@@ -1,4 +1,4 @@
-const maxCount = 10000;
+const maxCount = 5000;
 const counterSelector = '.rtExYb';
 const checkboxSelector = '.ckGgle';
 const photoDivSelector = ".yDSiEe.uGCjIb.zcLWac.eejsDc.TWmIyd";
@@ -26,8 +26,13 @@ async function deleteGooglePhotos() {
     };
 
     // Scrolls the photo list to the top
-    const scrollPhotoListToTop = () => {
-        document.querySelector(photoDivSelector).scrollTop = 0;
+    const scrollPhotoListTo = (top = 0) => {
+        document.querySelector(photoDivSelector).scrollTop = top;
+    };
+
+    // Scrolls the photo list to the top
+    const scrollPhotoListBy = (height = 0) => {
+        document.querySelector(photoDivSelector).scrollBy(0, height); 
     };
 
     // Waits until a specific condition is met, then returns the result
@@ -36,7 +41,7 @@ async function deleteGooglePhotos() {
         while (Date.now() - startTime < timeout) {
             let result = await resultFunction();
             if (conditionFunction(result)) return result;
-            await wait(100);
+            await wait(300);
         }
         throw new Error("Timeout reached");
     };
@@ -54,7 +59,7 @@ async function deleteGooglePhotos() {
         confirmation_button.click();
 
         await waitUntil(() => getCount() === 0);
-        scrollPhotoListToTop();
+        scrollPhotoListTo(0);
     };
 
     // Main loop to select and delete photos
@@ -65,7 +70,8 @@ async function deleteGooglePhotos() {
                 x => x.length > 0
             );
             let count = getCount();
-            checkboxes.slice(0, maxCount - count).forEach(x => x.click());
+            let targetCheckboxes = checkboxes.slice(0, maxCount - count);
+            targetCheckboxes.forEach(x => x.click());
             await wait(200);
             count = getCount();
             console.log("Selected " + count);
@@ -73,7 +79,9 @@ async function deleteGooglePhotos() {
             if (count >= maxCount) {
                 await deleteSelected();
             } else {
-                await scrollPhotoList();
+                let rect = targetCheckboxes[targetCheckboxes.length - 1].getBoundingClientRect();
+                let height = rect.top + rect.height;
+                scrollPhotoListBy(height);
             }
         } catch (e) {
             console.log(e);
