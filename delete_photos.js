@@ -1,74 +1,85 @@
-// How many photos to delete?
-// Put a number value, like this
-// const maxImageCount = 5896
-const maxImageCount = "ALL_PHOTOS";
+const maxCount = 1000;
+const counterSelector = '.rtExYb';
+const checkboxSelector = '.ckGgle';
+const photoDivSelector = ".yDSiEe.uGCjIb.zcLWac.eejsDc.TWmIyd";
+const deleteButtonSelector = 'button[aria-label="Delete"]';
+const confirmationButtonSelector = '#yDmH0d > div.llhEMd.iWO5td > div > div.g3VIld.V639qd.bvQPzd.oEOLpc.Up8vH.J9Nfi.A9Uzve.iWO5td > div.XfpsVe.J9fJmf > button.VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-k8QpJ.nCP5yc.kHssdc.HvOprf';
 
-// Selector for Images and buttons
-const ELEMENT_SELECTORS = {
-    checkboxClass: '.ckGgle',
-    languageAgnosticDeleteButton: 'div[data-delete-origin] button',
-    deleteButton: 'button[aria-label="Delete"]',
-    confirmationButton: '#yDmH0d > div.llhEMd.iWO5td > div > div.g3VIld.V639qd.bvQPzd.oEOLpc.Up8vH.J9Nfi.A9Uzve.iWO5td > div.XfpsVe.J9fJmf > button.VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-k8QpJ.nCP5yc.kHssdc.HvOprf'
-}
+async function deleteGooglePhotos() {
+    // Retrieves the current count of selected photos
+    const getCount = () => {
+        const counterElement = document.querySelector(counterSelector);
+        return counterElement ? parseInt(counterElement.textContent) || 0 : 0;
+    };
 
-// Time Configuration (in milliseconds)
-const TIME_CONFIG = {
-    delete_cycle: 10000,
-    press_button_delay: 2000
-};
+    // Waits for a specified time
+    const wait = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
 
-const MAX_RETRIES = 10;
+    // Scrolls the photo list down
+    const scrollPhotoList = () => {
+        document.querySelector(photoDivSelector).scrollBy(0, window.outerHeight);
+    };
 
-let imageCount = 0;
+    // Scrolls the photo list to the top
+    const scrollPhotoListToTop = () => {
+        document.querySelector(photoDivSelector).scrollTop = 0;
+    };
 
-let checkboxes;
-let buttons = {
-    deleteButton: null,
-    confirmationButton: null
-}
+    // Waits until a specific condition is met, then returns the result
+    const waitUntil = async (resultFunction, conditionFunction = x => x, timeout = 60000) => {
+        let startTime = Date.now();
+        while (Date.now() - startTime < timeout) {
+            let result = await resultFunction();
+            if (conditionFunction(result)) return result;
+            await wait(100);
+        }
+        throw new Error("Timeout reached");
+    };
 
-let deleteTask = setInterval(() => {
-    let attemptCount = 1;
+    // Handles the deletion of selected photos
+    const deleteSelected = async () => {
+        let count = getCount();
+        if (count <= 0) return;
+        console.log("Deleting " + count);
 
-    do {
-        checkboxes = document.querySelectorAll(ELEMENT_SELECTORS['checkboxClass']);
+        const deleteButton = document.querySelector(deleteButtonSelector);
+        deleteButton.click();
 
-    } while (checkboxes.length <= 0 && attemptCount++ < MAX_RETRIES);
+        const confirmation_button = await waitUntil(() => document.querySelector(confirmationButtonSelector));
+        confirmation_button.click();
 
+        await waitUntil(() => getCount() === 0);
+        scrollPhotoListToTop();
+    };
 
-    if (checkboxes.length <= 0) {
-        console.log("[INFO] No more images to delete.");
-        clearInterval(deleteTask);
-        console.log("[SUCCESS] Tool exited.");
-        return;
+    // Main loop to select and delete photos
+    while (true) {
+        try {
+            const checkboxes = await waitUntil(
+                () => [...document.querySelectorAll(checkboxSelector)].filter(x => x.ariaChecked == 'false'), 
+                x => x.length > 0
+            );
+            let count = getCount();
+            checkboxes.slice(0, maxCount - count).forEach(x => x.click());
+            await wait(200);
+            count = getCount();
+            console.log("Selected " + count);
+
+            if (count >= maxCount) {
+                await deleteSelected();
+            } else {
+                scrollPhotoList();
+            }
+        } catch (e) {
+            console.log(e);
+            break; // Break out of the loop if a timeout occurs
+        }
     }
 
-    imageCount += checkboxes.length;
+    // Final deletion for any remaining photos
+    await deleteSelected();
 
-    checkboxes.forEach((checkbox) => { checkbox.click() });
-    console.log("[INFO] Deleting", checkboxes.length, "images");
+    console.log('End of deletion process');
+}
 
-    setTimeout(() => {
-        try {
-            buttons.deleteButton = document.querySelector(ELEMENT_SELECTORS['languageAgnosticDeleteButton']);
-            buttons.deleteButton.click();
-        } catch {
-            buttons.deleteButton = document.querySelector(ELEMENT_SELECTORS['deleteButton']);
-            buttons.deleteButton.click();
-        }
-
-        setTimeout(() => {
-            buttons.confirmation_button = document.querySelector(ELEMENT_SELECTORS['confirmationButton']);
-            buttons.confirmation_button.click();
-
-            console.log(`[INFO] ${imageCount}/${maxImageCount} Deleted`);
-            if (maxImageCount !== "ALL_PHOTOS" && imageCount >= parseInt(maxImageCount)) {
-                console.log(`${imageCount} photos deleted as requested`);
-                clearInterval(deleteTask);
-                console.log("[SUCCESS] Tool exited.");
-                return;
-            }
-
-        }, TIME_CONFIG['press_button_delay']);
-    }, TIME_CONFIG['press_button_delay']);
-}, TIME_CONFIG['delete_cycle']);
+await deleteGooglePhotos();
