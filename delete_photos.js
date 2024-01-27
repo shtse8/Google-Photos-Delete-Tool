@@ -1,4 +1,4 @@
-const maxCount = 1000;
+const maxCount = 10000;
 const counterSelector = '.rtExYb';
 const checkboxSelector = '.ckGgle';
 const photoDivSelector = ".yDSiEe.uGCjIb.zcLWac.eejsDc.TWmIyd";
@@ -16,8 +16,13 @@ async function deleteGooglePhotos() {
     const wait = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
 
     // Scrolls the photo list down
-    const scrollPhotoList = () => {
-        document.querySelector(photoDivSelector).scrollBy(0, window.outerHeight);
+    const scrollPhotoList = async () => {
+        let photoDiv = document.querySelector(photoDivSelector)
+	let top = photoDiv.scrollTop;
+	await waitUntil(() => {
+	    photoDiv.scrollBy(0, photoDiv.clientHeight);
+            return photoDiv.scrollTop > top;
+        });
     };
 
     // Scrolls the photo list to the top
@@ -26,7 +31,7 @@ async function deleteGooglePhotos() {
     };
 
     // Waits until a specific condition is met, then returns the result
-    const waitUntil = async (resultFunction, conditionFunction = x => x, timeout = 60000) => {
+    const waitUntil = async (resultFunction, conditionFunction = x => x, timeout = 600000) => {
         let startTime = Date.now();
         while (Date.now() - startTime < timeout) {
             let result = await resultFunction();
@@ -68,7 +73,7 @@ async function deleteGooglePhotos() {
             if (count >= maxCount) {
                 await deleteSelected();
             } else {
-                scrollPhotoList();
+                await scrollPhotoList();
             }
         } catch (e) {
             console.log(e);
