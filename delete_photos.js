@@ -86,7 +86,7 @@ async function deleteGooglePhotos() {
             } else {
                 let rect = targetCheckboxes[targetCheckboxes.length - 1].getBoundingClientRect();
                 let height = rect.top;
-                scrollPhotoListBy(height);
+                await scrollPhotoListBy(height);
             }
         } catch (e) {
             console.log(e);
