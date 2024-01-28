@@ -1,6 +1,6 @@
 const maxCount = 5000;
 const counterSelector = '.rtExYb';
-const checkboxSelector = '.ckGgle';
+const checkboxSelector = '.ckGgle[aria-checked=false]';
 const photoDivSelector = ".yDSiEe.uGCjIb.zcLWac.eejsDc.TWmIyd";
 const deleteButtonSelector = 'button[aria-label="Delete"]';
 const confirmationButtonSelector = '#yDmH0d > div.llhEMd.iWO5td > div > div.g3VIld.V639qd.bvQPzd.oEOLpc.Up8vH.J9Nfi.A9Uzve.iWO5td > div.XfpsVe.J9fJmf > button.VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-k8QpJ.nCP5yc.kHssdc.HvOprf';
@@ -31,8 +31,13 @@ async function deleteGooglePhotos() {
     };
 
     // Scrolls the photo list to the top
-    const scrollPhotoListBy = (height = 0) => {
-        document.querySelector(photoDivSelector).scrollBy(0, height); 
+    const scrollPhotoListBy = async (height = 0) => {
+	const photoDiv = document.querySelector(photoDivSelector);
+	await waitUntil(() => {
+            const top = photoDiv.scrollTop;
+            photoDiv.scrollBy(0, height);
+            return photoDiv.scrollTop == top + height
+        });
     };
 
     // Waits until a specific condition is met, then returns the result
@@ -66,7 +71,7 @@ async function deleteGooglePhotos() {
     while (true) {
         try {
             const checkboxes = await waitUntil(
-                () => [...document.querySelectorAll(checkboxSelector)].filter(x => x.ariaChecked == 'false'), 
+                () => [...document.querySelectorAll(checkboxSelector)], 
                 x => x.length > 0
             );
             let count = getCount();
