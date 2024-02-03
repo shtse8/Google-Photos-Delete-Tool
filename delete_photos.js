@@ -37,7 +37,7 @@ async function deleteGooglePhotos() {
             const top = photoDiv.scrollTop;
             photoDiv.scrollBy(0, height);
 
-            return waitUntil(() => document.querySelector(checkboxSelector), 500)
+            return waitUntil(() => document.querySelector(checkboxSelector), 500).catch(() => null)
         });
     };
 
