@@ -36,7 +36,7 @@ async function deleteGooglePhotos() {
 	await waitUntil(() => {
             const top = photoDiv.scrollTop;
             photoDiv.scrollBy(0, height);
-            return photoDiv.scrollTop == top + height
+            return photoDiv.scrollTop != top
         });
     };
 
