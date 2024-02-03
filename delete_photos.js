@@ -18,9 +18,9 @@ async function deleteGooglePhotos() {
     // Scrolls the photo list down
     const scrollPhotoList = async () => {
         let photoDiv = document.querySelector(photoDivSelector)
-	let top = photoDiv.scrollTop;
-	await waitUntil(() => {
-	    photoDiv.scrollBy(0, photoDiv.clientHeight);
+        let top = photoDiv.scrollTop;
+        await waitUntil(() => {
+            photoDiv.scrollBy(0, photoDiv.clientHeight);
             return photoDiv.scrollTop > top;
         });
     };
@@ -32,20 +32,21 @@ async function deleteGooglePhotos() {
 
     // Scrolls the photo list to the top
     const scrollPhotoListBy = async (height = 0) => {
-	const photoDiv = document.querySelector(photoDivSelector);
-	await waitUntil(() => {
+        const photoDiv = document.querySelector(photoDivSelector);
+        await waitUntil(() => {
             const top = photoDiv.scrollTop;
             photoDiv.scrollBy(0, height);
-            return photoDiv.scrollTop != top
+
+            return waitUntil(() => document.querySelector(checkboxSelector), 500)
         });
     };
 
     // Waits until a specific condition is met, then returns the result
-    const waitUntil = async (resultFunction, conditionFunction = x => x, timeout = 600000) => {
+    const waitUntil = async (resultFunction, timeout = 600000) => {
         let startTime = Date.now();
         while (Date.now() - startTime < timeout) {
             let result = await resultFunction();
-            if (conditionFunction(result)) return result;
+            if (result) return result;
             await wait(300);
         }
         throw new Error("Timeout reached");
@@ -71,8 +72,10 @@ async function deleteGooglePhotos() {
     while (true) {
         try {
             const checkboxes = await waitUntil(
-                () => [...document.querySelectorAll(checkboxSelector)], 
-                x => x.length > 0
+                () => {
+                    const selectors = document.querySelectorAll(checkboxSelector)
+                    return selectors.length > 0 ? [...document.querySelectorAll(checkboxSelector)] : null
+                }
             );
             let count = getCount();
             let targetCheckboxes = checkboxes.slice(0, maxCount - count);
