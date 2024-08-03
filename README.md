@@ -1,6 +1,8 @@
 # 🗑️ Google Photos Delete Tool
 
-This tool provides an efficient, stable, and automated way to delete multiple photos from Google Photos. Unlike other scripts or manual methods, this tool offers several unique features:
+This tool provides an efficient, stable, and automated way to delete multiple photos from Google Photos. It's now available as a Chrome extension for easier use, but you can also use the script injection method if you prefer.
+
+Unlike other scripts or manual methods, this tool offers several unique features:
 
 - 🎯 **Selector-based Awaiting**: Instead of using timers, this script uses selectors to await elements, ensuring optimal performance and stability across different network speeds and device capabilities.
 - 🔄 **Automatic Scrolling**: The script automatically scrolls through your entire photo library, eliminating the need for manual intervention.
@@ -13,7 +15,8 @@ This improved version offers a more reliable and efficient solution for users lo
 ## 📋 Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Usage](#usage)
+- [Method 1: Chrome Extension (Recommended)](#method-1-chrome-extension-recommended)
+- [Method 2: Script Injection](#method-2-script-injection)
 - [Customization](#customization)
 - [Troubleshooting](#troubleshooting)
 - [Caution](#caution)
@@ -26,7 +29,38 @@ This improved version offers a more reliable and efficient solution for users lo
 - 🌐 A modern web browser (tested on Google Chrome, but should work on others)
 - 🔑 Access to the [English version of Google Photos](https://photos.google.com/?hl=en)
 
-## 🚀 Usage
+## 🚀 Method 1: Chrome Extension (Recommended)
+
+### Installation
+
+1. Clone this repository or download it as a ZIP file:
+   ```
+   git clone https://github.com/shtse8/google-photos-delete-tool.git
+   ```
+
+2. Open Google Chrome and navigate to `chrome://extensions/`
+
+3. Enable "Developer mode" by toggling the switch in the top right corner
+
+4. Click on "Load unpacked" and select the `chrome-extension` folder from the cloned/downloaded repository
+
+5. The Google Photos Delete Tool extension should now appear in your Chrome extensions
+
+### Usage
+
+1. Navigate to [Google Photos](https://photos.google.com/?hl=en)
+
+2. Click on the Google Photos Delete Tool extension icon in your Chrome toolbar
+
+3. The tool will automatically start selecting and deleting photos based on the default settings
+
+4. Monitor the progress through the browser console (press F12 to open Developer Tools, then select the Console tab)
+
+5. The process will continue until it reaches the set limit or runs out of photos to delete
+
+## 💻 Method 2: Script Injection
+
+### Usage
 
 1. 🔐 [Login to your Google Account](https://accounts.google.com/ServiceLogin).
 
@@ -64,7 +98,7 @@ This improved version offers a more reliable and efficient solution for users lo
 
    ![Google Chrome Console on Google Photos page](images/chrome-console.jpg)
 
-6. 📋 Copy all the code from the `delete_photos.js` file and paste it into the console.
+6. 📋 Copy all the code from the [`delete_photos.js`](https://github.com/shtse8/google-photos-delete-tool/blob/main/delete_photos.js) file and paste it into the console.
 
    ![The Code in Chrome Console](images/code-in-console.jpg)
 
@@ -76,9 +110,23 @@ This improved version offers a more reliable and efficient solution for users lo
 
 You can adjust the `maxCount` variable at the beginning of the script to set the maximum number of photos to delete. By default, it's set to 10,000.
 
-```javascript
-const maxCount = 10000; // Change this number to your desired limit
-```
+For the Chrome extension:
+1. Open the [`chrome-extension/content.js`](https://github.com/shtse8/google-photos-delete-tool/blob/main/chrome-extension/content.js) file
+2. Locate the `CONFIG` object at the beginning of the file
+3. Modify the `maxCount` value to your desired limit:
+   ```javascript
+   const CONFIG = {
+     maxCount: 5000, // Change this number to your desired limit
+     // ... other config options
+   };
+   ```
+4. Save the file and reload the extension in `chrome://extensions/`
+
+For the script injection method:
+1. Open the [`delete_photos.js`](https://github.com/shtse8/google-photos-delete-tool/blob/main/delete_photos.js) file
+2. Locate the `CONFIG` object at the beginning of the file
+3. Modify the `maxCount` value as shown above
+4. Save the file and use the updated script for injection
 
 ## 🔧 Troubleshooting
 
@@ -88,6 +136,8 @@ If you encounter any issues:
 2. 🔄 Try refreshing the page and running the script again.
 3. 🔁 If the script stops unexpectedly, you can simply run it again to continue the process.
 4. 🔍 Check the browser console for any error messages and report them if the issue persists.
+5. If using the extension, try the script injection method to see if the issue persists.
+6. If problems persist, please [open an issue](https://github.com/shtse8/google-photos-delete-tool/issues) on this GitHub repository.
 
 ## ⚠️ Caution
 
@@ -100,7 +150,7 @@ If you encounter any issues:
 1. **Q: Is this tool safe to use?**
    A: While the tool is designed to be safe, always use caution when bulk deleting files. Ensure you have backups of important photos.
 
-2. **Q:  Can I recover photos deleted by this tool?**
+2. **Q: Can I recover photos deleted by this tool?**
    A: Google Photos typically keeps deleted items in the trash for 60 days. You can recover them from there within this period.
 
 3. **Q: Why does the script sometimes pause or slow down?**
@@ -108,12 +158,16 @@ If you encounter any issues:
 
 ## 🤝 Contributing
 
-Contributions are welcome! If you have suggestions for improvements or encounter any problems, please open an issue or submit a pull request.
+Contributions are welcome! If you have suggestions for improvements or encounter any problems, please [open an issue](https://github.com/shtse8/google-photos-delete-tool/issues) or submit a [Pull Request](https://github.com/shtse8/google-photos-delete-tool/pulls).
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/shtse8/google-photos-delete-tool/blob/main/LICENSE) file for details.
 
 ---
 
 **Disclaimer:** This tool is not officially associated with Google. Use it at your own risk. The developers are not responsible for any data loss or account issues resulting from the use of this script.
+
+---
+
+📌 If you find this tool helpful, please consider giving it a star on GitHub! ⭐
