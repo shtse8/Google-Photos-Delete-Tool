@@ -1,69 +1,121 @@
-# Google Photos Delete All Tool
+# Google Photos Delete Tool
 
-If you have ever wanted to delete thousands of photos from [Google Photos](https://photos.google.com/) but failed to find an easy way to do so, then this is the tool for you. This script automates the deletion process, providing a visual representation as it happens!
+This tool provides an efficient, stable, and automated way to delete multiple photos from Google Photos. Unlike other scripts or manual methods, this tool offers several unique features:
 
-## Getting Started
+- **Selector-based Awaiting**: Instead of using timers, this script uses selectors to await elements, ensuring optimal performance and stability across different network speeds and device capabilities.
+- **Automatic Scrolling**: The script automatically scrolls through your entire photo library, eliminating the need for manual intervention.
+- **Batch Processing**: Photos are selected and deleted in batches, significantly speeding up the deletion process.
+- **Customizable Deletion Limit**: Users can easily set a maximum number of photos to delete, providing fine-grained control over the operation.
+- **Resilient to Interruptions**: If the script stops unexpectedly, it can be restarted and will continue from where it left off.
 
-Follow the step-by-step instructions below to run the tool.
+This improved version offers a more reliable and efficient solution for users looking to manage large numbers of photos in their Google Photos account.
 
-### Prerequisites
+![Google Photos Delete Tool in Action](images/tool-in-action.png)
+*Image: Screenshot of the Google Photos Delete Tool selecting and deleting photos*
 
-- A modern web browser, preferably Google Chrome. You can [download the latest version of Google Chrome here](https://www.google.com/chrome/).
+## Table of Contents
 
-- Use the [English language version of Google Photos](https://photos.google.com/?hl=en).
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Customization](#customization)
+- [Troubleshooting](#troubleshooting)
+- [Caution](#caution)
+- [Frequently Asked Questions](#frequently-asked-questions)
+- [Contributing](#contributing)
+- [License](#license)
 
-### Assumptions
+## Prerequisites
 
-These steps are written for Google Chrome. If you're using a different browser, the steps are similar, but specific shortcuts or keywords may vary.
+- A modern web browser (tested on Google Chrome, but should work on others)
+- Access to the [English version of Google Photos](https://photos.google.com/?hl=en)
 
-### Steps
+## Installation
 
-1. **Login to your Google Account**: Go to the [Google Account Sign-in Page](https://accounts.google.com/ServiceLogin).
+1. Clone this repository or download the `delete_photos.js` file:
+   ```
+   git clone https://github.com/your-username/google-photos-delete-tool.git
+   ```
+   Or download the script directly: [delete_photos.js](https://raw.githubusercontent.com/your-username/google-photos-delete-tool/main/delete_photos.js)
 
-2. **Navigate to Google Photos**: Go to [Google Photos](https://photos.google.com/?hl=en).
+2. No additional installation is required as the script runs directly in your browser's console.
 
-3. **Disable Image Loading** (Optional but recommended to reduce CPU, RAM, and network usage):
-   - **On Chrome**:
-     1. Click on the padlock icon next to the URL bar and select "Site settings".
-     2. Block images under the "Permissions" section.
-     3. Reload Google Photos.
+## Usage
 
-4. **Open Developer Tools**:
-   - **Keyboard Shortcut**: Press `CTRL + SHIFT + I`.
-   - **Right Click on Page**: Select `Inspect`.
-   - **From Menu**: Click the menu button (three dots), select `More tools`, then `Developer tools`.
+1. Log into your Google Account and navigate to [Google Photos](https://photos.google.com/?hl=en).
 
-5. **Open the Console Tab**:
-   - Click on the `Console` tab in the Developer Tools.
+   ![Google Photos Homepage](images/google-photos-homepage.png)
+   *Image: Screenshot of Google Photos homepage*
 
-6. **Copy and Paste the Script**:
-   - Copy the entire code from the `delete_photos.js` file and paste it into the console.
-   - Press **ENTER** to run the script.
+2. Open your browser's Developer Tools:
+   - Chrome/Edge: Press `Ctrl + Shift + I` (Windows/Linux) or `Cmd + Option + I` (Mac)
+   - Firefox: Press `Ctrl + Shift + K` (Windows/Linux) or `Cmd + Option + K` (Mac)
 
-7. **Run the Script**:
-   - The script will start running upon hitting ENTER. It will select and delete photos in batches until all photos are deleted.
+   ![Developer Tools Console](images/dev-tools-console.png)
+   *Image: Screenshot of browser's Developer Tools with Console tab open*
 
-### Advanced Options
+3. Switch to the "Console" tab in the Developer Tools.
 
-To delete a specific number of photos, modify the value of `maxCount` in the script.
+4. Copy the entire content of the `delete_photos.js` file.
 
-### Debugging
+5. Paste the code into the console and press Enter to run the script.
 
-- If the script doesn't delete photos, ensure you are using the [English language version of Google Photos](https://photos.google.com/?hl=en).
-- If it stops after deleting some images, simply paste the script again and press ENTER. The script will continue the operation.
-- For slow internet connections, the script will automatically wait for elements to be available before proceeding, ensuring stable operation.
+   ![Script in Console](images/script-in-console.png)
+   *Image: Screenshot of the script pasted into the browser console*
 
-### FAQs
+6. The script will start selecting and deleting photos automatically. You'll see progress updates in the console.
 
-1. **It checks and unchecks the photos, but doesn't delete them.**
-   - Ensure you are using the [English language version of Google Photos](https://photos.google.com/?hl=en) and run the tool again.
+   ![Script Running](images/script-running.png)
+   *Image: Screenshot of the script running with console output*
 
-2. **It stops after deleting some images.**
-   - Simply paste the script again and hit ENTER. The script will continue deleting photos.
+## Customization
 
-3. **There was a delay in loading images and the tool exited.**
-   - In this case, you can paste the script again and hit ENTER. The script will resume the operation from where it left off.
+You can adjust the `maxCount` variable at the beginning of the script to set the maximum number of photos to delete. By default, it's set to 10,000.
 
-### Conclusion
+```javascript
+const maxCount = 10000; // Change this number to your desired limit
+```
 
-This script provides a reliable and efficient way to delete all photos from Google Photos. By using selectors to await elements, it ensures optimal performance and stability, making it a powerful tool for managing your photo library.
+## Troubleshooting
+
+If you encounter any issues:
+
+1. Ensure you're using the English version of Google Photos.
+2. Try refreshing the page and running the script again.
+3. If the script stops unexpectedly, you can simply run it again to continue the process.
+4. Check the browser console for any error messages and report them if the issue persists.
+
+## Caution
+
+- Use this script responsibly. Deleted photos may be recoverable for a limited time, but exercise caution to avoid unintended data loss.
+- This script interacts with the Google Photos interface, which may change over time. If Google updates their UI, the script may need adjustments.
+- Always ensure you have backups of important photos before performing bulk deletions.
+
+## Frequently Asked Questions
+
+1. **Q: Is this tool safe to use?**
+   A: While the tool is designed to be safe, always use caution when bulk deleting files. Ensure you have backups of important photos.
+
+2. **Q: Can I recover photos deleted by this tool?**
+   A: Google Photos typically keeps deleted items in the trash for 60 days. You can recover them from there within this period.
+
+3. **Q: Why does the script sometimes pause or slow down?**
+   A: The script may slow down due to network latency or Google Photos' rate limiting. It's designed to handle these situations gracefully.
+
+## Contributing
+
+Contributions are welcome! If you have suggestions for improvements or encounter any problems, please:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Disclaimer:** This tool is not officially associated with Google. Use it at your own risk. The developers are not responsible for any data loss or account issues resulting from the use of this script.
