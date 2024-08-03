@@ -63,6 +63,7 @@ Our tool maintains high performance even with large libraries, whereas manual de
 ## 📋 Table of Contents
 
 - [Prerequisites](#prerequisites)
+- [Optimizing Performance](#optimizing-performance)
 - [Method 1: Chrome Extension (Recommended)](#method-1-chrome-extension-recommended)
 - [Method 2: Script Injection](#method-2-script-injection)
 - [Customization](#customization)
@@ -76,6 +77,22 @@ Our tool maintains high performance even with large libraries, whereas manual de
 
 - 🌐 A modern web browser (tested on Google Chrome, but should work on others)
 - 🔑 Access to the [English version of Google Photos](https://photos.google.com/?hl=en)
+
+## ⚡ Optimizing Performance
+
+To significantly speed up the deletion process for both the Chrome extension and script injection methods, we recommend blocking image loading:
+
+1. 🚫 Disable image loading for Google Photos on your browser to avoid high CPU, RAM, and network usage:
+
+   - On Chrome:
+     1. Click on the site padlock (the lock icon along the URL bar) -> Site settings
+     2. Block images in the Permissions for the website
+
+   ![Image Blocking in Chrome](images/image_block.png)
+
+2. Reload Google Photos after applying this setting.
+
+This step can dramatically improve the tool's performance by reducing the amount of data that needs to be loaded.
 
 ## 🚀 Method 1: Chrome Extension (Recommended)
 
@@ -98,13 +115,15 @@ Our tool maintains high performance even with large libraries, whereas manual de
 
 1. Navigate to [Google Photos](https://photos.google.com/?hl=en)
 
-2. Click on the Google Photos Delete Tool extension icon in your Chrome toolbar
+2. (Optional but recommended) Apply the image blocking step from the [Optimizing Performance](#optimizing-performance) section
 
-3. The tool will automatically start selecting and deleting photos based on the default settings
+3. Click on the Google Photos Delete Tool extension icon in your Chrome toolbar
 
-4. Monitor the progress through the browser console (press F12 to open Developer Tools, then select the Console tab)
+4. The tool will automatically start selecting and deleting photos based on the default settings
 
-5. The process will continue until it reaches the set limit or runs out of photos to delete
+5. Monitor the progress through the browser console (press F12 to open Developer Tools, then select the Console tab)
+
+6. The process will continue until it reaches the set limit or runs out of photos to delete
 
 ## 💻 Method 2: Script Injection
 
@@ -118,15 +137,7 @@ Our tool maintains high performance even with large libraries, whereas manual de
 
    ![Google Photos Page](images/google-photos-page.jpg)
 
-3. 🚫 Disable image loading for Google Photos on your browser to avoid high CPU, RAM, and network usage:
-
-   - On Chrome:
-     1. Click on the site padlock (the lock icon along the URL bar) -> Site settings
-     2. Block images in the Permissions for the website
-
-   ![Image Blocking in Chrome](images/image_block.png)
-
-   3. Reload Google Photos
+3. Apply the image blocking step from the [Optimizing Performance](#optimizing-performance) section
 
 4. 🛠️ Open Developer Tools. You can do this by:
 
