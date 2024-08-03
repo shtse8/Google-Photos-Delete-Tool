@@ -10,13 +10,9 @@ This tool provides an efficient, stable, and automated way to delete multiple ph
 
 This improved version offers a more reliable and efficient solution for users looking to manage large numbers of photos in their Google Photos account.
 
-![Google Photos Delete Tool in Action](images/tool-in-action.png)
-*Image: Screenshot of the Google Photos Delete Tool selecting and deleting photos*
-
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Installation](#installation)
 - [Usage](#usage)
 - [Customization](#customization)
 - [Troubleshooting](#troubleshooting)
@@ -30,43 +26,51 @@ This improved version offers a more reliable and efficient solution for users lo
 - A modern web browser (tested on Google Chrome, but should work on others)
 - Access to the [English version of Google Photos](https://photos.google.com/?hl=en)
 
-## Installation
-
-1. Clone this repository or download the `delete_photos.js` file:
-   ```
-   git clone https://github.com/your-username/google-photos-delete-tool.git
-   ```
-   Or download the script directly: [delete_photos.js](https://raw.githubusercontent.com/your-username/google-photos-delete-tool/main/delete_photos.js)
-
-2. No additional installation is required as the script runs directly in your browser's console.
-
 ## Usage
 
-1. Log into your Google Account and navigate to [Google Photos](https://photos.google.com/?hl=en).
+1. [Login to your Google Account](https://accounts.google.com/ServiceLogin).
 
-   ![Google Photos Homepage](images/google-photos-homepage.png)
-   *Image: Screenshot of Google Photos homepage*
+   ![Google Account Sign-in Page](images/google-signin-page.jpg)
 
-2. Open your browser's Developer Tools:
-   - Chrome/Edge: Press `Ctrl + Shift + I` (Windows/Linux) or `Cmd + Option + I` (Mac)
-   - Firefox: Press `Ctrl + Shift + K` (Windows/Linux) or `Cmd + Option + K` (Mac)
+2. Go to [Google Photos](https://photos.google.com/?hl=en)
 
-   ![Developer Tools Console](images/dev-tools-console.png)
-   *Image: Screenshot of browser's Developer Tools with Console tab open*
+   ![Google Photos Page](images/google-photos-page.jpg)
 
-3. Switch to the "Console" tab in the Developer Tools.
+3. Disable image loading for Google Photos on your browser to avoid high CPU, RAM, and network usage:
 
-4. Copy the entire content of the `delete_photos.js` file.
+   - On Chrome:
+     1. Click on the site padlock (the lock icon along the URL bar) -> Site settings
+     2. Block images in the Permissions for the website
 
-5. Paste the code into the console and press Enter to run the script.
+   ![Image Blocking in Chrome](images/image_block.png)
 
-   ![Script in Console](images/script-in-console.png)
-   *Image: Screenshot of the script pasted into the browser console*
+   3. Reload Google Photos
 
-6. The script will start selecting and deleting photos automatically. You'll see progress updates in the console.
+4. Open Developer Tools. You can do this by:
 
-   ![Script Running](images/script-running.png)
-   *Image: Screenshot of the script running with console output*
+   - **Keyboard Shortcut**: Press `CTRL + SHIFT + I`
+   - **From the Page**: Right-click on an empty area and select `Inspect` (last option)
+
+   ![Google Chrome Right Click Pop-up Menu](images/chrome-popup-menu.jpg)
+
+   - **From Menu**: 
+     1. Click on the menu button ![Google Chrome Menu Icon](images/chrome-menu-icon.jpg) on Google Chrome
+     2. Select `More tools`
+     3. Select `Developer tools`
+
+   ![Google Chrome Menu Developer Tools](images/chrome-menu-popup.jpg)
+
+5. After opening the developer tools, click on the `Console` tab.
+
+   ![Google Chrome Console on Google Photos page](images/chrome-console.jpg)
+
+6. Copy all the code from the `delete_photos.js` file and paste it into the console.
+
+   ![The Code in Chrome Console](images/code-in-console.jpg)
+
+7. Hit **ENTER** after pasting the script in the console. The script will start running upon hitting the ENTER key.
+
+8. The script will start selecting and deleting photos automatically. You'll see progress updates in the console.
 
 ## Customization
 
@@ -104,13 +108,7 @@ If you encounter any issues:
 
 ## Contributing
 
-Contributions are welcome! If you have suggestions for improvements or encounter any problems, please:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Contributions are welcome! If you have suggestions for improvements or encounter any problems, please open an issue or submit a pull request.
 
 ## License
 
