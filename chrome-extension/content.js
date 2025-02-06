@@ -4,8 +4,7 @@ const CONFIG = {
       counter: ".rtExYb",
       checkbox: ".ckGgle[aria-checked=false]",
       photoDiv: ".yDSiEe.uGCjIb.zcLWac.eejsDc.TWmIyd",
-      deleteButton: 'button[aria-label="Delete"]',
-      confirmationButton: ".VfPpkd-T0kwCb  button.VfPpkd-LgbsSe.VfPpkd-LgbsSe-OWXEXe-k8QpJ.nCP5yc.AjY5Oe.LQeN7.kDryjd"
+      deleteButton: 'button[aria-label="Move to trash"]'
     },
     timeout: 600000,
     scrollDelay: 300
@@ -55,21 +54,24 @@ const CONFIG = {
   };
   
   const deleteSelected = async () => {
-    const count = getCount();
-    if (count <= 0) return;
-  
-    console.log(`Deleting ${count} photos`);
-    getElement(CONFIG.selectors.deleteButton).click();
-  
-    const confirmationButton = await waitUntil(() => 
-      getElement(CONFIG.selectors.confirmationButton)
-    );
-    confirmationButton.click();
-  
-    await waitUntil(() => getCount() === 0);
-    scrollPhotoListTo(0);
+      const count = getCount();
+      if (count <= 0) return;
+
+      console.log(`Deleting ${count} photos`);
+      getElement(CONFIG.selectors.deleteButton).click();
+
+      const confirmationButton = await waitUntil(() => 
+          [...document.querySelectorAll("button")].find(
+              (btn) => btn.textContent.trim() === "Move to trash"
+          )
+      );
+    
+      confirmationButton.click();
+
+      await waitUntil(() => getCount() === 0);
+      scrollPhotoListTo(0);
   };
-  
+
   const selectPhotos = async () => {
     const checkboxes = await waitUntil(() => {
       const elements = getElements(CONFIG.selectors.checkbox);
