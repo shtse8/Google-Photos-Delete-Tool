@@ -3,7 +3,7 @@
  *
  * The metadata header is injected at build time by scripts/build.ts.
  */
-import { DeleteEngine, type Progress, formatElapsed } from '../core'
+import { DeleteEngine, type Progress, formatElapsed, formatEta } from '../core'
 
 const PANEL_ID = 'gpdt-panel'
 
@@ -16,13 +16,15 @@ const createStyles = (): string => `
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 13px;
     color: #e0e0e0;
-    background: #1e1e1e;
-    border: 1px solid #333;
-    border-radius: 12px;
+    background: rgba(30, 30, 50, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    width: 260px;
+    width: 280px;
     overflow: hidden;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     user-select: none;
   }
   #${PANEL_ID}.minimized {
@@ -46,12 +48,12 @@ const createStyles = (): string => `
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 12px;
-    background: #252525;
-    border-bottom: 1px solid #333;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
   }
   .gpdt-title {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13px;
     display: flex;
     align-items: center;
@@ -67,24 +69,50 @@ const createStyles = (): string => `
     color: #888;
     cursor: pointer;
     font-size: 14px;
-    padding: 2px 4px;
+    padding: 2px 6px;
     border-radius: 4px;
     line-height: 1;
+    transition: all 0.15s;
   }
-  .gpdt-header-btns button:hover { color: #fff; background: #333; }
+  .gpdt-header-btns button:hover { color: #fff; background: rgba(255,255,255,0.1); }
   .gpdt-content {
-    padding: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .gpdt-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #a1a1aa;
+  }
+  .gpdt-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #666;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .gpdt-status-dot.running { background: #22c55e; animation: gpdt-pulse 1.5s infinite; }
+  .gpdt-status-dot.paused { background: #f59e0b; animation: gpdt-pulse 2s infinite; }
+  .gpdt-status-dot.done { background: #4f8cff; }
+  .gpdt-status-dot.error { background: #ef4444; }
+  @keyframes gpdt-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
   }
   .gpdt-stats {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    margin-bottom: 12px;
   }
   .gpdt-stat {
-    background: #2a2a2a;
-    border-radius: 8px;
-    padding: 8px 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 10px 12px;
     text-align: center;
   }
   .gpdt-stat-value {
@@ -92,55 +120,78 @@ const createStyles = (): string => `
     font-weight: 700;
     color: #fff;
     line-height: 1.2;
+    font-variant-numeric: tabular-nums;
   }
   .gpdt-stat-label {
     font-size: 10px;
-    color: #888;
+    color: #71717a;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-top: 2px;
   }
-  .gpdt-status {
-    text-align: center;
-    font-size: 11px;
-    color: #888;
-    margin-bottom: 10px;
+  .gpdt-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
-  .gpdt-status .dot {
-    display: inline-block;
-    width: 6px;
+  .gpdt-progress-bar {
+    flex: 1;
     height: 6px;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: middle;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
   }
-  .gpdt-status .dot.idle { background: #666; }
-  .gpdt-status .dot.running { background: #4caf50; animation: gpdt-pulse 1.5s infinite; }
-  .gpdt-status .dot.done { background: #2196f3; }
-  .gpdt-status .dot.error { background: #f44336; }
-  @keyframes gpdt-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+  .gpdt-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4f8cff, #6c5ce7);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+  .gpdt-progress-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #a1a1aa;
+    min-width: 32px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .gpdt-controls {
+    display: flex;
+    gap: 8px;
   }
   .gpdt-btn {
-    width: 100%;
+    flex: 1;
     padding: 10px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
+  .gpdt-btn:active { transform: scale(0.97); }
   .gpdt-btn-start {
-    background: #4caf50;
+    background: linear-gradient(135deg, #4f8cff, #6c5ce7);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(79,140,255,0.3);
+  }
+  .gpdt-btn-start:hover { opacity: 0.9; }
+  .gpdt-btn-pause {
+    background: #f59e0b;
     color: #fff;
   }
-  .gpdt-btn-start:hover { background: #43a047; }
+  .gpdt-btn-pause:hover { background: #d97706; }
   .gpdt-btn-stop {
-    background: #f44336;
+    background: #ef4444;
     color: #fff;
   }
-  .gpdt-btn-stop:hover { background: #e53935; }
+  .gpdt-btn-stop:hover { background: #dc2626; }
+  .gpdt-hidden { display: none !important; }
 `
 
 const createPanel = (): HTMLElement => {
@@ -161,6 +212,10 @@ const createPanel = (): HTMLElement => {
         </div>
       </div>
       <div class="gpdt-content">
+        <div class="gpdt-status-bar">
+          <span class="gpdt-status-dot"></span>
+          <span class="gpdt-status-text">Ready</span>
+        </div>
         <div class="gpdt-stats">
           <div class="gpdt-stat">
             <div class="gpdt-stat-value gpdt-deleted">0</div>
@@ -170,12 +225,27 @@ const createPanel = (): HTMLElement => {
             <div class="gpdt-stat-value gpdt-speed">—</div>
             <div class="gpdt-stat-label">Per min</div>
           </div>
+          <div class="gpdt-stat">
+            <div class="gpdt-stat-value gpdt-elapsed">0s</div>
+            <div class="gpdt-stat-label">Elapsed</div>
+          </div>
+          <div class="gpdt-stat">
+            <div class="gpdt-stat-value gpdt-eta">—</div>
+            <div class="gpdt-stat-label">ETA</div>
+          </div>
         </div>
-        <div class="gpdt-status">
-          <span class="dot idle"></span>
-          <span class="gpdt-status-text">Ready</span>
+        <div class="gpdt-progress">
+          <div class="gpdt-progress-bar">
+            <div class="gpdt-progress-fill"></div>
+          </div>
+          <span class="gpdt-progress-label">0%</span>
         </div>
-        <button class="gpdt-btn gpdt-btn-start gpdt-toggle">▶ Start</button>
+        <div class="gpdt-controls">
+          <button class="gpdt-btn gpdt-btn-start gpdt-start-btn">▶ Start</button>
+          <button class="gpdt-btn gpdt-btn-pause gpdt-pause-btn gpdt-hidden">⏸ Pause</button>
+          <button class="gpdt-btn gpdt-btn-start gpdt-resume-btn gpdt-hidden">▶ Resume</button>
+          <button class="gpdt-btn gpdt-btn-stop gpdt-stop-btn gpdt-hidden">⏹ Stop</button>
+        </div>
       </div>
     </div>
   `
@@ -185,7 +255,8 @@ const createPanel = (): HTMLElement => {
 
 const getStatusClass = (status: Progress['status']): string => {
   switch (status) {
-    case 'idle': return 'idle'
+    case 'idle': return ''
+    case 'paused': return 'paused'
     case 'done': return 'done'
     case 'error': return 'error'
     default: return 'running'
@@ -198,6 +269,7 @@ const getStatusText = (status: Progress['status']): string => {
     case 'selecting': return 'Selecting photos…'
     case 'deleting': return 'Deleting batch…'
     case 'scrolling': return 'Loading more…'
+    case 'paused': return 'Paused'
     case 'done': return 'Complete!'
     case 'error': return 'Error'
     default: return status
@@ -207,43 +279,76 @@ const getStatusText = (status: Progress['status']): string => {
 ;(async () => {
   const panel = createPanel()
   let engine: DeleteEngine | null = null
-  let running = false
+  let state: 'idle' | 'running' | 'paused' = 'idle'
+  const MAX_COUNT = 10_000
 
   const $deleted = panel.querySelector('.gpdt-deleted') as HTMLElement
   const $speed = panel.querySelector('.gpdt-speed') as HTMLElement
-  const $dot = panel.querySelector('.dot') as HTMLElement
+  const $elapsed = panel.querySelector('.gpdt-elapsed') as HTMLElement
+  const $eta = panel.querySelector('.gpdt-eta') as HTMLElement
+  const $dot = panel.querySelector('.gpdt-status-dot') as HTMLElement
   const $statusText = panel.querySelector('.gpdt-status-text') as HTMLElement
-  const $toggle = panel.querySelector('.gpdt-toggle') as HTMLButtonElement
+  const $progressFill = panel.querySelector('.gpdt-progress-fill') as HTMLElement
+  const $progressLabel = panel.querySelector('.gpdt-progress-label') as HTMLElement
+  const $startBtn = panel.querySelector('.gpdt-start-btn') as HTMLButtonElement
+  const $pauseBtn = panel.querySelector('.gpdt-pause-btn') as HTMLButtonElement
+  const $resumeBtn = panel.querySelector('.gpdt-resume-btn') as HTMLButtonElement
+  const $stopBtn = panel.querySelector('.gpdt-stop-btn') as HTMLButtonElement
   const $minimize = panel.querySelector('.gpdt-minimize') as HTMLButtonElement
   const $close = panel.querySelector('.gpdt-close') as HTMLButtonElement
+
+  const setUIState = (newState: 'idle' | 'running' | 'paused'): void => {
+    state = newState
+    $startBtn.classList.toggle('gpdt-hidden', state !== 'idle')
+    $pauseBtn.classList.toggle('gpdt-hidden', state !== 'running')
+    $resumeBtn.classList.toggle('gpdt-hidden', state !== 'paused')
+    $stopBtn.classList.toggle('gpdt-hidden', state === 'idle')
+  }
 
   const updateUI = (progress: Progress): void => {
     $deleted.textContent = progress.deleted.toLocaleString()
 
     const elapsed = Date.now() - progress.startedAt
+    $elapsed.textContent = formatElapsed(elapsed)
+
     if (progress.deleted > 0 && elapsed > 0) {
       const rate = Math.round(progress.deleted / (elapsed / 60_000))
       $speed.textContent = rate.toLocaleString()
+
+      const remaining = MAX_COUNT - progress.deleted
+      if (remaining > 0 && rate > 0) {
+        const etaMs = (remaining / rate) * 60_000
+        $eta.textContent = formatEta(etaMs)
+      } else {
+        $eta.textContent = '—'
+      }
     }
 
-    $dot.className = `dot ${getStatusClass(progress.status)}`
+    // Progress bar
+    const pct = Math.min(100, (progress.deleted / MAX_COUNT) * 100)
+    $progressFill.style.width = `${pct}%`
+    $progressLabel.textContent = `${Math.round(pct)}%`
+
+    $dot.className = `gpdt-status-dot ${getStatusClass(progress.status)}`
     $statusText.textContent = getStatusText(progress.status)
 
     if (progress.status === 'done' || progress.status === 'error' || progress.status === 'idle') {
-      running = false
-      $toggle.textContent = '▶ Start'
-      $toggle.className = 'gpdt-btn gpdt-btn-start gpdt-toggle'
+      setUIState('idle')
+    } else if (progress.status === 'paused') {
+      setUIState('paused')
     }
   }
 
   const start = async (): Promise<void> => {
-    running = true
-    $toggle.textContent = '⏹ Stop'
-    $toggle.className = 'gpdt-btn gpdt-btn-stop gpdt-toggle'
+    setUIState('running')
     $speed.textContent = '—'
     $deleted.textContent = '0'
+    $elapsed.textContent = '0s'
+    $eta.textContent = '—'
+    $progressFill.style.width = '0%'
+    $progressLabel.textContent = '0%'
 
-    engine = new DeleteEngine({}, updateUI)
+    engine = new DeleteEngine({ maxCount: MAX_COUNT }, updateUI)
     const result = await engine.run()
 
     console.log(
@@ -251,17 +356,26 @@ const getStatusText = (status: Progress['status']): string => {
     )
   }
 
-  const stop = (): void => {
-    engine?.abort()
-    running = false
-    $toggle.textContent = '▶ Start'
-    $toggle.className = 'gpdt-btn gpdt-btn-start gpdt-toggle'
+  const pause = (): void => {
+    engine?.pause()
+    setUIState('paused')
   }
 
-  $toggle.addEventListener('click', () => {
-    if (running) stop()
-    else void start()
-  })
+  const resume = (): void => {
+    engine?.resume()
+    setUIState('running')
+  }
+
+  const stop = (): void => {
+    engine?.stop()
+    engine = null
+    setUIState('idle')
+  }
+
+  $startBtn.addEventListener('click', () => void start())
+  $pauseBtn.addEventListener('click', pause)
+  $resumeBtn.addEventListener('click', resume)
+  $stopBtn.addEventListener('click', stop)
 
   $minimize.addEventListener('click', () => {
     panel.classList.add('minimized')
