@@ -1,27 +1,53 @@
 import { type Config, DEFAULT_CONFIG } from './config'
 import { SELECTORS } from './selectors'
 import { $, $$, sleep, waitUntil } from './utils'
+import { EventEmitter } from './event-emitter'
+
+export type EngineStatus =
+  | 'idle'
+  | 'selecting'
+  | 'deleting'
+  | 'scrolling'
+  | 'paused'
+  | 'done'
+  | 'error'
 
 export interface Progress {
   deleted: number
   selected: number
-  status: 'idle' | 'selecting' | 'deleting' | 'scrolling' | 'done' | 'error'
+  status: EngineStatus
   startedAt: number
   error?: string
 }
 
 export type ProgressCallback = (progress: Progress) => void
 
+/** Events emitted by DeleteEngine */
+export interface EngineEvents {
+  progress: [Progress]
+  error: [Error]
+  done: [Progress]
+  paused: []
+  resumed: []
+}
+
 /**
  * Core deletion engine — shared between extension and standalone script.
+ *
+ * Supports three-state control: run → pause → resume / stop.
  */
-export class DeleteEngine {
+export class DeleteEngine extends EventEmitter<EngineEvents> {
   private config: Config
   private progress: Progress
   private onProgress?: ProgressCallback
-  private aborted = false
+
+  private stopped = false
+  private paused = false
+  private pausePromise: Promise<void> | null = null
+  private pauseResolve: (() => void) | null = null
 
   constructor(config: Partial<Config> = {}, onProgress?: ProgressCallback) {
+    super()
     this.config = { ...DEFAULT_CONFIG, ...config }
     this.onProgress = onProgress
     this.progress = {
@@ -32,31 +58,80 @@ export class DeleteEngine {
     }
   }
 
-  /** Stop the deletion process gracefully */
+  /** Pause the deletion process. Can be resumed with resume(). */
+  pause(): void {
+    if (this.paused || this.stopped) return
+    this.paused = true
+    this.pausePromise = new Promise<void>((resolve) => {
+      this.pauseResolve = resolve
+    })
+    this.progress.status = 'paused'
+    this.emitProgress()
+    this.emit('paused')
+  }
+
+  /** Resume a paused deletion process. */
+  resume(): void {
+    if (!this.paused) return
+    this.paused = false
+    this.pauseResolve?.()
+    this.pausePromise = null
+    this.pauseResolve = null
+    this.emit('resumed')
+  }
+
+  /** Stop the deletion process permanently. Cannot be resumed. */
+  stop(): void {
+    this.stopped = true
+    // Also unblock any pause wait
+    if (this.paused) {
+      this.paused = false
+      this.pauseResolve?.()
+      this.pausePromise = null
+      this.pauseResolve = null
+    }
+  }
+
+  /** @deprecated Use stop() instead. Kept for backward compatibility. */
   abort(): void {
-    this.aborted = true
+    this.stop()
+  }
+
+  /** Check if the engine is currently paused. */
+  get isPaused(): boolean {
+    return this.paused
+  }
+
+  /** Check if the engine has been stopped. */
+  get isStopped(): boolean {
+    return this.stopped
   }
 
   /** Run the full deletion loop */
   async run(): Promise<Progress> {
-    this.aborted = false
+    this.stopped = false
+    this.paused = false
     this.progress.startedAt = Date.now()
     this.progress.status = 'selecting'
-    this.emit()
+    this.emitProgress()
 
     try {
-      while (!this.aborted) {
+      while (!this.stopped) {
+        // Check for pause
+        await this.checkPause()
+        if (this.stopped) break
+
         const { count, lastCheckbox } = await this.selectBatch()
 
         if (count >= this.config.maxCount) {
           await this.deleteSelected()
         } else if (lastCheckbox) {
           this.progress.status = 'scrolling'
-          this.emit()
+          this.emitProgress()
           const { top } = lastCheckbox.getBoundingClientRect()
           await this.scrollBy(top)
           this.progress.status = 'selecting'
-          this.emit()
+          this.emitProgress()
         }
       }
     } catch (err) {
@@ -65,14 +140,18 @@ export class DeleteEngine {
       if (!msg.includes('Timed out')) {
         this.progress.status = 'error'
         this.progress.error = msg
-        this.emit()
+        this.emitProgress()
+        this.emit('error', err instanceof Error ? err : new Error(msg))
         console.error('[DeleteEngine]', err)
       }
     } finally {
       // Flush remaining selection
       await this.deleteSelected()
-      this.progress.status = this.aborted ? 'idle' : 'done'
-      this.emit()
+      this.progress.status = this.stopped ? 'idle' : 'done'
+      this.emitProgress()
+      if (this.progress.status === 'done') {
+        this.emit('done', { ...this.progress })
+      }
     }
 
     return this.progress
@@ -80,8 +159,17 @@ export class DeleteEngine {
 
   // --- Private helpers ---
 
-  private emit(): void {
-    this.onProgress?.({ ...this.progress })
+  /** Wait while paused. */
+  private async checkPause(): Promise<void> {
+    if (this.pausePromise) {
+      await this.pausePromise
+    }
+  }
+
+  private emitProgress(): void {
+    const snapshot = { ...this.progress }
+    this.onProgress?.(snapshot)
+    this.emit('progress', snapshot)
   }
 
   private getCount(): number {
@@ -113,7 +201,7 @@ export class DeleteEngine {
     await sleep(200)
     const newCount = this.getCount()
     this.progress.selected = newCount
-    this.emit()
+    this.emitProgress()
 
     console.log(`[DeleteEngine] Selected ${newCount} photos`)
     return { count: newCount, lastCheckbox: batch[batch.length - 1] ?? null }
@@ -124,7 +212,7 @@ export class DeleteEngine {
     if (count <= 0) return
 
     this.progress.status = 'deleting'
-    this.emit()
+    this.emitProgress()
     console.log(`[DeleteEngine] Deleting ${count} photos...`)
 
     const deleteBtn = $(SELECTORS.deleteButton) as HTMLElement | null
@@ -151,7 +239,7 @@ export class DeleteEngine {
 
     this.progress.deleted += count
     this.progress.selected = 0
-    this.emit()
+    this.emitProgress()
 
     // Scroll back to top for next batch
     this.getContainer().scrollTop = 0
@@ -161,7 +249,7 @@ export class DeleteEngine {
     const container = this.getContainer()
     await waitUntil(
       () => {
-        void container.scrollTop; // Read to ensure layout
+        void container.scrollTop // Read to ensure layout
         container.scrollBy(0, height)
         return waitUntil(
           () => $(SELECTORS.checkbox),

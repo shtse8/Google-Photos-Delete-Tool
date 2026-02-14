@@ -10,7 +10,8 @@
 
 type Listener<Args extends unknown[]> = (...args: Args) => void
 
-export class EventEmitter<EventMap extends Record<string, unknown[]>> {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export class EventEmitter<EventMap extends { [K in keyof EventMap]: unknown[] }> {
   private listeners = new Map<keyof EventMap, Set<Listener<unknown[]>>>()
 
   /** Subscribe to an event. Returns an unsubscribe function. */
