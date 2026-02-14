@@ -211,6 +211,20 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     const count = this.getCount()
     if (count <= 0) return
 
+    // In dry run mode, just record the count and deselect
+    if (this.config.dryRun) {
+      this.progress.deleted += count
+      this.progress.selected = 0
+      this.emitProgress()
+      console.log(`[DeleteEngine] Dry run: would delete ${count} photos (total: ${this.progress.deleted})`)
+
+      // Deselect all by clicking the selected checkboxes
+      const selected = $$(SELECTORS.checkbox.replace('false', 'true'))
+      selected.forEach(cb => (cb as HTMLElement).click())
+      await sleep(200)
+      return
+    }
+
     this.progress.status = 'deleting'
     this.emitProgress()
     console.log(`[DeleteEngine] Deleting ${count} photos...`)
