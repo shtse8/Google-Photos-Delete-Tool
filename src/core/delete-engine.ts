@@ -1,6 +1,6 @@
 import { type Config, DEFAULT_CONFIG } from './config'
-import { SELECTORS } from './selectors'
-import { $, $$, sleep, waitUntil } from './utils'
+import { SELECTOR_DEFS, queryOne, queryAll } from './selectors'
+import { sleep, waitUntil } from './utils'
 import { EventEmitter } from './event-emitter'
 import { DeletionLog } from './deletion-log'
 
@@ -180,12 +180,12 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
   }
 
   private getCount(): number {
-    const el = $(SELECTORS.counter)
+    const el = queryOne(SELECTOR_DEFS.counter)
     return el ? parseInt(el.textContent ?? '0', 10) || 0 : 0
   }
 
   private getContainer(): HTMLElement {
-    const el = $(SELECTORS.photoContainer) as HTMLElement | null
+    const el = queryOne(SELECTOR_DEFS.photoContainer) as HTMLElement | null
     if (!el) throw new Error('Photo container not found — are you on photos.google.com?')
     return el
   }
@@ -193,7 +193,7 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
   private async selectBatch(): Promise<{ count: number; lastCheckbox: Element | null }> {
     const checkboxes = await waitUntil(
       () => {
-        const els = $$(SELECTORS.checkbox)
+        const els = queryAll(SELECTOR_DEFS.checkbox)
         return els.length > 0 ? els : null
       },
       this.config.timeout,
@@ -228,7 +228,8 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
       console.log(`[DeleteEngine] Dry run: would delete ${count} photos (total: ${this.progress.deleted})`)
 
       // Deselect all by clicking the selected checkboxes
-      const selected = $$(SELECTORS.checkbox.replace('false', 'true'))
+      const checkedSelector = SELECTOR_DEFS.checkbox.primary.replace('false', 'true')
+      const selected = [...document.querySelectorAll(checkedSelector)]
       selected.forEach(cb => (cb as HTMLElement).click())
       await sleep(200)
       return
@@ -238,7 +239,7 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     this.emitProgress()
     console.log(`[DeleteEngine] Deleting ${count} photos...`)
 
-    const deleteBtn = $(SELECTORS.deleteButton) as HTMLElement | null
+    const deleteBtn = queryOne(SELECTOR_DEFS.deleteButton) as HTMLElement | null
     if (!deleteBtn) throw new Error('Delete button not found')
     deleteBtn.click()
 
@@ -277,7 +278,7 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
         void container.scrollTop // Read to ensure layout
         container.scrollBy(0, height)
         return waitUntil(
-          () => $(SELECTORS.checkbox),
+          () => queryOne(SELECTOR_DEFS.checkbox),
           500,
           this.config.pollDelay,
         ).catch(() => null)
