@@ -1,231 +1,101 @@
-<div align="center">
-
 # 🗑️ Google Photos Delete Tool
 
-### ⚡ The fastest way to bulk delete your Google Photos
-
 [![CI](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml)
-[![Chrome Web Store Version](https://img.shields.io/chrome-web-store/v/jiahfbbfpacpolomdjlpdpiljllcdenb)](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
-[![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/jiahfbbfpacpolomdjlpdpiljllcdenb)](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
-[![Chrome Web Store Rating](https://img.shields.io/chrome-web-store/rating/jiahfbbfpacpolomdjlpdpiljllcdenb)](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![GitHub stars](https://img.shields.io/github/stars/shtse8/Google-Photos-Delete-Tool?style=social)](https://github.com/shtse8/Google-Photos-Delete-Tool)
+[![Release](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ggkelpdpjkmoghdahpnlblkodamacmko?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/google-photos-delete-tool/ggkelpdpjkmoghdahpnlblkodamacmko)
 
-**[Install](#-installation)** · **[Features](#-features)** · **[Performance](#-performance)** · **[Configuration](#-configuration)** · **[FAQ](#-faq)** · **[Contributing](#-contributing)**
+**The fastest way to bulk delete your Google Photos — up to 25× faster than manual deletion.**
 
-</div>
-
----
-
-## 📖 Overview
-
-A powerful, efficient tool to bulk delete photos from Google Photos. Choose the method that works best for you — **Chrome extension**, **userscript**, **bookmarklet**, or **script injection**.
-
-Unlike manual deletion or timer-based scripts, this tool uses intelligent selector-based awaiting for optimal performance and reliability across all network conditions.
+Google Photos doesn't provide a "delete all" button. This tool automates the tedious process of selecting and deleting photos in batches, so you can reclaim your storage in minutes instead of hours.
 
 ---
 
 ## ✨ Features
 
-- 🎯 **Smart Selection** — Selector-based awaiting instead of unreliable timers
-- 🔄 **Auto-Scrolling** — Automatically processes your entire library
-- 📦 **Batch Processing** — Deletes up to 10,000 photos per run
-- ⚡ **Blazing Fast** — Up to 25x faster than manual deletion
-- 📊 **Live Stats** — Real-time progress, speed, and deletion count
-- 🛑 **Start/Stop** — Full control at any time
-- 💪 **Resilient** — Graceful error handling and recovery
-- 🔧 **Configurable** — Set limits via popup UI or config
-- 🌗 **Dark UI** — Minimal, non-intrusive floating panel (userscript)
+- 🚀 **Batch Deletion** — Selects and deletes photos in large batches automatically
+- ⏸️ **Pause / Resume / Stop** — Full three-state control over the deletion process
+- 🧪 **Dry Run Mode** — Count your photos without deleting anything
+- 📊 **Live Stats Dashboard** — Deletion count, rate per minute, elapsed time, and ETA
+- 🌗 **Auto Dark / Light Mode** — Adapts to your system preference
+- 🔄 **Resilient Selectors** — Fallback selectors when Google updates their UI
+- 📈 **Smart Rate Tracking** — Sliding window rate calculation for accurate ETAs
+- 🔁 **Exponential Backoff** — Intelligent retry logic for reliability
+- 🧩 **Multiple Formats** — Chrome extension, userscript, bookmarklet, or console paste
 
----
+## 📸 Screenshot
+
+> *Coming soon — see `docs/screenshot.png`*
 
 ## 📦 Installation
 
-### Method 1: Chrome Extension ⭐ Recommended
+### Chrome Extension (Recommended)
 
-Install directly from the Chrome Web Store:
-
-**[➡️ Install from Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)**
-
-1. Click the link above → **Add to Chrome**
+1. Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/ggkelpdpjkmoghdahpnlblkodamacmko)
 2. Navigate to [photos.google.com](https://photos.google.com/?hl=en)
-3. Click the extension icon → **Start** 🎉
+3. Click the extension icon and press **Start**
 
-<details>
-<summary>Manual installation (Developer mode)</summary>
+### Manual Install (Developer Mode)
 
-```bash
-git clone https://github.com/shtse8/Google-Photos-Delete-Tool.git
-cd Google-Photos-Delete-Tool
-bun install && bun run build
-```
+1. Download the latest `google-photos-delete-tool.zip` from [Releases](https://github.com/shtse8/Google-Photos-Delete-Tool/releases)
+2. Go to `chrome://extensions/`
+3. Enable **Developer mode** (top-right toggle)
+4. Click **Load unpacked** and select the extracted folder
+5. Navigate to [photos.google.com](https://photos.google.com/?hl=en)
 
-1. Open `chrome://extensions/` → Enable **Developer mode**
-2. Click **Load unpacked** → Select the `dist/extension` folder
-3. Navigate to Google Photos → Click the extension icon → **Start**
-
-</details>
-
----
-
-### Method 2: Userscript (Tampermonkey / Violentmonkey)
-
-Install with your favourite userscript manager:
-
-**[➡️ Install Userscript](https://github.com/shtse8/Google-Photos-Delete-Tool/releases/latest/download/google-photos-delete.user.js)**
+### Userscript (Tampermonkey / Violentmonkey)
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/)
-2. Click the link above — your userscript manager will prompt to install
-3. Navigate to [photos.google.com](https://photos.google.com/?hl=en)
-4. A floating control panel appears in the bottom-right corner → **Start** 🎉
+2. Download the latest [`google-photos-delete.user.js`](https://github.com/shtse8/Google-Photos-Delete-Tool/releases/latest/download/google-photos-delete.user.js)
+3. Navigate to [photos.google.com](https://photos.google.com/?hl=en) — a floating panel will appear
 
-The userscript auto-updates when new releases are published.
+### Bookmarklet
 
----
-
-### Method 3: Bookmarklet
-
-No extensions needed — works in any modern browser.
-
-1. Download [`bookmarklet.txt`](https://github.com/shtse8/Google-Photos-Delete-Tool/releases/latest/download/bookmarklet.txt) from the latest release
+1. Download `bookmarklet.txt` from [Releases](https://github.com/shtse8/Google-Photos-Delete-Tool/releases)
 2. Create a new bookmark in your browser
-3. Paste the contents of `bookmarklet.txt` as the bookmark **URL**
-4. Navigate to [photos.google.com](https://photos.google.com/?hl=en) → Click the bookmark
+3. Paste the content as the bookmark URL
+4. Navigate to [photos.google.com](https://photos.google.com/?hl=en) and click the bookmark
 
-> **Tip**: Or open [`bookmarklet.html`](dist/bookmarklet.html) after building and drag the link to your bookmarks bar.
-
----
-
-### Method 4: Script Injection (Console Paste)
-
-For one-off use or quick testing.
+### Console (DevTools)
 
 1. Navigate to [photos.google.com](https://photos.google.com/?hl=en)
-2. Open DevTools (`F12` or `Ctrl+Shift+I`) → **Console** tab
+2. Open DevTools (`F12` or `Ctrl+Shift+J`)
 3. Copy the contents of [`inject.js`](https://github.com/shtse8/Google-Photos-Delete-Tool/releases/latest/download/inject.js) and paste into the console
-4. Press **Enter** 🚀
+4. Control with: `__gpdt_pause()`, `__gpdt_resume()`, `__gpdt_stop()`
 
-> **Stop early**: Run `window.__gpdt_stop()` in the console.
+## 🚀 Usage
 
-<details>
-<summary>📋 Step-by-step with screenshots</summary>
+### Chrome Extension
 
-#### Step 1: Sign in to Google
-![Google Account Sign-in Page](images/google-signin-page.jpg)
+1. Go to [photos.google.com](https://photos.google.com/?hl=en)
+2. Click the 🗑️ extension icon in your toolbar
+3. Configure options:
+   - **Max photos** — How many photos to delete (default: 10,000)
+   - **Dry run** — Toggle to count photos without deleting
+4. Click **▶ Start**
+5. Watch the live stats: deletion count, rate, elapsed time, ETA
+6. Use **⏸ Pause**, **▶ Resume**, or **⏹ Stop** as needed
 
-#### Step 2: Go to Google Photos
-![Google Photos Page](images/google-photos-page.jpg)
+### Userscript / Bookmarklet / Console
 
-#### Step 3: Open Developer Tools
-Press `Ctrl+Shift+I` or `F12`, or right-click → **Inspect**.
-
-![Chrome Developer Tools Menu](images/chrome-menu-popup.jpg)
-
-#### Step 4: Open Console Tab
-![Chrome Console](images/chrome-console.jpg)
-
-#### Step 5: Paste & Run
-![Code in Console](images/code-in-console.jpg)
-
-</details>
-
----
-
-## 📊 Performance
-
-### Speed Comparison
-
-| Method | Photos/Minute | Relative Speed |
-|--------|--------------|----------------|
-| 🐌 Manual Deletion | ~20 | 1x |
-| 📜 Average Script | ~100 | 5x |
-| ⚡ **This Tool** | **~500*** | **25x** |
-
-<sub>*Actual performance varies based on network and hardware</sub>
-
-### Key Metrics
-
-- **Batch Size**: Up to 10,000 photos per operation
-- **Success Rate**: >99% with automatic retry
-- **Resource Usage**: Low CPU/memory via smart polling
-- **API Efficiency**: Minimised calls to avoid rate limiting
-
-### 🚀 Performance Tip: Block Images
-
-For massive speed improvements, block image loading on Google Photos:
-
-1. Click the **padlock icon** in the address bar
-2. Go to **Site settings** → **Images** → **Block**
-3. Reload Google Photos
-
-<div align="center">
-  <img src="images/image_block.png" alt="Block images in Chrome" width="600">
-</div>
-
-This dramatically reduces CPU, RAM, and network usage.
-
----
+A floating panel or console output provides the same controls and stats.
 
 ## ⚙️ Configuration
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `maxCount` | `10,000` | Maximum photos to delete per run |
-| `timeout` | `600,000` ms | Timeout for waiting operations |
-| `pollDelay` | `300` ms | Delay between poll attempts |
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `maxCount` | `number` | `10,000` | Maximum photos to delete per run |
+| `dryRun` | `boolean` | `false` | Count photos without deleting |
+| `timeout` | `number` | `600,000` | Timeout for DOM operations (ms) |
+| `pollDelay` | `number` | `300` | Delay between DOM polls (ms) |
 
-**Chrome extension**: Configure via the popup UI.
-**Script / Userscript**: Edit the config in the source or pass options to `DeleteEngine`.
+## 🏗️ Development
 
----
+### Prerequisites
 
-## ❓ FAQ
-
-<details>
-<summary><b>Is this tool safe to use?</b></summary>
-
-Yes, but always exercise caution with bulk deletions. Make sure you have backups of important photos. The tool interacts only with Google Photos' public web interface — no API keys or OAuth required.
-</details>
-
-<details>
-<summary><b>Can I recover deleted photos?</b></summary>
-
-Yes! Google Photos keeps deleted items in the **Trash for 60 days**. You can restore them anytime within this period.
-</details>
-
-<details>
-<summary><b>Why does the script pause or slow down?</b></summary>
-
-This can happen due to network latency or Google's rate limiting. The tool handles this gracefully and continues automatically.
-</details>
-
-<details>
-<summary><b>How many photos can I delete at once?</b></summary>
-
-By default, the limit is 10,000 photos per run. You can change this in the extension popup or config.
-</details>
-
-<details>
-<summary><b>Does this work on mobile?</b></summary>
-
-No. Desktop browsers only — mobile browsers don't support the required developer features.
-</details>
-
-<details>
-<summary><b>Will this delete photos from my device?</b></summary>
-
-No. It only deletes from Google Photos cloud storage. Local photos on your device are not affected.
-</details>
-
-<details>
-<summary><b>The tool says "Photo container not found"</b></summary>
-
-Make sure you're on the English version of Google Photos: [photos.google.com/?hl=en](https://photos.google.com/?hl=en). Google may also update their UI, which can temporarily break selectors — check for updates.
-</details>
-
----
-
-## 🛠️ Development
+- [Bun](https://bun.sh/) (package manager and runtime)
+- [Node.js](https://nodejs.org/) 18+ (for TypeScript tooling)
 
 ### Setup
 
@@ -233,104 +103,109 @@ Make sure you're on the English version of Google Photos: [photos.google.com/?hl
 git clone https://github.com/shtse8/Google-Photos-Delete-Tool.git
 cd Google-Photos-Delete-Tool
 bun install
-bun run build
-bun run typecheck
 ```
 
-### Project Structure
+### Commands
+
+```bash
+bun run build       # Build all targets
+bun run typecheck   # TypeScript type checking
+bun run lint        # ESLint
+bun run test        # Run tests (Vitest)
+bun run test:watch  # Run tests in watch mode
+bun run dev         # Build with watch mode
+bun run zip         # Create extension ZIP for upload
+```
+
+### Build Targets
+
+| Target | Output | Description |
+|--------|--------|-------------|
+| Chrome Extension | `dist/extension/` | MV3 extension with popup, content script, background worker |
+| Standalone | `dist/standalone/inject.js` | Paste into DevTools console |
+| Userscript | `dist/userscript/*.user.js` | Tampermonkey / Violentmonkey |
+| Bookmarklet | `dist/bookmarklet.txt` | `javascript:` URL |
+| Bookmarklet HTML | `dist/bookmarklet.html` | Draggable install page |
+
+### Architecture
 
 ```
 src/
-├── core/               Shared deletion engine
-│   ├── config.ts           Default configuration
-│   ├── selectors.ts        Google Photos CSS selectors
-│   ├── delete-engine.ts    Core logic
-│   ├── utils.ts            Helpers (sleep, waitUntil, $, $$)
-│   └── index.ts            Barrel export
-├── extension/          Chrome extension (MV3)
-│   ├── manifest.json
-│   ├── background.ts
-│   ├── content.ts
-│   └── popup/              Popup UI (html, css, ts)
-├── standalone/         Console injection script
-│   └── inject.ts
-├── userscript/         Tampermonkey / Violentmonkey
-│   └── google-photos-delete.user.ts
-└── bookmarklet/        Bookmarklet HTML template
-    └── template.html
+├── core/                   # Shared engine (framework-agnostic)
+│   ├── config.ts           # Configuration types and defaults
+│   ├── delete-engine.ts    # Main deletion engine with EventEmitter
+│   ├── deletion-log.ts     # Rate tracking and ETA estimation
+│   ├── event-emitter.ts    # Typed EventEmitter (zero deps)
+│   ├── selectors.ts        # DOM selectors with fallbacks
+│   ├── utils.ts            # Sleep, waitUntil, retry, formatters
+│   └── index.ts            # Barrel exports
+├── extension/              # Chrome extension
+│   ├── background.ts       # Service worker (badge, icon click)
+│   ├── content.ts          # Content script (runs DeleteEngine)
+│   ├── popup/              # Extension popup UI
+│   │   ├── popup.html
+│   │   ├── popup.css
+│   │   └── popup.ts
+│   ├── manifest.json       # MV3 manifest
+│   └── icons/              # Extension icons
+├── standalone/inject.ts    # Console paste script
+├── userscript/             # Tampermonkey/Violentmonkey
+└── bookmarklet/            # Bookmarklet template
 ```
 
-### Build Outputs
+## ❓ FAQ
 
-```
-dist/
-├── extension/          → Load as unpacked extension
-├── standalone/
-│   └── inject.js       → Paste into DevTools console
-├── userscript/
-│   └── google-photos-delete.user.js  → Install in Tampermonkey
-├── bookmarklet.txt     → Bookmark URL
-└── bookmarklet.html    → Draggable bookmark page
-```
+<details>
+<summary><strong>Is this safe to use?</strong></summary>
 
-### Scripts
+Yes. The tool only automates clicks that you would normally do manually — selecting photos and clicking "Move to trash". Photos go to your Google Photos trash, where they remain for 60 days before permanent deletion. You can restore them anytime from trash.
+</details>
 
-| Command | Description |
-|---------|-------------|
-| `bun run build` | Build all targets |
-| `bun run typecheck` | TypeScript type checking |
-| `bun run lint` | ESLint |
-| `bun run release` | Bump version with standard-version |
-| `bun run zip` | Create extension ZIP for Chrome Web Store |
+<details>
+<summary><strong>Why do I need this?</strong></summary>
 
-### Releasing
+Google Photos has no "Select All" or "Delete All" feature. To delete thousands of photos, you'd need to manually select them in batches of ~500 and delete each batch. This tool automates that process.
+</details>
 
-```bash
-bun run release        # Bumps version, creates git tag
-git push --follow-tags # GitHub Actions builds & publishes
-```
+<details>
+<summary><strong>What happens if Google updates their UI?</strong></summary>
 
----
+The tool uses resilient selectors with fallbacks. If the primary CSS selector fails, it tries alternative selectors and logs a warning. If all selectors fail, the tool will stop gracefully with an error message.
+</details>
+
+<details>
+<summary><strong>Can I undo a deletion?</strong></summary>
+
+Yes! Deleted photos go to Google Photos trash and stay there for 60 days. Go to [photos.google.com/trash](https://photos.google.com/trash) to restore them.
+</details>
+
+<details>
+<summary><strong>How fast is it?</strong></summary>
+
+Typically 200–500 photos per minute, depending on your internet speed and Google's rate limiting. That's roughly 25× faster than manual selection and deletion.
+</details>
+
+<details>
+<summary><strong>Does it work with Google One / shared storage?</strong></summary>
+
+Yes. It deletes photos from whatever view you're currently on in Google Photos.
+</details>
 
 ## 🤝 Contributing
 
-Contributions are welcome!
+Contributions are welcome! Please:
 
-- 🐛 [Report bugs](https://github.com/shtse8/Google-Photos-Delete-Tool/issues)
-- 💡 [Suggest features](https://github.com/shtse8/Google-Photos-Delete-Tool/issues)
-- 🔧 [Submit pull requests](https://github.com/shtse8/Google-Photos-Delete-Tool/pulls)
-- ⭐ Star this repo if you find it useful!
-
----
-
-## ⚠️ Disclaimer
-
-- **Use responsibly** — always verify what you're deleting
-- **Backup first** — ensure important photos are saved elsewhere
-- **UI changes** — Google may update their interface, requiring selector updates
-- **Not affiliated** with Google
-- **No liability** — developers are not responsible for data loss or account issues
-
----
-
-## 🔒 Privacy
-
-This tool runs entirely in your browser. It does not collect, transmit, or store any personal data. No analytics, no telemetry, no third-party services.
-
-See the [Privacy Policy](PRIVACY.md) if applicable.
-
----
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feat/my-feature`)
+3. Make your changes
+4. Run `bun run typecheck && bun run lint && bun run test && bun run build`
+5. Commit with [conventional commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `refactor:`, etc.)
+6. Open a Pull Request
 
 ## 📄 License
 
-MIT © [Kyle Tse](https://github.com/shtse8)
+[MIT](LICENSE) © [Kyle Tse](https://github.com/shtse8)
 
-See [LICENSE](LICENSE) for details.
+## 🙏 Credits
 
----
-
-<div align="center">
-
-**💖 Found this helpful? Give it a ⭐ and share it!**
-
-</div>
+Originally created by [mrishab](https://github.com/mrishab/google-photos-delete-tool). Forked, modernized, and maintained by [Kyle Tse](https://github.com/shtse8).
