@@ -33,3 +33,64 @@ export const formatElapsed = (ms: number): string => {
   const seconds = totalSeconds % 60;
   return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 };
+
+/** Format milliseconds as human-friendly ETA string */
+export const formatEta = (ms: number): string => {
+  if (ms <= 0) return '0s';
+  const totalSeconds = Math.ceil(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+};
+
+/**
+ * Retry a function with exponential backoff.
+ *
+ * @param fn - Function to retry
+ * @param options - Retry options
+ * @returns Result of the function
+ */
+export const retryWithBackoff = async <T>(
+  fn: () => T | Promise<T>,
+  options: {
+    maxRetries?: number
+    baseDelay?: number
+    maxDelay?: number
+    factor?: number
+  } = {},
+): Promise<T> => {
+  const {
+    maxRetries = 3,
+    baseDelay = 1000,
+    maxDelay = 30_000,
+    factor = 2,
+  } = options;
+
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+
+      if (attempt >= maxRetries) break;
+
+      const delay = Math.min(baseDelay * factor ** attempt, maxDelay);
+      const jitter = delay * (0.5 + Math.random() * 0.5);
+
+      console.warn(
+        `[Retry] Attempt ${attempt + 1}/${maxRetries} failed, retrying in ${Math.round(jitter)}ms...`,
+        err,
+      );
+
+      await sleep(jitter);
+    }
+  }
+
+  throw lastError;
+};
