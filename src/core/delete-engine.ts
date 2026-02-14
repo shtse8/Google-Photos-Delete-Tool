@@ -2,6 +2,7 @@ import { type Config, DEFAULT_CONFIG } from './config'
 import { SELECTORS } from './selectors'
 import { $, $$, sleep, waitUntil } from './utils'
 import { EventEmitter } from './event-emitter'
+import { DeletionLog } from './deletion-log'
 
 export type EngineStatus =
   | 'idle'
@@ -29,6 +30,8 @@ export interface EngineEvents {
   done: [Progress]
   paused: []
   resumed: []
+  /** Emitted after each batch deletion with the batch count */
+  deleted: [number]
 }
 
 /**
@@ -45,6 +48,9 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
   private paused = false
   private pausePromise: Promise<void> | null = null
   private pauseResolve: (() => void) | null = null
+
+  /** Deletion log for rate tracking and ETA estimation. */
+  readonly log = new DeletionLog()
 
   constructor(config: Partial<Config> = {}, onProgress?: ProgressCallback) {
     super()
@@ -113,6 +119,7 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     this.paused = false
     this.progress.startedAt = Date.now()
     this.progress.status = 'selecting'
+    this.log.start()
     this.emitProgress()
 
     try {
@@ -215,7 +222,9 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     if (this.config.dryRun) {
       this.progress.deleted += count
       this.progress.selected = 0
+      this.log.record(count)
       this.emitProgress()
+      this.emit('deleted', count)
       console.log(`[DeleteEngine] Dry run: would delete ${count} photos (total: ${this.progress.deleted})`)
 
       // Deselect all by clicking the selected checkboxes
@@ -253,7 +262,9 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
 
     this.progress.deleted += count
     this.progress.selected = 0
+    this.log.record(count)
     this.emitProgress()
+    this.emit('deleted', count)
 
     // Scroll back to top for next batch
     this.getContainer().scrollTop = 0

@@ -3,3 +3,4 @@ export { SELECTORS } from './selectors';
 export { DeleteEngine, type Progress, type ProgressCallback, type EngineStatus, type EngineEvents } from './delete-engine';
 export { sleep, waitUntil, $, $$, formatElapsed } from './utils';
 export { EventEmitter } from './event-emitter';
+export { DeletionLog, type DeletionEntry } from './deletion-log';
