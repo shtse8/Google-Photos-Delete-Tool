@@ -8,8 +8,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run scripts/build.ts --watch",
-    "build": "bun run scripts/build.ts && bun run build:inject",
-    "build:inject": "vite build --config vite.inject.config.ts",
+    "build": "bun run scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",

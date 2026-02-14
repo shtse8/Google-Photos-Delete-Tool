@@ -33,6 +33,8 @@ jobs:
           files: |
             google-photos-delete-tool.zip
             dist/standalone/inject.js
+            dist/userscript/google-photos-delete.user.js
+            dist/bookmarklet.txt
           generate_release_notes: true
 
       # Chrome Web Store publish (requires secrets)
@@ -50,7 +52,6 @@ jobs:
             --client-secret ${{ secrets.CHROME_CLIENT_SECRET }} \
             --refresh-token ${{ secrets.CHROME_REFRESH_TOKEN }}
           
-          # Auto-publish (remove this step if you want manual review)
           bun x chrome-webstore-upload-cli publish \
             --extension-id ${{ secrets.CHROME_EXTENSION_ID }} \
             --client-id ${{ secrets.CHROME_CLIENT_ID }} \
