@@ -7,30 +7,106 @@
   <title>Google Photos Delete Tool</title>
 </head>
 <body>
-  <div class="container">
-    <h1>🗑️ Delete Tool</h1>
+  <main class="card">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-icon">🗑️</div>
+      <div class="header-text">
+        <h1 class="header-title">Delete Tool</h1>
+        <p class="header-subtitle">Google Photos</p>
+      </div>
+    </header>
 
-    <div class="status" id="status">Ready</div>
-
-    <div class="progress-bar">
-      <div class="progress-fill" id="progress-fill"></div>
+    <!-- Status indicator -->
+    <div class="status-bar" id="status-bar">
+      <span class="status-dot" id="status-dot"></span>
+      <span class="status-text" id="status-text">Ready</span>
     </div>
-    <div class="progress-text" id="progress-text">0 deleted</div>
 
-    <div class="settings">
-      <label>
-        Max photos
-        <input type="number" id="max-count" value="10000" min="1" max="100000" step="100">
-      </label>
+    <!-- Error display -->
+    <div class="error-bar hidden" id="error-bar">
+      <span class="error-icon">⚠️</span>
+      <span class="error-text" id="error-text"></span>
     </div>
 
-    <div class="stats" id="stats"></div>
+    <!-- Stats dashboard -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-deleted">0</div>
+        <div class="stat-label">Deleted</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-rate">—</div>
+        <div class="stat-label">Per min</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-elapsed">0s</div>
+        <div class="stat-label">Elapsed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-eta">—</div>
+        <div class="stat-label">ETA</div>
+      </div>
+    </div>
 
-    <button class="btn btn-start" id="start-btn">▶ Start</button>
-    <button class="btn btn-stop hidden" id="stop-btn">⏹ Stop</button>
+    <!-- Progress bar -->
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="progress-label" id="progress-label">0%</div>
+    </div>
 
-    <div class="note" id="note"></div>
-  </div>
+    <!-- Settings -->
+    <div class="settings" id="settings-panel">
+      <div class="setting-row">
+        <label class="setting-label" for="max-count">Max photos</label>
+        <input
+          type="number"
+          id="max-count"
+          class="setting-input"
+          value="10000"
+          min="1"
+          max="100000"
+          step="100"
+          aria-label="Maximum number of photos to delete"
+        >
+      </div>
+      <div class="setting-row">
+        <label class="setting-label" for="dry-run">
+          Dry run
+          <span class="setting-hint">Count only, no deletion</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="dry-run" aria-label="Enable dry run mode">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn btn-primary" id="start-btn" aria-label="Start deleting">
+        <span class="btn-icon">▶</span>
+        <span class="btn-text">Start</span>
+      </button>
+      <button class="btn btn-warning hidden" id="pause-btn" aria-label="Pause">
+        <span class="btn-icon">⏸</span>
+        <span class="btn-text">Pause</span>
+      </button>
+      <button class="btn btn-primary hidden" id="resume-btn" aria-label="Resume">
+        <span class="btn-icon">▶</span>
+        <span class="btn-text">Resume</span>
+      </button>
+      <button class="btn btn-danger hidden" id="stop-btn" aria-label="Stop">
+        <span class="btn-icon">⏹</span>
+        <span class="btn-text">Stop</span>
+      </button>
+    </div>
+
+    <!-- Note area -->
+    <div class="note hidden" id="note" role="alert"></div>
+  </main>
 
   <script src="popup.js"></script>
 </body>
