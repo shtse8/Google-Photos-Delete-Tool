@@ -3,33 +3,51 @@ import { DeleteEngine, type Progress } from '../core'
 let engine: DeleteEngine | null = null
 
 const reportProgress = (progress: Progress): void => {
-  // Send to background for badge update
+  // Send to background for badge update and popup relay
   chrome.runtime.sendMessage({ type: 'progress', data: progress })
   // Log to console
   const { deleted, selected, status } = progress
   console.log(`[Google Photos Delete] ${status} — ${deleted} deleted, ${selected} selected`)
 }
 
-const start = (maxCount: number): void => {
+interface StartOptions {
+  maxCount?: number
+  dryRun?: boolean
+}
+
+const start = ({ maxCount = 10_000, dryRun = false }: StartOptions): void => {
   if (engine) {
     console.warn('[Google Photos Delete] Already running — stop first')
     return
   }
 
-  engine = new DeleteEngine({ maxCount }, (progress) => {
+  engine = new DeleteEngine({ maxCount, dryRun }, (progress) => {
     reportProgress(progress)
     if (progress.status === 'done' || progress.status === 'error') {
       engine = null
     }
   })
 
-  console.log(`[Google Photos Delete] Starting — target: ${maxCount} photos`)
+  const mode = dryRun ? '(dry run) ' : ''
+  console.log(`[Google Photos Delete] Starting ${mode}— target: ${maxCount} photos`)
   engine.run()
+}
+
+const pause = (): void => {
+  if (!engine) return
+  engine.pause()
+  console.log('[Google Photos Delete] Paused')
+}
+
+const resume = (): void => {
+  if (!engine) return
+  engine.resume()
+  console.log('[Google Photos Delete] Resumed')
 }
 
 const stop = (): void => {
   if (!engine) return
-  engine.abort()
+  engine.stop()
   engine = null
   console.log('[Google Photos Delete] Stopped')
 }
@@ -38,7 +56,15 @@ const stop = (): void => {
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   switch (message.action) {
     case 'start':
-      start(message.maxCount ?? 10_000)
+      start({ maxCount: message.maxCount, dryRun: message.dryRun })
+      sendResponse({ ok: true })
+      break
+    case 'pause':
+      pause()
+      sendResponse({ ok: true })
+      break
+    case 'resume':
+      resume()
       sendResponse({ ok: true })
       break
     case 'stop':
@@ -46,11 +72,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse({ ok: true })
       break
     case 'toggle':
-      if (engine) { stop(); } else { start(message.maxCount ?? 10_000); }
+      if (engine) {
+        stop()
+      } else {
+        start({ maxCount: message.maxCount, dryRun: message.dryRun })
+      }
       sendResponse({ ok: true })
       break
     case 'status':
-      sendResponse({ running: !!engine })
+      sendResponse({
+        running: !!engine,
+        paused: engine?.isPaused ?? false,
+      })
       break
   }
 })
