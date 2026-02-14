@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build, Release & Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Create extension ZIP
+        run: cd dist/extension && zip -r ../../google-photos-delete-tool.zip .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            google-photos-delete-tool.zip
+            dist/standalone/inject.js
+          generate_release_notes: true
+
+      # Chrome Web Store publish (requires secrets)
+      - name: Publish to Chrome Web Store
+        if: >-
+          secrets.CHROME_EXTENSION_ID != '' &&
+          secrets.CHROME_CLIENT_ID != '' &&
+          secrets.CHROME_CLIENT_SECRET != '' &&
+          secrets.CHROME_REFRESH_TOKEN != ''
+        run: |
+          bun x chrome-webstore-upload-cli upload \
+            --source google-photos-delete-tool.zip \
+            --extension-id ${{ secrets.CHROME_EXTENSION_ID }} \
+            --client-id ${{ secrets.CHROME_CLIENT_ID }} \
+            --client-secret ${{ secrets.CHROME_CLIENT_SECRET }} \
+            --refresh-token ${{ secrets.CHROME_REFRESH_TOKEN }}
+          
+          # Auto-publish (remove this step if you want manual review)
+          bun x chrome-webstore-upload-cli publish \
+            --extension-id ${{ secrets.CHROME_EXTENSION_ID }} \
+            --client-id ${{ secrets.CHROME_CLIENT_ID }} \
+            --client-secret ${{ secrets.CHROME_CLIENT_SECRET }} \
+            --refresh-token ${{ secrets.CHROME_REFRESH_TOKEN }}
