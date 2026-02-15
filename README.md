@@ -4,7 +4,7 @@
 [![Release](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ggkelpdpjkmoghdahpnlblkodamacmko?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/google-photos-delete-tool/ggkelpdpjkmoghdahpnlblkodamacmko)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jiahfbbfpacpolomdjlpdpiljllcdenb?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
 
 **The fastest way to bulk delete your Google Photos — up to 25× faster than manual deletion.**
 
@@ -32,7 +32,7 @@ Google Photos doesn't provide a "delete all" button. This tool automates the ted
 
 ### Chrome Extension (Recommended)
 
-1. Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/ggkelpdpjkmoghdahpnlblkodamacmko)
+1. Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
 2. Navigate to [photos.google.com](https://photos.google.com/?hl=en)
 3. Click the extension icon and press **Start**
 
