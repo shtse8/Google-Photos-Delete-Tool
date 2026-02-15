@@ -1,8 +1,8 @@
 {
   "name": "google-photos-delete-tool",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
-  "description": "Bulk delete photos from Google Photos — Chrome extension & standalone script",
+  "description": "Bulk delete photos from Google Photos \u2014 Chrome extension & standalone script",
   "author": "Kyle Tse <shtse8@gmail.com>",
   "license": "MIT",
   "type": "module",
