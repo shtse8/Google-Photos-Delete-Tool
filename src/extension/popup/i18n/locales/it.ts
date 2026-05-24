@@ -26,8 +26,8 @@ const it: Translations = {
   settings: {
     sectionLabel: 'Impostazioni',
     maxCount: {
-      label: 'Foto max',
-      hint: 'Dimensione lotto e tetto',
+      label: 'Foto per lotto',
+      hint: 'Seleziona ed elimina in ciclo fino a svuotare la galleria',
     },
     dryRun: {
       label: 'Prova a vuoto',

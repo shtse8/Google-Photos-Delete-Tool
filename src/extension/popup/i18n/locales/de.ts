@@ -26,8 +26,8 @@ const de: Translations = {
   settings: {
     sectionLabel: 'Einstellungen',
     maxCount: {
-      label: 'Max. Fotos',
-      hint: 'Stapelgröße und Obergrenze',
+      label: 'Fotos pro Stapel',
+      hint: 'Auswahl und Löschung in Schleife bis die Galerie leer ist',
     },
     dryRun: {
       label: 'Testlauf',

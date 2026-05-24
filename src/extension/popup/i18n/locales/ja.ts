@@ -26,8 +26,8 @@ const ja: Translations = {
   settings: {
     sectionLabel: '設定',
     maxCount: {
-      label: '最大枚数',
-      hint: 'バッチサイズと上限',
+      label: '1回あたりの枚数',
+      hint: 'ギャラリーが空になるまで選択と削除を繰り返します',
     },
     dryRun: {
       label: 'テスト実行',

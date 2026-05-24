@@ -26,8 +26,8 @@ const en: Translations = {
   settings: {
     sectionLabel: 'Settings',
     maxCount: {
-      label: 'Max photos',
-      hint: 'Batch size and run cap',
+      label: 'Photos per batch',
+      hint: 'Select & delete in loops until the gallery is empty',
     },
     dryRun: {
       label: 'Dry run',

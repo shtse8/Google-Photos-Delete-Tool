@@ -26,8 +26,8 @@ const nl: Translations = {
   settings: {
     sectionLabel: 'Instellingen',
     maxCount: {
-      label: 'Max. foto’s',
-      hint: 'Batchgrootte en plafond',
+      label: 'Foto’s per batch',
+      hint: 'Selecteert en wist in lussen tot de galerij leeg is',
     },
     dryRun: {
       label: 'Proefrit',

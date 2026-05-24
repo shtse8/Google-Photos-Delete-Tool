@@ -26,8 +26,8 @@ const fr: Translations = {
   settings: {
     sectionLabel: 'Réglages',
     maxCount: {
-      label: 'Photos max.',
-      hint: 'Taille de lot et plafond',
+      label: 'Photos par lot',
+      hint: 'Sélection puis suppression en boucle jusqu’à la fin',
     },
     dryRun: {
       label: 'Mode test',

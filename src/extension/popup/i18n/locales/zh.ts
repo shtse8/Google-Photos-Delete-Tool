@@ -26,8 +26,8 @@ const zh: Translations = {
   settings: {
     sectionLabel: '设置',
     maxCount: {
-      label: '最多照片',
-      hint: '批量大小与上限',
+      label: '每批照片数',
+      hint: '循环选择与删除,直至清空相册',
     },
     dryRun: {
       label: '试运行',

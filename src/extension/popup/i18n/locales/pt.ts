@@ -26,8 +26,8 @@ const pt: Translations = {
   settings: {
     sectionLabel: 'Ajustes',
     maxCount: {
-      label: 'Fotos máx.',
-      hint: 'Tamanho do lote e teto',
+      label: 'Fotos por lote',
+      hint: 'Seleciona e exclui em laço até esvaziar a galeria',
     },
     dryRun: {
       label: 'Simulação',
