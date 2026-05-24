@@ -161,7 +161,7 @@ const saveSettings = (): void => {
 const sendToContent = async (message: Record<string, unknown>): Promise<unknown> => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
   if (!tab?.id || !tab.url?.includes('photos.google.com')) {
-    showNote(t('notes.navigateFirst'))
+    showNote('notes.navigateFirst')
     return null
   }
   hideNote()
@@ -187,7 +187,13 @@ const setUIState = (state: UIState): void => {
   else if (state === 'idle') stopElapsedTimer()
 }
 
-const showNote  = (text: string): void => { noteEl.textContent = text; noteEl.classList.remove('hidden') }
+const showNote  = (key: string): void => {
+  // Stamp the key so it re-translates whenever the locale changes
+  // (applyTranslations walks every [data-i18n]).
+  noteEl.dataset.i18n = key
+  noteEl.textContent = t(key)
+  noteEl.classList.remove('hidden')
+}
 const hideNote  = (): void => { noteEl.classList.add('hidden') }
 const showError = (msg: string): void => { errorText.textContent = msg; errorBar.classList.remove('hidden') }
 const hideError = (): void => { errorBar.classList.add('hidden') }
