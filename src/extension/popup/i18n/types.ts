@@ -19,6 +19,8 @@ export interface Translations {
     done: string
     error: string
     idle: string
+    navigatingTrash: string
+    emptyingTrash: string
   }
   stats: {
     deleted: string
@@ -30,6 +32,7 @@ export interface Translations {
     sectionLabel: string
     maxCount: { label: string; hint: string }
     dryRun: { label: string; hint: string }
+    emptyTrash: { label: string; hint: string }
     language: { label: string; trigger: string }
   }
   actions: {

@@ -14,6 +14,8 @@ const nl: Translations = {
     done: 'Klaar',
     error: 'Fout',
     idle: 'Inactief',
+    navigatingTrash: 'Prullenbak openen…',
+    emptyingTrash: 'Prullenbak legen…',
   },
   stats: {
     deleted: 'Verwijderd',
@@ -30,6 +32,10 @@ const nl: Translations = {
     dryRun: {
       label: 'Proefrit',
       hint: 'Alleen tellen, niet verwijderen',
+    },
+    emptyTrash: {
+      label: 'Prullenbak legen',
+      hint: 'Daarna definitief verwijderen',
     },
     language: {
       label: 'Taal',

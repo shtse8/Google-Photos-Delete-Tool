@@ -9,8 +9,8 @@ import {
 } from '../src/extension/popup/i18n'
 
 describe('LOCALES', () => {
-  it('lists French first', () => {
-    expect(LOCALES[0].code).toBe('fr')
+  it('lists English first (it is the default)', () => {
+    expect(LOCALES[0].code).toBe('en')
   })
 
   it('exposes the supported set', () => {
@@ -39,10 +39,12 @@ describe('LOCALES', () => {
       'status.ready', 'status.selecting', 'status.deleting',
       'status.scrolling', 'status.paused', 'status.done',
       'status.error', 'status.idle',
+      'status.navigatingTrash', 'status.emptyingTrash',
       'stats.deleted', 'stats.rate', 'stats.elapsed', 'stats.eta',
       'settings.sectionLabel',
       'settings.maxCount.label', 'settings.maxCount.hint',
       'settings.dryRun.label', 'settings.dryRun.hint',
+      'settings.emptyTrash.label', 'settings.emptyTrash.hint',
       'settings.language.label', 'settings.language.trigger',
       'actions.start', 'actions.pause', 'actions.resume', 'actions.stop',
       'notes.navigateFirst',
@@ -64,21 +66,21 @@ describe('setLocale / getLocale', () => {
     setLocale(DEFAULT_LOCALE)
   })
 
-  it('defaults to French', () => {
-    expect(DEFAULT_LOCALE).toBe('fr')
-    expect(getLocale()).toBe('fr')
+  it('defaults to English', () => {
+    expect(DEFAULT_LOCALE).toBe('en')
+    expect(getLocale()).toBe('en')
   })
 
   it('switches locales', () => {
-    setLocale('en')
-    expect(getLocale()).toBe('en')
+    setLocale('fr')
+    expect(getLocale()).toBe('fr')
     setLocale('ja')
     expect(getLocale()).toBe('ja')
   })
 
   it('falls back to default for unknown codes', () => {
     setLocale('xx-unknown' as LocaleCode)
-    expect(getLocale()).toBe('fr')
+    expect(getLocale()).toBe('en')
   })
 })
 
@@ -89,6 +91,7 @@ describe('t()', () => {
     expect(t('header.title')).toMatch(/Photos/)
     expect(t('actions.start')).toBe('Démarrer')
     expect(t('status.paused')).toBe('En pause')
+    expect(t('settings.emptyTrash.label')).toBe('Vider la corbeille')
   })
 
   it('returns the key as fallback for unknown paths', () => {

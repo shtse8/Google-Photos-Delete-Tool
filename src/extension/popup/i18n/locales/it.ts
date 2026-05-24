@@ -14,6 +14,8 @@ const it: Translations = {
     done: 'Completato',
     error: 'Errore',
     idle: 'Inattivo',
+    navigatingTrash: 'Apertura del cestino…',
+    emptyingTrash: 'Svuotamento del cestino…',
   },
   stats: {
     deleted: 'Eliminate',
@@ -30,6 +32,10 @@ const it: Translations = {
     dryRun: {
       label: 'Prova a vuoto',
       hint: 'Conta senza eliminare',
+    },
+    emptyTrash: {
+      label: 'Svuota cestino',
+      hint: 'Elimina definitivamente dopo',
     },
     language: {
       label: 'Lingua',

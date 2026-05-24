@@ -18,6 +18,17 @@ const STROKE = 'width="24" height="24" viewBox="0 0 24 24" stroke-width="1.75" '
 const FILL = 'width="24" height="24" viewBox="0 0 24 24" fill="currentColor"'
 
 const ICONS = {
+  brandGooglePhotos: `<svg ${STROKE}>
+    <path d="M12 12c-3.071 -.301 -7 .515 -7 -3.5s3.929 -3.198 7 -3.5z"/>
+    <path d="M12 12c.301 -3.071 -.515 -7 3.5 -7s3.198 3.929 3.5 7z"/>
+    <path d="M12 12c3.071 .301 7 -.515 7 3.5s-3.929 3.198 -7 3.5z"/>
+    <path d="M12 12c-.301 3.071 .515 7 -3.5 7s-3.198 -3.929 -3.5 -7z"/></svg>`,
+  trashX: `<svg ${STROKE}>
+    <path d="M4 7h16"/>
+    <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
+    <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>
+    <path d="M10 12l4 4"/>
+    <path d="M14 12l-4 4"/></svg>`,
   trash: `<svg ${STROKE}>
     <path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/>
     <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
@@ -56,7 +67,7 @@ function buildCard(opts: {
   return `<main class="app">
   <header class="app-header">
     <div class="brand">
-      <span class="brand-icon">${ICONS.trash}</span>
+      <span class="brand-icon">${ICONS.brandGooglePhotos}</span>
       <div class="brand-text">
         <h1 class="brand-title">${t.title}</h1>
         <p class="brand-subtitle">${t.subtitle}</p>
@@ -129,6 +140,20 @@ function buildCard(opts: {
         <span class="toggle-track"><span class="toggle-thumb"></span></span>
       </label>
     </div>
+
+    <div class="field">
+      <label class="field-label">
+        <span class="field-icon field-icon-danger">${ICONS.trashX}</span>
+        <span class="field-text">
+          <span class="field-name">${t.emptyLabel}</span>
+          <span class="field-hint">${t.emptyHint}</span>
+        </span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" checked ${state === 'running' ? 'disabled' : ''}>
+        <span class="toggle-track toggle-track-danger"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
   </section>
 
   <div class="controls">
@@ -145,8 +170,9 @@ const FR = {
   statDeleted: 'Supprimées', statRate: 'Par minute',
   statElapsed: 'Écoulé', statEta: 'Restant',
   settingsTitle: 'Réglages',
-  maxLabel: 'Photos max.', maxHint: 'Taille de lot et plafond',
-  dryLabel: 'Mode test',   dryHint: 'Compter sans rien supprimer',
+  maxLabel: 'Photos max.',   maxHint: 'Taille de lot et plafond',
+  dryLabel: 'Mode test',     dryHint: 'Compter sans rien supprimer',
+  emptyLabel: 'Vider la corbeille', emptyHint: 'Supprimer définitivement après',
   actStart: 'Démarrer', actPause: 'Pause', actStop: 'Arrêter',
 }
 
@@ -156,8 +182,9 @@ const EN = {
   statDeleted: 'Deleted', statRate: 'Per minute',
   statElapsed: 'Elapsed', statEta: 'ETA',
   settingsTitle: 'Settings',
-  maxLabel: 'Max photos', maxHint: 'Batch size and run cap',
-  dryLabel: 'Dry run',    dryHint: 'Count only, no deletion',
+  maxLabel: 'Max photos',   maxHint: 'Batch size and run cap',
+  dryLabel: 'Dry run',      dryHint: 'Count only, no deletion',
+  emptyLabel: 'Empty trash', emptyHint: 'Permanently delete afterwards',
   actStart: 'Start', actPause: 'Pause', actStop: 'Stop',
 }
 
@@ -209,8 +236,8 @@ ${css}
   <div class="preview-grid">
 
     <div class="preview-cell">
-      <div class="preview-label">FR · idle · light</div>
-      <div class="popup-wrapper">${buildCard({ langCode: 'FR', t: FR, state: 'idle' })}</div>
+      <div class="preview-label">EN · idle · light</div>
+      <div class="popup-wrapper">${buildCard({ langCode: 'EN', t: EN, state: 'idle' })}</div>
     </div>
 
     <div class="preview-cell">
@@ -219,8 +246,8 @@ ${css}
     </div>
 
     <div class="preview-cell">
-      <div class="preview-label">FR · lang menu open</div>
-      <div class="popup-wrapper">${buildCard({ langCode: 'FR', t: FR, state: 'idle', showOpenMenu: true })}</div>
+      <div class="preview-label">EN · lang menu open</div>
+      <div class="popup-wrapper">${buildCard({ langCode: 'EN', t: EN, state: 'idle', showOpenMenu: true })}</div>
     </div>
 
     <div class="preview-cell dark" style="color-scheme: dark;">

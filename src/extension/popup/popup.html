@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,8 +14,8 @@
       <div class="brand">
         <span class="brand-icon" id="brand-icon" aria-hidden="true"></span>
         <div class="brand-text">
-          <h1 class="brand-title" data-i18n="header.title">Suppression Photos</h1>
-          <p class="brand-subtitle" data-i18n="header.subtitle">Nettoyage Google Photos</p>
+          <h1 class="brand-title" data-i18n="header.title">Photos Cleanup</h1>
+          <p class="brand-subtitle" data-i18n="header.subtitle">Google Photos bulk delete</p>
         </div>
       </div>
       <div class="lang-picker">
@@ -27,7 +27,7 @@
           data-i18n-attr="aria-label:settings.language.trigger"
         >
           <span class="lang-icon" id="lang-icon" aria-hidden="true"></span>
-          <span class="lang-code" id="lang-code">FR</span>
+          <span class="lang-code" id="lang-code">EN</span>
           <span class="lang-chevron" id="lang-chevron" aria-hidden="true"></span>
         </button>
         <ul class="lang-menu hidden" id="lang-menu" role="listbox"></ul>
@@ -37,7 +37,7 @@
     <!-- ─── Status pill ─────────────────────────────────────────── -->
     <div class="status" id="status">
       <span class="status-dot" id="status-dot"></span>
-      <span class="status-text" id="status-text" data-i18n="status.ready">Prêt</span>
+      <span class="status-text" id="status-text" data-i18n="status.ready">Ready</span>
     </div>
 
     <!-- ─── Error banner ────────────────────────────────────────── -->
@@ -50,19 +50,19 @@
     <section class="stats" aria-label="Stats">
       <article class="stat">
         <div class="stat-value" id="stat-deleted">0</div>
-        <div class="stat-label" data-i18n="stats.deleted">Supprimées</div>
+        <div class="stat-label" data-i18n="stats.deleted">Deleted</div>
       </article>
       <article class="stat">
         <div class="stat-value" id="stat-rate">—</div>
-        <div class="stat-label" data-i18n="stats.rate">Par minute</div>
+        <div class="stat-label" data-i18n="stats.rate">Per minute</div>
       </article>
       <article class="stat">
         <div class="stat-value" id="stat-elapsed">0s</div>
-        <div class="stat-label" data-i18n="stats.elapsed">Écoulé</div>
+        <div class="stat-label" data-i18n="stats.elapsed">Elapsed</div>
       </article>
       <article class="stat">
         <div class="stat-value" id="stat-eta">—</div>
-        <div class="stat-label" data-i18n="stats.eta">Restant</div>
+        <div class="stat-label" data-i18n="stats.eta">ETA</div>
       </article>
     </section>
 
@@ -78,15 +78,15 @@
     <section class="settings" id="settings-panel">
       <header class="settings-header">
         <span class="settings-icon" id="settings-icon" aria-hidden="true"></span>
-        <span class="settings-title" data-i18n="settings.sectionLabel">Réglages</span>
+        <span class="settings-title" data-i18n="settings.sectionLabel">Settings</span>
       </header>
 
       <div class="field">
         <label class="field-label" for="max-count">
           <span class="field-icon" id="field-icon-max" aria-hidden="true"></span>
           <span class="field-text">
-            <span class="field-name" data-i18n="settings.maxCount.label">Photos max.</span>
-            <span class="field-hint" data-i18n="settings.maxCount.hint">Taille de lot et plafond</span>
+            <span class="field-name" data-i18n="settings.maxCount.label">Max photos</span>
+            <span class="field-hint" data-i18n="settings.maxCount.hint">Batch size and run cap</span>
           </span>
         </label>
         <input
@@ -106,13 +106,29 @@
         <label class="field-label" for="dry-run">
           <span class="field-icon" id="field-icon-dry" aria-hidden="true"></span>
           <span class="field-text">
-            <span class="field-name" data-i18n="settings.dryRun.label">Mode test</span>
-            <span class="field-hint" data-i18n="settings.dryRun.hint">Compter sans rien supprimer</span>
+            <span class="field-name" data-i18n="settings.dryRun.label">Dry run</span>
+            <span class="field-hint" data-i18n="settings.dryRun.hint">Count only, no deletion</span>
           </span>
         </label>
         <label class="toggle" data-i18n-attr="aria-label:settings.dryRun.label">
           <input type="checkbox" id="dry-run">
           <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+          </span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="empty-trash">
+          <span class="field-icon field-icon-danger" id="field-icon-empty" aria-hidden="true"></span>
+          <span class="field-text">
+            <span class="field-name" data-i18n="settings.emptyTrash.label">Empty trash</span>
+            <span class="field-hint" data-i18n="settings.emptyTrash.hint">Permanently delete afterwards</span>
+          </span>
+        </label>
+        <label class="toggle" data-i18n-attr="aria-label:settings.emptyTrash.label">
+          <input type="checkbox" id="empty-trash">
+          <span class="toggle-track toggle-track-danger">
             <span class="toggle-thumb"></span>
           </span>
         </label>
@@ -123,7 +139,7 @@
     <div class="controls">
       <button class="btn btn-primary" id="start-btn" data-i18n-attr="aria-label:actions.start">
         <span class="btn-icon" id="start-icon" aria-hidden="true"></span>
-        <span class="btn-text" data-i18n="actions.start">Démarrer</span>
+        <span class="btn-text" data-i18n="actions.start">Start</span>
       </button>
       <button class="btn btn-warning hidden" id="pause-btn" data-i18n-attr="aria-label:actions.pause">
         <span class="btn-icon" id="pause-icon" aria-hidden="true"></span>
@@ -131,11 +147,11 @@
       </button>
       <button class="btn btn-primary hidden" id="resume-btn" data-i18n-attr="aria-label:actions.resume">
         <span class="btn-icon" id="resume-icon" aria-hidden="true"></span>
-        <span class="btn-text" data-i18n="actions.resume">Reprendre</span>
+        <span class="btn-text" data-i18n="actions.resume">Resume</span>
       </button>
       <button class="btn btn-danger hidden" id="stop-btn" data-i18n-attr="aria-label:actions.stop">
         <span class="btn-icon" id="stop-icon" aria-hidden="true"></span>
-        <span class="btn-text" data-i18n="actions.stop">Arrêter</span>
+        <span class="btn-text" data-i18n="actions.stop">Stop</span>
       </button>
     </div>
 

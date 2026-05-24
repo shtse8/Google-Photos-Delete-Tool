@@ -14,6 +14,8 @@ const pt: Translations = {
     done: 'Concluído',
     error: 'Erro',
     idle: 'Inativo',
+    navigatingTrash: 'Abrindo lixeira…',
+    emptyingTrash: 'Esvaziando lixeira…',
   },
   stats: {
     deleted: 'Excluídas',
@@ -30,6 +32,10 @@ const pt: Translations = {
     dryRun: {
       label: 'Simulação',
       hint: 'Apenas contar, sem excluir',
+    },
+    emptyTrash: {
+      label: 'Esvaziar lixeira',
+      hint: 'Excluir permanentemente depois',
     },
     language: {
       label: 'Idioma',

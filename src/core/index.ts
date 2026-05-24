@@ -14,6 +14,8 @@ export {
   findDeleteToolbarButton,
   findConfirmDialog,
   findConfirmButton,
+  findEmptyTrashButton,
+  EMPTY_TRASH_PHRASES,
 } from './selectors';
 export { DeleteEngine, type Progress, type ProgressCallback, type EngineStatus, type EngineEvents } from './delete-engine';
 export { sleep, waitUntil, $, $$, formatElapsed, formatEta, retryWithBackoff } from './utils';

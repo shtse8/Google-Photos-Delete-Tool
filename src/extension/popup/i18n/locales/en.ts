@@ -14,6 +14,8 @@ const en: Translations = {
     done: 'Done',
     error: 'Error',
     idle: 'Idle',
+    navigatingTrash: 'Opening trash…',
+    emptyingTrash: 'Emptying trash…',
   },
   stats: {
     deleted: 'Deleted',
@@ -30,6 +32,10 @@ const en: Translations = {
     dryRun: {
       label: 'Dry run',
       hint: 'Count only, no deletion',
+    },
+    emptyTrash: {
+      label: 'Empty trash',
+      hint: 'Permanently delete afterwards',
     },
     language: {
       label: 'Language',

@@ -14,6 +14,8 @@ const ja: Translations = {
     done: '完了',
     error: 'エラー',
     idle: '待機中',
+    navigatingTrash: 'ゴミ箱を開いています…',
+    emptyingTrash: 'ゴミ箱を空にしています…',
   },
   stats: {
     deleted: '削除済み',
@@ -30,6 +32,10 @@ const ja: Translations = {
     dryRun: {
       label: 'テスト実行',
       hint: '数えるだけで削除しない',
+    },
+    emptyTrash: {
+      label: 'ゴミ箱を空にする',
+      hint: '完了後に完全削除',
     },
     language: {
       label: '言語',

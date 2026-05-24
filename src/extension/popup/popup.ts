@@ -15,6 +15,7 @@ import { mountIcon } from './icons'
 
 const maxCountInput   = document.getElementById('max-count')      as HTMLInputElement
 const dryRunInput     = document.getElementById('dry-run')        as HTMLInputElement
+const emptyTrashInput = document.getElementById('empty-trash')    as HTMLInputElement
 const startBtn        = document.getElementById('start-btn')      as HTMLButtonElement
 const pauseBtn        = document.getElementById('pause-btn')      as HTMLButtonElement
 const resumeBtn       = document.getElementById('resume-btn')     as HTMLButtonElement
@@ -37,13 +38,14 @@ const langCodeLabel   = document.getElementById('lang-code')      as HTMLElement
 
 // ─── Icon mounting (static set, attached once) ──────────────────
 
-mountIcon('brand-icon',      'trash')
+mountIcon('brand-icon',      'brandGooglePhotos')
 mountIcon('lang-icon',       'language')
 mountIcon('lang-chevron',    'chevronDown')
 mountIcon('error-icon',      'alertTriangle')
 mountIcon('settings-icon',   'settings')
 mountIcon('field-icon-max',  'hash')
 mountIcon('field-icon-dry',  'flask')
+mountIcon('field-icon-empty','trashX')
 mountIcon('start-icon',      'play')
 mountIcon('pause-icon',      'pause')
 mountIcon('resume-icon',     'play')
@@ -137,18 +139,20 @@ document.addEventListener('keydown', (e) => {
 
 // ─── Settings persistence ───────────────────────────────────────
 
-chrome.storage.local.get(['maxCount', 'dryRun', 'locale'], (data) => {
+chrome.storage.local.get(['maxCount', 'dryRun', 'emptyTrash', 'locale'], (data) => {
   const code = pickInitialLocale(data.locale)
   applyLocale(code)
 
   if (data.maxCount) maxCountInput.value = String(data.maxCount)
   if (data.dryRun) dryRunInput.checked = true
+  if (data.emptyTrash) emptyTrashInput.checked = true
 })
 
 const saveSettings = (): void => {
   chrome.storage.local.set({
     maxCount: parseInt(maxCountInput.value, 10) || 10_000,
     dryRun: dryRunInput.checked,
+    emptyTrash: emptyTrashInput.checked,
   })
 }
 
@@ -174,8 +178,9 @@ const setUIState = (state: UIState): void => {
   resumeBtn.classList.toggle('hidden', state !== 'paused')
   stopBtn.classList.toggle('hidden',   state === 'idle')
 
-  maxCountInput.disabled = state !== 'idle'
-  dryRunInput.disabled   = state !== 'idle'
+  maxCountInput.disabled  = state !== 'idle'
+  dryRunInput.disabled    = state !== 'idle'
+  emptyTrashInput.disabled = state !== 'idle'
   settingsPanel.classList.toggle('disabled', state !== 'idle')
 
   if (state === 'running') startElapsedTimer()
@@ -202,12 +207,13 @@ const stopElapsedTimer = (): void => {
 // ─── Button handlers (unchanged protocol) ───────────────────────
 
 startBtn.addEventListener('click', async () => {
-  const maxCount = parseInt(maxCountInput.value, 10) || 10_000
-  const dryRun   = dryRunInput.checked
+  const maxCount        = parseInt(maxCountInput.value, 10) || 10_000
+  const dryRun          = dryRunInput.checked
+  const emptyTrashAfter = emptyTrashInput.checked
   saveSettings()
   hideError()
 
-  await sendToContent({ action: 'start', maxCount, dryRun })
+  await sendToContent({ action: 'start', maxCount, dryRun, emptyTrashAfter })
   startedAt = Date.now()
   setUIState('running')
 })
@@ -230,13 +236,15 @@ sendToContent({ action: 'status' }).then((res: unknown) => {
 let lastStatus: string = 'idle'
 
 const STATUS_DOT: Record<string, string> = {
-  selecting: 'running',
-  deleting:  'running',
-  scrolling: 'running',
-  paused:    'paused',
-  done:      'done',
-  error:     'error',
-  idle:      '',
+  selecting:       'running',
+  deleting:        'running',
+  scrolling:       'running',
+  navigatingTrash: 'running',
+  emptyingTrash:   'running',
+  paused:          'paused',
+  done:            'done',
+  error:           'error',
+  idle:            '',
 }
 
 function refreshStatusLabel(): void {

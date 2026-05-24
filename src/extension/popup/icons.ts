@@ -17,13 +17,29 @@ const FILL_ATTRS =
   'aria-hidden="true" focusable="false"'
 
 export const icons = {
-  // Header brand
+  // Header brand — Tabler "brand-google-photos" (the four-petal flower)
+  brandGooglePhotos: `<svg ${STROKE_ATTRS}>
+    <path d="M12 12c-3.071 -.301 -7 .515 -7 -3.5s3.929 -3.198 7 -3.5z" />
+    <path d="M12 12c.301 -3.071 -.515 -7 3.5 -7s3.198 3.929 3.5 7z" />
+    <path d="M12 12c3.071 .301 7 -.515 7 3.5s-3.929 3.198 -7 3.5z" />
+    <path d="M12 12c-.301 3.071 .515 7 -3.5 7s-3.198 -3.929 -3.5 -7z" />
+  </svg>`,
+
   trash: `<svg ${STROKE_ATTRS}>
     <path d="M4 7l16 0" />
     <path d="M10 11l0 6" />
     <path d="M14 11l0 6" />
     <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
     <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+  </svg>`,
+
+  // Trash with an X — perfect indicator for "permanent / empty trash"
+  trashX: `<svg ${STROKE_ATTRS}>
+    <path d="M4 7h16" />
+    <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+    <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+    <path d="M10 12l4 4" />
+    <path d="M14 12l-4 4" />
   </svg>`,
 
   // Action buttons (filled variants are more legible at small sizes)

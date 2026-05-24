@@ -22,15 +22,15 @@ import zh from './locales/zh'
 export type { LocaleCode, LocaleEntry, Translations } from './types'
 
 /**
- * Available locales. French is listed first because it is the project's
- * default; the rest are sorted by native-name alphabetical order so the
- * picker is predictable.
+ * Available locales. English is listed first because it is the default;
+ * the rest are sorted by native-name alphabetical order so the picker
+ * is predictable across runs.
  */
 export const LOCALES: readonly LocaleEntry[] = Object.freeze([
-  { code: 'fr', label: 'Français', translations: fr },
-  { code: 'de', label: 'Deutsch', translations: de },
   { code: 'en', label: 'English', translations: en },
+  { code: 'de', label: 'Deutsch', translations: de },
   { code: 'es', label: 'Español', translations: es },
+  { code: 'fr', label: 'Français', translations: fr },
   { code: 'it', label: 'Italiano', translations: it },
   { code: 'nl', label: 'Nederlands', translations: nl },
   { code: 'pt', label: 'Português', translations: pt },
@@ -38,10 +38,16 @@ export const LOCALES: readonly LocaleEntry[] = Object.freeze([
   { code: 'ja', label: '日本語', translations: ja },
 ])
 
-export const DEFAULT_LOCALE: LocaleCode = 'fr'
+/**
+ * Default locale used when nothing matches the browser's UI language.
+ * `detectBrowserLocale()` is still consulted first; this is only the
+ * tie-breaker. Set to 'en' so unknown locales fall back to a language
+ * the broadest audience reads.
+ */
+export const DEFAULT_LOCALE: LocaleCode = 'en'
 
 let currentCode: LocaleCode = DEFAULT_LOCALE
-let currentTranslations: Translations = fr
+let currentTranslations: Translations = en
 
 /** Get the locale code that is currently active. */
 export function getLocale(): LocaleCode {

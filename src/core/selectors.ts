@@ -342,6 +342,70 @@ export function findDeleteToolbarButton(): HTMLElement | null {
 }
 
 /**
+ * Multi-word phrases that uniquely identify the "Empty trash" / "Empty bin"
+ * action on the /trash page. We require longer phrases here (not just
+ * "trash") because /trash also exposes "Delete forever" and "Restore"
+ * buttons that we must not accidentally match.
+ */
+export const EMPTY_TRASH_PHRASES: readonly string[] = Object.freeze([
+  // English
+  'empty trash', 'empty bin', 'empty the trash', 'empty the bin',
+  // French
+  'vider la corbeille', 'vider corbeille',
+  // Spanish
+  'vaciar papelera', 'vaciar la papelera',
+  // German
+  'papierkorb leeren',
+  // Italian
+  'svuota cestino', 'svuota il cestino',
+  // Portuguese
+  'esvaziar lixo', 'esvaziar lixeira', 'esvaziar a lixeira',
+  // Dutch
+  'prullenbak legen', 'leeg prullenbak', 'leeg de prullenbak',
+  // Polish, Czech
+  'oproznij kosz', 'vyprazdnit kos',
+  // Russian
+  'опорожнить корзину', 'очистить корзину',
+  // Japanese, Korean, Chinese
+  'ゴミ箱を空に', 'ごみ箱を空に',
+  '휴지통 비우기',
+  '清空回收站', '清空垃圾桶', '清空垃圾箱',
+])
+
+/**
+ * Find the "Empty trash" toolbar button visible on the /trash page.
+ * Uses the multi-phrase keyword list above so we don't accidentally
+ * match "Delete forever" (which also lives on /trash).
+ */
+export function findEmptyTrashButton(): HTMLElement | null {
+  // Fast path: a couple of well-known English aria-labels.
+  const cssCandidates: string[] = [
+    'button[aria-label="Empty trash"]',
+    'button[aria-label="Empty bin"]',
+  ]
+  for (const sel of cssCandidates) {
+    const el = document.querySelector<HTMLButtonElement>(sel)
+    if (el && isVisible(el) && !isInsideDialog(el)) return el
+  }
+
+  // Locale-aware path: scan all buttons.
+  const allButtons = [
+    ...document.querySelectorAll<HTMLElement>('button, [role="button"]'),
+  ]
+  for (const btn of allButtons) {
+    if (!isVisible(btn)) continue
+    if (isInsideDialog(btn)) continue
+    const candidate = getButtonTextCandidates(btn)
+    if (!candidate) continue
+    if (containsAnyKeyword(candidate, EMPTY_TRASH_PHRASES)) {
+      return btn
+    }
+  }
+
+  return null
+}
+
+/**
  * Find a currently-open confirmation dialog. Returns the topmost
  * visible one (highest z-index) when multiple are open.
  */

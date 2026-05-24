@@ -14,6 +14,8 @@ const es: Translations = {
     done: 'Terminado',
     error: 'Error',
     idle: 'Inactivo',
+    navigatingTrash: 'Abriendo papelera…',
+    emptyingTrash: 'Vaciando papelera…',
   },
   stats: {
     deleted: 'Eliminadas',
@@ -30,6 +32,10 @@ const es: Translations = {
     dryRun: {
       label: 'Modo prueba',
       hint: 'Solo contar, sin eliminar',
+    },
+    emptyTrash: {
+      label: 'Vaciar papelera',
+      hint: 'Eliminar definitivamente después',
     },
     language: {
       label: 'Idioma',

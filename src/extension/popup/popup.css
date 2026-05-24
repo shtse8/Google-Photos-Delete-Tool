@@ -109,13 +109,16 @@ html, body {
   font-feature-settings: 'cv11', 'ss01', 'ss03';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg-app);
   color: var(--text);
 }
 
+/* The popup IS the card — no outer rectangle, no inset margin. */
 body {
   width: 320px;
-  background: var(--bg-app-gradient), var(--bg-app);
+  margin: 0;
+  background:
+    var(--bg-app-gradient),
+    var(--bg-app);
 }
 
 /* ─── App container ───────────────────────────────────────────── */
@@ -124,13 +127,7 @@ body {
   flex-direction: column;
   gap: 14px;
   padding: 18px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  margin: 8px;
-  box-shadow: var(--shadow-card);
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  background: transparent;
   animation: appear 280ms var(--ease);
 }
 
@@ -592,6 +589,24 @@ body {
 }
 .toggle input:focus-visible ~ .toggle-track {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+/* Danger variant of the toggle — for the "Empty trash" switch which
+   represents a permanent / irreversible action. */
+.toggle input:checked ~ .toggle-track-danger {
+  background: linear-gradient(135deg, #f97316, var(--danger));
+}
+.toggle input:focus-visible ~ .toggle-track-danger {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+}
+
+/* Danger-tinted icon chip for the matching field-icon */
+.field-icon-danger {
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.10);
+}
+@media (prefers-color-scheme: dark) {
+  .field-icon-danger { background: rgba(239, 68, 68, 0.16); }
 }
 
 /* ─── Controls ────────────────────────────────────────────────── */

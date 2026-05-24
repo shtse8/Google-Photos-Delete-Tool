@@ -4,6 +4,7 @@ import {
   containsAnyKeyword,
   DELETE_KEYWORDS,
   CANCEL_KEYWORDS,
+  EMPTY_TRASH_PHRASES,
 } from '../src/core/selectors'
 
 describe('normalizeText', () => {
@@ -132,7 +133,7 @@ describe('DELETE_KEYWORDS vs CANCEL_KEYWORDS - no overlap', () => {
     }
   })
 
-  it('no cancel label is misread as destructive', () => {
+  it('no cancel label is misread as destructive (well-known labels)', () => {
     const cancelLabels = [
       'Cancel',
       'Annuler',
@@ -151,6 +152,52 @@ describe('DELETE_KEYWORDS vs CANCEL_KEYWORDS - no overlap', () => {
       expect(
         containsAnyKeyword(label, DELETE_KEYWORDS),
         `expected NO DELETE match for "${label}"`,
+      ).toBe(false)
+    }
+  })
+})
+
+describe('EMPTY_TRASH_PHRASES', () => {
+  it('matches the multi-word empty-trash button across languages', () => {
+    const positives = [
+      'Empty trash',
+      'Empty bin',                       // UK English
+      'Vider la corbeille',
+      'Vaciar papelera',
+      'Vaciar la papelera',
+      'Papierkorb leeren',
+      'Svuota cestino',
+      'Esvaziar lixeira',
+      'Prullenbak legen',
+      'ゴミ箱を空にする',
+      '清空回收站',
+      '휴지통 비우기',
+    ]
+    for (const label of positives) {
+      expect(
+        containsAnyKeyword(label, EMPTY_TRASH_PHRASES),
+        `expected EMPTY_TRASH match for "${label}"`,
+      ).toBe(true)
+    }
+  })
+
+  it('does NOT match per-item destructive actions on /trash', () => {
+    // These also live on the /trash page but mean "delete the selected
+    // photos forever" — we must not confuse them with "Empty trash".
+    const negatives = [
+      'Delete forever',
+      'Supprimer définitivement',
+      'Eliminar definitivamente',
+      'Endgültig löschen',
+      'Restore',
+      'Restaurer',
+      'Move to trash',     // main-grid action; must not match either
+      'Mettre à la corbeille',
+    ]
+    for (const label of negatives) {
+      expect(
+        containsAnyKeyword(label, EMPTY_TRASH_PHRASES),
+        `expected NO EMPTY_TRASH match for "${label}"`,
       ).toBe(false)
     }
   })

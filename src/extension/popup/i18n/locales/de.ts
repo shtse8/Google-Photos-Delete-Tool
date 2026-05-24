@@ -14,6 +14,8 @@ const de: Translations = {
     done: 'Fertig',
     error: 'Fehler',
     idle: 'Bereit',
+    navigatingTrash: 'Papierkorb wird geöffnet…',
+    emptyingTrash: 'Papierkorb wird geleert…',
   },
   stats: {
     deleted: 'Gelöscht',
@@ -30,6 +32,10 @@ const de: Translations = {
     dryRun: {
       label: 'Testlauf',
       hint: 'Nur zählen, nicht löschen',
+    },
+    emptyTrash: {
+      label: 'Papierkorb leeren',
+      hint: 'Danach endgültig löschen',
     },
     language: {
       label: 'Sprache',

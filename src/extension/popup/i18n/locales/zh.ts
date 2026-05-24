@@ -14,6 +14,8 @@ const zh: Translations = {
     done: '完成',
     error: '错误',
     idle: '空闲',
+    navigatingTrash: '正在打开回收站…',
+    emptyingTrash: '正在清空回收站…',
   },
   stats: {
     deleted: '已删除',
@@ -30,6 +32,10 @@ const zh: Translations = {
     dryRun: {
       label: '试运行',
       hint: '仅计数,不删除',
+    },
+    emptyTrash: {
+      label: '清空回收站',
+      hint: '完成后永久删除',
     },
     language: {
       label: '语言',

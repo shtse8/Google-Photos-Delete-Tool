@@ -14,6 +14,8 @@ const fr: Translations = {
     done: 'Terminé',
     error: 'Erreur',
     idle: 'Inactif',
+    navigatingTrash: 'Ouverture de la corbeille…',
+    emptyingTrash: 'Vidage de la corbeille…',
   },
   stats: {
     deleted: 'Supprimées',
@@ -30,6 +32,10 @@ const fr: Translations = {
     dryRun: {
       label: 'Mode test',
       hint: 'Compter sans rien supprimer',
+    },
+    emptyTrash: {
+      label: 'Vider la corbeille',
+      hint: 'Supprimer définitivement après',
     },
     language: {
       label: 'Langue',
