@@ -27,7 +27,7 @@ const fr: Translations = {
     sectionLabel: 'Réglages',
     maxCount: {
       label: 'Photos par lot',
-      hint: 'Sélection puis suppression en boucle jusqu’à la fin',
+      hint: 'Tranches successives jusqu’à la fin · 0 = illimité',
     },
     dryRun: {
       label: 'Mode test',
@@ -49,7 +49,7 @@ const fr: Translations = {
     stop: 'Arrêter',
   },
   notes: {
-    navigateFirst: 'Ouvrez d’abord photos.google.com.',
+    navigateFirst: 'Ouvrez d’abord {url}.',
   },
 }
 

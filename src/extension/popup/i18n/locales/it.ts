@@ -27,7 +27,7 @@ const it: Translations = {
     sectionLabel: 'Impostazioni',
     maxCount: {
       label: 'Foto per lotto',
-      hint: 'Seleziona ed elimina in ciclo fino a svuotare la galleria',
+      hint: 'Ciclo fino a galleria vuota · 0 = senza limite',
     },
     dryRun: {
       label: 'Prova a vuoto',
@@ -49,7 +49,7 @@ const it: Translations = {
     stop: 'Arresta',
   },
   notes: {
-    navigateFirst: 'Apri prima photos.google.com.',
+    navigateFirst: 'Apri prima {url}.',
   },
 }
 

@@ -27,7 +27,7 @@ const nl: Translations = {
     sectionLabel: 'Instellingen',
     maxCount: {
       label: 'Foto’s per batch',
-      hint: 'Selecteert en wist in lussen tot de galerij leeg is',
+      hint: 'In lussen tot de galerij leeg is · 0 = geen limiet',
     },
     dryRun: {
       label: 'Proefrit',
@@ -49,7 +49,7 @@ const nl: Translations = {
     stop: 'Stoppen',
   },
   notes: {
-    navigateFirst: 'Open eerst photos.google.com.',
+    navigateFirst: 'Open eerst {url}.',
   },
 }
 

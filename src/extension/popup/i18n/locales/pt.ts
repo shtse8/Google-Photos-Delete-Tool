@@ -27,7 +27,7 @@ const pt: Translations = {
     sectionLabel: 'Ajustes',
     maxCount: {
       label: 'Fotos por lote',
-      hint: 'Seleciona e exclui em laço até esvaziar a galeria',
+      hint: 'Em laço até a galeria esvaziar · 0 = sem limite',
     },
     dryRun: {
       label: 'Simulação',
@@ -49,7 +49,7 @@ const pt: Translations = {
     stop: 'Parar',
   },
   notes: {
-    navigateFirst: 'Abra photos.google.com primeiro.',
+    navigateFirst: 'Abra {url} primeiro.',
   },
 }
 

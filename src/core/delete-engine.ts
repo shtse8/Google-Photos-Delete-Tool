@@ -142,8 +142,16 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     this.emitProgress()
 
     const url = typeof window !== 'undefined' ? window.location.pathname : '(no window)'
+    // maxCount === 0 is the documented "no batch cap" sentinel. Internally
+    // we treat it as Infinity so the math/comparisons stay natural; the
+    // no-progress branch below knows to auto-flush instead of declaring
+    // end-of-gallery in this mode.
+    const isUnlimited = this.config.maxCount === 0
+    const effectiveMax = isUnlimited ? Infinity : this.config.maxCount
+
     console.log(
-      `${LOG} run() start — url=${url} maxCount=${this.config.maxCount} ` +
+      `${LOG} run() start — url=${url} ` +
+      `maxCount=${this.config.maxCount}${isUnlimited ? ' (unlimited)' : ''} ` +
       `dryRun=${this.config.dryRun} actionTimeout=${this.config.actionTimeout}ms ` +
       `endOfListAttempts=${this.config.endOfListAttempts}`,
     )
@@ -155,9 +163,9 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
         await this.checkPause()
         if (this.stopped) break
 
-        // Phase 1: select what's visible (up to maxCount).
+        // Phase 1: select what's visible (up to the effective batch cap).
         const beforeCount = this.getCount()
-        const remainingCapacity = this.config.maxCount - beforeCount
+        const remainingCapacity = effectiveMax - beforeCount
         await this.selectVisibleCheckboxes(remainingCapacity)
         const currentCount = this.getCount()
         const counterGain = currentCount - beforeCount
@@ -168,7 +176,7 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
         // Phase 2: if the batch is full, delete it now (or, in dry-run,
         // stop here — we can't deselect-and-recount without double-counting
         // the same visible photos forever).
-        if (currentCount >= this.config.maxCount) {
+        if (currentCount >= effectiveMax) {
           if (this.config.dryRun) {
             console.log(
               `${LOG} [dry-run] reached cap of ${this.config.maxCount} — stopping. ` +
@@ -199,6 +207,21 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
             `— counter ${beforeCount}→${currentCount}, scroll did not advance`,
           )
           if (consecutiveNoProgress >= this.config.endOfListAttempts) {
+            // Unlimited mode: this is most likely Google Photos' own
+            // selection cap (~500) rather than the true end of the
+            // gallery. Flush whatever is selected and try again — if
+            // the next round also stalls with an empty counter, we'll
+            // exit on the OUTER consecutiveNoProgress check (currentCount
+            // will be 0 after the flush).
+            if (isUnlimited && currentCount > 0) {
+              console.log(
+                `${LOG} unlimited mode: flushing ${currentCount} (likely GP cap) ` +
+                `and continuing`,
+              )
+              await this.deleteSelected()
+              consecutiveNoProgress = 0
+              continue
+            }
             console.log(
               `${LOG} end of gallery reached after ${this.config.endOfListAttempts} ` +
               `attempts with no progress; ${currentCount} selected ready to flush`,

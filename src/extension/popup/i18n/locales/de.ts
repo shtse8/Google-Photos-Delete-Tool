@@ -27,7 +27,7 @@ const de: Translations = {
     sectionLabel: 'Einstellungen',
     maxCount: {
       label: 'Fotos pro Stapel',
-      hint: 'Auswahl und Löschung in Schleife bis die Galerie leer ist',
+      hint: 'Schleife bis Galerie leer · 0 = unbegrenzt',
     },
     dryRun: {
       label: 'Testlauf',
@@ -49,7 +49,7 @@ const de: Translations = {
     stop: 'Stoppen',
   },
   notes: {
-    navigateFirst: 'Öffne zuerst photos.google.com.',
+    navigateFirst: 'Öffne zuerst {url}.',
   },
 }
 

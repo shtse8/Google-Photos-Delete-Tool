@@ -32,7 +32,7 @@ import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatu
     <!-- Config: Max count -->
     <div style="margin-bottom:8px;">
       <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Max photos to delete</label>
-      <input id="gpdt-max" type="number" value="10000" min="1" style="
+      <input id="gpdt-max" type="number" value="500" min="0" style="
         width:100%;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);
         background:rgba(255,255,255,0.06);color:#e8e8e8;font-size:12px;outline:none;
         box-sizing:border-box;
@@ -125,7 +125,8 @@ import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatu
   // --- UI update ---
 
   const updateUI = (p: Progress): void => {
-    const maxCount = parseInt(maxInput.value, 10) || 10_000
+    const parsed = parseInt(maxInput.value, 10)
+    const maxCount = Number.isFinite(parsed) && parsed >= 0 ? parsed : 500
     const running = !['idle', 'done', 'error'].includes(p.status)
 
     // Show/hide button groups
@@ -188,7 +189,8 @@ import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatu
   startBtn.addEventListener('click', () => {
     if (engine) return
 
-    const maxCount = parseInt(maxInput.value, 10) || 10_000
+    const parsed = parseInt(maxInput.value, 10)
+    const maxCount = Number.isFinite(parsed) && parsed >= 0 ? parsed : 500
     const dryRun = dryRunCheck.checked
 
     // Reset UI

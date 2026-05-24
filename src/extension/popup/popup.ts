@@ -106,6 +106,7 @@ function applyLocale(code: LocaleCode): void {
   updateLangTriggerLabel()
   renderLangMenu()
   refreshStatusLabel()
+  renderNote()
   chrome.storage.local.set({ locale: code })
 }
 
@@ -139,18 +140,26 @@ document.addEventListener('keydown', (e) => {
 
 // ─── Settings persistence ───────────────────────────────────────
 
+/** Read the maxCount input. Special-cases the documented "0 = unlimited"
+ *  sentinel: 0 is preserved instead of falling back to the default. */
+const readMaxCount = (): number => {
+  const parsed = parseInt(maxCountInput.value, 10)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 500
+}
+
 chrome.storage.local.get(['maxCount', 'dryRun', 'emptyTrash', 'locale'], (data) => {
   const code = pickInitialLocale(data.locale)
   applyLocale(code)
 
-  if (data.maxCount) maxCountInput.value = String(data.maxCount)
+  // `!== undefined` so a stored 0 (unlimited) is honoured.
+  if (data.maxCount !== undefined) maxCountInput.value = String(data.maxCount)
   if (data.dryRun) dryRunInput.checked = true
   if (data.emptyTrash) emptyTrashInput.checked = true
 })
 
 const saveSettings = (): void => {
   chrome.storage.local.set({
-    maxCount: parseInt(maxCountInput.value, 10) || 10_000,
+    maxCount: readMaxCount(),
     dryRun: dryRunInput.checked,
     emptyTrash: emptyTrashInput.checked,
   })
@@ -187,14 +196,26 @@ const setUIState = (state: UIState): void => {
   else if (state === 'idle') stopElapsedTimer()
 }
 
-const showNote  = (key: string): void => {
-  // Stamp the key so it re-translates whenever the locale changes
-  // (applyTranslations walks every [data-i18n]).
-  noteEl.dataset.i18n = key
-  noteEl.textContent = t(key)
+/** Renders the photos.google.com link with safe attributes — used inside
+ *  translated note strings via the {url} placeholder. */
+const NAVIGATE_LINK_HTML =
+  '<a href="https://photos.google.com/" target="_blank" rel="noopener">photos.google.com</a>'
+
+/** Re-render the currently displayed note for the active locale. The note
+ *  uses `data-note-key` (not `data-i18n`) so applyTranslations() does NOT
+ *  overwrite our innerHTML with plain textContent. */
+const renderNote = (): void => {
+  const key = noteEl.dataset.noteKey
+  if (!key) return
+  noteEl.innerHTML = t(key).replace(/\{url\}/g, NAVIGATE_LINK_HTML)
+}
+
+const showNote = (key: string): void => {
+  noteEl.dataset.noteKey = key
+  renderNote()
   noteEl.classList.remove('hidden')
 }
-const hideNote  = (): void => { noteEl.classList.add('hidden') }
+const hideNote = (): void => { noteEl.classList.add('hidden') }
 const showError = (msg: string): void => { errorText.textContent = msg; errorBar.classList.remove('hidden') }
 const hideError = (): void => { errorBar.classList.add('hidden') }
 
@@ -213,7 +234,7 @@ const stopElapsedTimer = (): void => {
 // ─── Button handlers (unchanged protocol) ───────────────────────
 
 startBtn.addEventListener('click', async () => {
-  const maxCount        = parseInt(maxCountInput.value, 10) || 10_000
+  const maxCount        = readMaxCount()
   const dryRun          = dryRunInput.checked
   const emptyTrashAfter = emptyTrashInput.checked
   saveSettings()
@@ -262,7 +283,7 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message.type !== 'progress') return
 
   const { deleted, status, startedAt: msgStartedAt, error } = message.data
-  const maxCount = parseInt(maxCountInput.value, 10) || 10_000
+  const maxCount = readMaxCount()
 
   if (msgStartedAt && startedAt === 0) startedAt = msgStartedAt
 
@@ -272,10 +293,16 @@ chrome.runtime.onMessage.addListener((message) => {
 
   if (error) showError(error); else hideError()
 
-  // Progress bar
-  const pct = Math.min(100, (deleted / maxCount) * 100)
-  progressFill.style.width = `${pct}%`
-  progressLabel.textContent = `${Math.round(pct)}%`
+  // Progress bar — undefined when maxCount=0 (unlimited mode) since
+  // there's no target to compute a percentage against.
+  if (maxCount > 0) {
+    const pct = Math.min(100, (deleted / maxCount) * 100)
+    progressFill.style.width = `${pct}%`
+    progressLabel.textContent = `${Math.round(pct)}%`
+  } else {
+    progressFill.style.width = '0%'
+    progressLabel.textContent = '∞'
+  }
 
   // Stats
   statDeleted.textContent = deleted.toLocaleString()
@@ -286,11 +313,16 @@ chrome.runtime.onMessage.addListener((message) => {
     statRate.textContent = rate.toLocaleString()
     statElapsed.textContent = formatElapsed(elapsed)
 
-    const remaining = maxCount - deleted
-    if (remaining > 0 && rate > 0) {
-      statEta.textContent = formatEta((remaining / rate) * 60_000)
+    if (maxCount > 0) {
+      const remaining = maxCount - deleted
+      if (remaining > 0 && rate > 0) {
+        statEta.textContent = formatEta((remaining / rate) * 60_000)
+      } else {
+        statEta.textContent = '—'
+      }
     } else {
-      statEta.textContent = '—'
+      // Unlimited mode — no fixed target, so no meaningful ETA.
+      statEta.textContent = '∞'
     }
   }
 

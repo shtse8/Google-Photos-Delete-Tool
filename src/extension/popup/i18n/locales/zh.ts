@@ -27,7 +27,7 @@ const zh: Translations = {
     sectionLabel: '设置',
     maxCount: {
       label: '每批照片数',
-      hint: '循环选择与删除,直至清空相册',
+      hint: '循环直至清空相册 · 0 = 无限制',
     },
     dryRun: {
       label: '试运行',
@@ -49,7 +49,7 @@ const zh: Translations = {
     stop: '停止',
   },
   notes: {
-    navigateFirst: '请先打开 photos.google.com。',
+    navigateFirst: '请先打开 {url}。',
   },
 }
 

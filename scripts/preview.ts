@@ -124,7 +124,7 @@ function buildCard(opts: {
           <span class="field-hint">${t.maxHint}</span>
         </span>
       </label>
-      <input type="number" class="field-input" value="10000">
+      <input type="number" class="field-input" value="500">
     </div>
 
     <div class="field">
@@ -170,7 +170,7 @@ const FR = {
   statDeleted: 'Supprimées', statRate: 'Par minute',
   statElapsed: 'Écoulé', statEta: 'Restant',
   settingsTitle: 'Réglages',
-  maxLabel: 'Photos par lot', maxHint: 'Sélection puis suppression en boucle jusqu’à la fin',
+  maxLabel: 'Photos par lot', maxHint: 'Tranches successives jusqu’à la fin · 0 = illimité',
   dryLabel: 'Mode test',     dryHint: 'Compter sans rien supprimer',
   emptyLabel: 'Vider la corbeille', emptyHint: 'Supprimer définitivement après',
   actStart: 'Démarrer', actPause: 'Pause', actStop: 'Arrêter',
@@ -182,7 +182,7 @@ const EN = {
   statDeleted: 'Deleted', statRate: 'Per minute',
   statElapsed: 'Elapsed', statEta: 'ETA',
   settingsTitle: 'Settings',
-  maxLabel: 'Photos per batch', maxHint: 'Select & delete in loops until the gallery is empty',
+  maxLabel: 'Photos per batch', maxHint: 'Looped until the gallery is empty · 0 = unlimited',
   dryLabel: 'Dry run',      dryHint: 'Count only, no deletion',
   emptyLabel: 'Empty trash', emptyHint: 'Permanently delete afterwards',
   actStart: 'Start', actPause: 'Pause', actStop: 'Stop',

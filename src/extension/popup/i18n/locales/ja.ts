@@ -27,7 +27,7 @@ const ja: Translations = {
     sectionLabel: '設定',
     maxCount: {
       label: '1回あたりの枚数',
-      hint: 'ギャラリーが空になるまで選択と削除を繰り返します',
+      hint: 'ギャラリーが空になるまで繰り返し · 0 = 無制限',
     },
     dryRun: {
       label: 'テスト実行',
@@ -49,7 +49,7 @@ const ja: Translations = {
     stop: '停止',
   },
   notes: {
-    navigateFirst: '先に photos.google.com を開いてください。',
+    navigateFirst: '先に {url} を開いてください。',
   },
 }
 

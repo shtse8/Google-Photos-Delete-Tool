@@ -280,7 +280,7 @@ const getStatusText = (status: Progress['status']): string => {
   const panel = createPanel()
   let engine: DeleteEngine | null = null
   let state: 'idle' | 'running' | 'paused' = 'idle'
-  const MAX_COUNT = 10_000
+  const MAX_COUNT = 500
 
   const $deleted = panel.querySelector('.gpdt-deleted') as HTMLElement
   const $speed = panel.querySelector('.gpdt-speed') as HTMLElement

@@ -1,5 +1,11 @@
 export interface Config {
-  /** Maximum photos to select per batch (also the run target). */
+  /**
+   * Maximum photos to select per batch (also the run target).
+   * Special value: **0** means "no batch cap" — the engine selects as
+   * many as Google Photos lets it click in one go (their UI caps the
+   * counter around ~500), flushes that batch on every stall, and
+   * keeps going until the gallery is truly empty.
+   */
   maxCount: number
   /** Default long-running timeout for waiting operations (ms). */
   timeout: number
@@ -30,7 +36,10 @@ export interface Config {
 }
 
 export const DEFAULT_CONFIG: Config = {
-  maxCount: 10_000,
+  // 500 is roughly the largest batch Google Photos will keep counting
+  // before its selection counter plateaus — picking the practical cap
+  // as default avoids users entering 10000 and being silently capped.
+  maxCount: 500,
   timeout: 600_000,
   pollDelay: 300,
   dryRun: false,

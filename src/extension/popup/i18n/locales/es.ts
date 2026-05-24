@@ -27,7 +27,7 @@ const es: Translations = {
     sectionLabel: 'Ajustes',
     maxCount: {
       label: 'Fotos por lote',
-      hint: 'Selecciona y elimina en bucle hasta vaciar la galería',
+      hint: 'En bucle hasta vaciar la galería · 0 = sin límite',
     },
     dryRun: {
       label: 'Modo prueba',
@@ -49,7 +49,7 @@ const es: Translations = {
     stop: 'Detener',
   },
   notes: {
-    navigateFirst: 'Abre photos.google.com primero.',
+    navigateFirst: 'Abre {url} primero.',
   },
 }
 

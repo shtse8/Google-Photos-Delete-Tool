@@ -684,6 +684,17 @@ body {
   border-radius: var(--radius-sm);
   border: 1px dashed var(--border);
 }
+.note a {
+  color: var(--accent-from);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--t-fast);
+}
+.note a:hover {
+  color: var(--accent-to);
+  text-decoration: none;
+}
 
 /* ─── Utilities ───────────────────────────────────────────────── */
 .hidden { display: none !important; }

@@ -27,7 +27,7 @@ const en: Translations = {
     sectionLabel: 'Settings',
     maxCount: {
       label: 'Photos per batch',
-      hint: 'Select & delete in loops until the gallery is empty',
+      hint: 'Looped until the gallery is empty · 0 = unlimited',
     },
     dryRun: {
       label: 'Dry run',
@@ -49,7 +49,7 @@ const en: Translations = {
     stop: 'Stop',
   },
   notes: {
-    navigateFirst: 'Open photos.google.com first.',
+    navigateFirst: 'Open {url} first.',
   },
 }
 
