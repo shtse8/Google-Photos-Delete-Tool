@@ -17,12 +17,14 @@ const FILL_ATTRS =
   'aria-hidden="true" focusable="false"'
 
 export const icons = {
-  // Header brand — Tabler "brand-google-photos" (the four-petal flower)
-  brandGooglePhotos: `<svg ${STROKE_ATTRS}>
-    <path d="M12 12c-3.071 -.301 -7 .515 -7 -3.5s3.929 -3.198 7 -3.5z" />
-    <path d="M12 12c.301 -3.071 -.515 -7 3.5 -7s3.198 3.929 3.5 7z" />
-    <path d="M12 12c3.071 .301 7 -.515 7 3.5s-3.929 3.198 -7 3.5z" />
-    <path d="M12 12c-.301 3.071 .515 7 -3.5 7s-3.198 -3.929 -3.5 -7z" />
+  // Header brand — generic Tabler "photo" mark (a framed image with a
+  // sun + mountains). Deliberately NOT the Google Photos pinwheel, to
+  // avoid leaning on Google's trademark in our own branding.
+  brand: `<svg ${STROKE_ATTRS}>
+    <path d="M15 8h.01" />
+    <path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z" />
+    <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" />
+    <path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" />
   </svg>`,
 
   trash: `<svg ${STROKE_ATTRS}>

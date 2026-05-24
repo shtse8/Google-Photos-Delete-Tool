@@ -42,7 +42,7 @@ const langCodeLabel   = document.getElementById('lang-code')      as HTMLElement
 
 // ─── Icon mounting (static set, attached once) ──────────────────
 
-mountIcon('brand-icon',      'brandGooglePhotos')
+mountIcon('brand-icon',      'brand')
 mountIcon('lang-icon',       'language')
 mountIcon('lang-chevron',    'chevronDown')
 mountIcon('error-icon',      'alertTriangle')
