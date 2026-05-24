@@ -1,8 +1,17 @@
 import { type Config, DEFAULT_CONFIG } from './config'
-import { SELECTOR_DEFS, queryOne, queryAll } from './selectors'
+import {
+  SELECTOR_DEFS,
+  queryOne,
+  queryAll,
+  findDeleteToolbarButton,
+  findConfirmDialog,
+  findConfirmButton,
+} from './selectors'
 import { sleep, waitUntil } from './utils'
 import { EventEmitter } from './event-emitter'
 import { DeletionLog } from './deletion-log'
+
+const LOG = '[gpdt]'
 
 export type EngineStatus =
   | 'idle'
@@ -38,6 +47,16 @@ export interface EngineEvents {
  * Core deletion engine — shared between extension and standalone script.
  *
  * Supports three-state control: run → pause → resume / stop.
+ *
+ * The run loop:
+ *   1. Selects every visible un-checked photo, up to the configured batch size.
+ *   2. If the batch is full (count >= maxCount), deletes it and continues.
+ *   3. Otherwise, scrolls to load more photos.
+ *   4. If a scroll attempt yields no new content and no new selections
+ *      can be made N times in a row, concludes we've reached the end of
+ *      the gallery and breaks out of the loop. The `finally` block then
+ *      flushes whatever is currently selected (so the final partial
+ *      batch is still deleted).
  */
 export class DeleteEngine extends EventEmitter<EngineEvents> {
   private config: Config
@@ -122,49 +141,131 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     this.log.start()
     this.emitProgress()
 
+    const url = typeof window !== 'undefined' ? window.location.pathname : '(no window)'
+    console.log(
+      `${LOG} run() start — url=${url} maxCount=${this.config.maxCount} ` +
+      `dryRun=${this.config.dryRun} actionTimeout=${this.config.actionTimeout}ms ` +
+      `endOfListAttempts=${this.config.endOfListAttempts}`,
+    )
+
+    let consecutiveNoProgress = 0
+
     try {
       while (!this.stopped) {
-        // Check for pause
         await this.checkPause()
         if (this.stopped) break
 
-        const { count, lastCheckbox } = await this.selectBatch()
+        // Phase 1: select what's visible (up to maxCount).
+        const beforeCount = this.getCount()
+        const remainingCapacity = this.config.maxCount - beforeCount
+        await this.selectVisibleCheckboxes(remainingCapacity)
+        const currentCount = this.getCount()
+        const counterGain = currentCount - beforeCount
 
-        if (count >= this.config.maxCount) {
+        this.progress.selected = currentCount
+        this.emitProgress()
+
+        // Phase 2: if the batch is full, delete it now (or, in dry-run,
+        // stop here — we can't deselect-and-recount without double-counting
+        // the same visible photos forever).
+        if (currentCount >= this.config.maxCount) {
+          if (this.config.dryRun) {
+            console.log(
+              `${LOG} [dry-run] reached cap of ${this.config.maxCount} — stopping. ` +
+              `Increase maxCount if you want to count more photos.`,
+            )
+            break
+          }
           await this.deleteSelected()
-        } else if (lastCheckbox) {
-          this.progress.status = 'scrolling'
-          this.emitProgress()
-          const { top } = lastCheckbox.getBoundingClientRect()
-          await this.scrollBy(top)
-          this.progress.status = 'selecting'
-          this.emitProgress()
+          consecutiveNoProgress = 0
+          continue
+        }
+
+        // Phase 3: not yet full — try to scroll for more photos.
+        this.progress.status = 'scrolling'
+        this.emitProgress()
+        const scrolled = await this.tryScrollForMore()
+        this.progress.status = 'selecting'
+        this.emitProgress()
+
+        // Detect end-of-gallery: we made no real progress this iteration
+        // (the counter didn't grow AND scroll didn't reveal new content).
+        // We require N consecutive failures so a transient page hiccup
+        // doesn't cut the run short.
+        if (counterGain <= 0 && !scrolled) {
+          consecutiveNoProgress++
+          console.log(
+            `${LOG} no progress (${consecutiveNoProgress}/${this.config.endOfListAttempts}) ` +
+            `— counter ${beforeCount}→${currentCount}, scroll did not advance`,
+          )
+          if (consecutiveNoProgress >= this.config.endOfListAttempts) {
+            console.log(
+              `${LOG} end of gallery reached after ${this.config.endOfListAttempts} ` +
+              `attempts with no progress; ${currentCount} selected ready to flush`,
+            )
+            break
+          }
+          // Brief pause before retrying — the page might just be slow.
+          await sleep(this.config.pollDelay)
+        } else {
+          if (consecutiveNoProgress > 0) {
+            console.log(
+              `${LOG} progress resumed (was ${consecutiveNoProgress}, ` +
+              `counter ${beforeCount}→${currentCount}, scrolled=${scrolled})`,
+            )
+          }
+          consecutiveNoProgress = 0
         }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      // Timeout just means we ran out of photos — not an error
-      if (!msg.includes('Timed out')) {
+      // Timed-out exceptions are treated as "no more photos" — not a fatal error.
+      if (msg.includes('Timed out')) {
+        console.log(`${LOG} timed out waiting for content — assuming end of gallery`)
+      } else {
+        console.error(`${LOG} run() error:`, err)
         this.progress.status = 'error'
         this.progress.error = msg
         this.emitProgress()
         this.emit('error', err instanceof Error ? err : new Error(msg))
-        console.error('[DeleteEngine]', err)
       }
     } finally {
-      // Flush remaining selection
-      await this.deleteSelected()
-      this.progress.status = this.stopped ? 'idle' : 'done'
+      // Flush remaining selection — this is what handles the "last partial batch".
+      try {
+        const remaining = this.getCount()
+        if (remaining > 0 && !this.stopped && this.progress.status !== 'error') {
+          console.log(`${LOG} flushing final batch of ${remaining}`)
+          await this.deleteSelected()
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(`${LOG} final flush failed:`, err)
+        if (this.progress.status !== 'error') {
+          this.progress.status = 'error'
+          this.progress.error = msg
+          this.emitProgress()
+          this.emit('error', err instanceof Error ? err : new Error(msg))
+        }
+      }
+
+      if (this.progress.status !== 'error') {
+        this.progress.status = this.stopped ? 'idle' : 'done'
+      }
       this.emitProgress()
       if (this.progress.status === 'done') {
         this.emit('done', { ...this.progress })
       }
+
+      console.log(
+        `${LOG} run() finished — status=${this.progress.status}, ` +
+        `deleted=${this.progress.deleted}`,
+      )
     }
 
     return this.progress
   }
 
-  // --- Private helpers ---
+  // ─── Private helpers ───────────────────────────────────────────
 
   /** Wait while paused. */
   private async checkPause(): Promise<void> {
@@ -179,112 +280,243 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     this.emit('progress', snapshot)
   }
 
+  /**
+   * Read the selected-count badge. Robust to locale-specific number
+   * formatting (e.g. "1 234" in French uses a non-breaking space).
+   */
   private getCount(): number {
     const el = queryOne(SELECTOR_DEFS.counter)
-    return el ? parseInt(el.textContent ?? '0', 10) || 0 : 0
+    if (!el) return 0
+    const digitsOnly = (el.textContent ?? '').replace(/[^\d]/g, '')
+    return parseInt(digitsOnly, 10) || 0
   }
 
-  private getContainer(): HTMLElement {
-    const el = queryOne(SELECTOR_DEFS.photoContainer) as HTMLElement | null
-    if (!el) throw new Error('Photo container not found — are you on photos.google.com?')
-    return el
+  /**
+   * Click every un-checked checkbox currently in the DOM, up to maxToSelect.
+   * Returns the number of clicks performed. Does NOT wait/poll — if no
+   * checkboxes are visible right now it returns 0 immediately (the caller
+   * is responsible for scrolling or concluding end-of-gallery).
+   */
+  private async selectVisibleCheckboxes(maxToSelect: number): Promise<number> {
+    if (maxToSelect <= 0) return 0
+
+    const checkboxes = queryAll(SELECTOR_DEFS.checkbox)
+    if (checkboxes.length === 0) {
+      return 0
+    }
+
+    const batch = checkboxes.slice(0, maxToSelect)
+    for (const cb of batch) {
+      (cb as HTMLElement).click()
+    }
+
+    await sleep(this.config.selectionSettleMs)
+
+    if (batch.length > 0) {
+      console.log(
+        `${LOG} selected ${batch.length} new item(s) ` +
+        `(visible unchecked: ${checkboxes.length}, counter: ${this.getCount()})`,
+      )
+    }
+    return batch.length
   }
 
-  private async selectBatch(): Promise<{ count: number; lastCheckbox: Element | null }> {
-    const checkboxes = await waitUntil(
-      () => {
-        const els = queryAll(SELECTOR_DEFS.checkbox)
-        return els.length > 0 ? els : null
-      },
-      this.config.timeout,
-      this.config.pollDelay,
+  /**
+   * Attempt to scroll the gallery to expose more photos.
+   * Returns true if scrolling produced any observable change (scrollTop
+   * advanced, scrollHeight grew, or more unchecked checkboxes appeared);
+   * false otherwise (i.e. we're at the end of the gallery).
+   */
+  private async tryScrollForMore(): Promise<boolean> {
+    const target = this.findScrollTarget()
+    if (!target) {
+      console.warn(`${LOG} scroll: no scrollable target found`)
+      return false
+    }
+
+    const measure = (): { top: number; height: number; checkboxes: number } => ({
+      top: target.scrollTop,
+      height: target.scrollHeight,
+      checkboxes: queryAll(SELECTOR_DEFS.checkbox).length,
+    })
+
+    const before = measure()
+    const step = Math.max(200, target.clientHeight || 800)
+    target.scrollBy({ top: step, left: 0, behavior: 'auto' })
+
+    const start = Date.now()
+    while (Date.now() - start < this.config.scrollSettleMs) {
+      await sleep(Math.min(this.config.pollDelay, 200))
+      const after = measure()
+      const movedScroll = after.top > before.top
+      const grewHeight = after.height > before.height
+      const moreCheckboxes = after.checkboxes > before.checkboxes
+      if (movedScroll || grewHeight || moreCheckboxes) {
+        console.log(
+          `${LOG} scroll progress: top ${before.top}→${after.top}, ` +
+          `height ${before.height}→${after.height}, ` +
+          `unchecked ${before.checkboxes}→${after.checkboxes}`,
+        )
+        return true
+      }
+    }
+
+    console.log(
+      `${LOG} scroll yielded no new content (top=${before.top} of ${before.height}, ` +
+      `unchecked=${before.checkboxes})`,
     )
-
-    const currentCount = this.getCount()
-    const remaining = this.config.maxCount - currentCount
-    const batch = checkboxes.slice(0, remaining)
-    batch.forEach(cb => (cb as HTMLElement).click())
-
-    await sleep(200)
-    const newCount = this.getCount()
-    this.progress.selected = newCount
-    this.emitProgress()
-
-    console.log(`[DeleteEngine] Selected ${newCount} photos`)
-    return { count: newCount, lastCheckbox: batch[batch.length - 1] ?? null }
+    return false
   }
 
+  /**
+   * Find the element that actually scrolls when we want to load more
+   * photos. Tries the photo container first, then the document scroll
+   * element. Returns whichever is actually scrollable.
+   */
+  private findScrollTarget(): HTMLElement | null {
+    const container = queryOne(SELECTOR_DEFS.photoContainer) as HTMLElement | null
+    if (container && container.scrollHeight > container.clientHeight + 1) {
+      return container
+    }
+
+    const docScroll = (document.scrollingElement || document.documentElement) as HTMLElement | null
+    if (docScroll && docScroll.scrollHeight > docScroll.clientHeight + 1) {
+      return docScroll
+    }
+
+    // As a last resort return whatever we found, even if it doesn't look scrollable.
+    return container ?? docScroll ?? null
+  }
+
+  /**
+   * Delete (or, in dry-run mode, count) the currently selected photos.
+   * Locale-aware: finds the toolbar button and confirm-button by
+   * keyword across multiple languages.
+   */
   private async deleteSelected(): Promise<void> {
     const count = this.getCount()
     if (count <= 0) return
 
-    // In dry run mode, just record the count and deselect
+    // ─── Dry-run path: count and deselect, then return ────────────
     if (this.config.dryRun) {
       this.progress.deleted += count
       this.progress.selected = 0
       this.log.record(count)
       this.emitProgress()
       this.emit('deleted', count)
-      console.log(`[DeleteEngine] Dry run: would delete ${count} photos (total: ${this.progress.deleted})`)
+      console.log(
+        `${LOG} [dry-run] would delete ${count} photos ` +
+        `(total: ${this.progress.deleted}). Deselecting…`,
+      )
 
-      // Deselect all by clicking the selected checkboxes
-      const checkedSelector = SELECTOR_DEFS.checkbox.primary.replace('false', 'true')
-      const selected = [...document.querySelectorAll(checkedSelector)]
-      selected.forEach(cb => (cb as HTMLElement).click())
-      await sleep(200)
+      // Click every currently-checked checkbox to clear the selection.
+      const checked = queryAll(SELECTOR_DEFS.checkboxChecked)
+      for (const cb of checked) (cb as HTMLElement).click()
+      await sleep(this.config.selectionSettleMs)
       return
     }
 
+    // ─── Real deletion path ───────────────────────────────────────
     this.progress.status = 'deleting'
     this.emitProgress()
-    console.log(`[DeleteEngine] Deleting ${count} photos...`)
+    console.log(`${LOG} deleting batch of ${count}`)
 
-    const deleteBtn = queryOne(SELECTOR_DEFS.deleteButton) as HTMLElement | null
-    if (!deleteBtn) throw new Error('Delete button not found')
+    // 1. Click the toolbar "move to trash" / "delete" button.
+    const deleteBtn = await this.waitForToolbarDeleteButton()
+    console.log(
+      `${LOG} found toolbar delete button: ` +
+      `aria-label="${deleteBtn.getAttribute('aria-label') ?? ''}" ` +
+      `text="${(deleteBtn.textContent ?? '').trim().slice(0, 40)}"`,
+    )
     deleteBtn.click()
 
-    // Wait for confirmation dialog
-    const confirmBtn = await waitUntil(
-      () =>
-        [...document.querySelectorAll('button')].find(
-          btn => btn.textContent?.trim() === 'Move to trash',
-        ),
-      this.config.timeout,
-      this.config.pollDelay,
+    // 2. Wait for the confirmation dialog to open.
+    const dialog = await this.waitForConfirmDialog()
+    console.log(`${LOG} confirmation dialog opened`)
+
+    // 3. Find and click the destructive-action button inside the dialog.
+    const confirmBtn = await this.waitForDialogConfirmButton(dialog)
+    console.log(
+      `${LOG} confirm button: ` +
+      `aria-label="${confirmBtn.getAttribute('aria-label') ?? ''}" ` +
+      `text="${(confirmBtn.textContent ?? '').trim().slice(0, 40)}"`,
     )
     confirmBtn.click()
 
-    // Wait for count to reset
-    await waitUntil(
-      () => this.getCount() === 0,
-      this.config.timeout,
-      this.config.pollDelay,
-    )
+    // 4. Wait for the counter to reset, meaning deletion has completed.
+    try {
+      await waitUntil(
+        () => this.getCount() === 0,
+        this.config.actionTimeout,
+        this.config.pollDelay,
+      )
+    } catch {
+      throw new Error(
+        `Deletion confirmation timed out: selected-count never returned to 0 ` +
+        `within ${this.config.actionTimeout}ms after clicking confirm. ` +
+        `Google Photos may be slow or the click did not register.`,
+      )
+    }
 
     this.progress.deleted += count
     this.progress.selected = 0
     this.log.record(count)
     this.emitProgress()
     this.emit('deleted', count)
+    console.log(`${LOG} batch deleted — total now ${this.progress.deleted}`)
 
-    // Scroll back to top for next batch
-    this.getContainer().scrollTop = 0
+    // Best-effort: scroll the photo container back to the top so the
+    // next batch starts from the same anchor. Failure is non-fatal.
+    const scrollTarget = this.findScrollTarget()
+    if (scrollTarget) scrollTarget.scrollTop = 0
   }
 
-  private async scrollBy(height: number): Promise<void> {
-    const container = this.getContainer()
-    await waitUntil(
-      () => {
-        void container.scrollTop // Read to ensure layout
-        container.scrollBy(0, height)
-        return waitUntil(
-          () => queryOne(SELECTOR_DEFS.checkbox),
-          500,
-          this.config.pollDelay,
-        ).catch(() => null)
-      },
-      this.config.timeout,
-      this.config.pollDelay,
-    )
+  private async waitForToolbarDeleteButton(): Promise<HTMLElement> {
+    try {
+      return await waitUntil(
+        () => findDeleteToolbarButton(),
+        this.config.actionTimeout,
+        this.config.pollDelay,
+      )
+    } catch {
+      throw new Error(
+        `Delete/trash button not found in toolbar after ${this.config.actionTimeout}ms. ` +
+        `Make sure you're on photos.google.com with photos selected. ` +
+        `If your UI language isn't supported yet, please open an issue with the ` +
+        `aria-label of the delete button (right-click → inspect).`,
+      )
+    }
+  }
+
+  private async waitForConfirmDialog(): Promise<HTMLElement> {
+    try {
+      return await waitUntil(
+        () => findConfirmDialog(),
+        this.config.actionTimeout,
+        this.config.pollDelay,
+      )
+    } catch {
+      throw new Error(
+        `Confirmation dialog did not appear after ${this.config.actionTimeout}ms. ` +
+        `The first click may not have registered, or Google Photos changed its ` +
+        `dialog markup. Try increasing pollDelay or reload the page.`,
+      )
+    }
+  }
+
+  private async waitForDialogConfirmButton(dialog: HTMLElement): Promise<HTMLElement> {
+    try {
+      return await waitUntil(
+        () => findConfirmButton(dialog),
+        this.config.actionTimeout,
+        this.config.pollDelay,
+      )
+    } catch {
+      throw new Error(
+        `Confirm button not found inside the confirmation dialog after ` +
+        `${this.config.actionTimeout}ms. If your UI is in an unsupported ` +
+        `language, please open an issue with the dialog's button text.`,
+      )
+    }
   }
 }
