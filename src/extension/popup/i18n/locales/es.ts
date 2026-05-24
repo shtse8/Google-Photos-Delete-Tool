@@ -18,6 +18,7 @@ const es: Translations = {
     emptyingTrash: 'Vaciando papelera…',
   },
   stats: {
+    sectionLabel: 'Estadísticas',
     deleted: 'Eliminadas',
     rate: 'Por minuto',
     elapsed: 'Transcurrido',
@@ -27,7 +28,7 @@ const es: Translations = {
     sectionLabel: 'Ajustes',
     maxCount: {
       label: 'Fotos por lote',
-      hint: 'En bucle hasta vaciar la galería · 0 = sin límite',
+      hint: 'En bucle hasta vaciar la galería',
     },
     dryRun: {
       label: 'Modo prueba',

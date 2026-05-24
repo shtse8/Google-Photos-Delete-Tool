@@ -18,6 +18,7 @@ const pt: Translations = {
     emptyingTrash: 'Esvaziando lixeira…',
   },
   stats: {
+    sectionLabel: 'Estatísticas',
     deleted: 'Excluídas',
     rate: 'Por minuto',
     elapsed: 'Decorrido',
@@ -27,7 +28,7 @@ const pt: Translations = {
     sectionLabel: 'Ajustes',
     maxCount: {
       label: 'Fotos por lote',
-      hint: 'Em laço até a galeria esvaziar · 0 = sem limite',
+      hint: 'Em laço até a galeria esvaziar',
     },
     dryRun: {
       label: 'Simulação',

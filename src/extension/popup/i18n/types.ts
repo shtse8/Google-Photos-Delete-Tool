@@ -23,6 +23,8 @@ export interface Translations {
     emptyingTrash: string
   }
   stats: {
+    /** Accessible label for the stats `<section>`. */
+    sectionLabel: string
     deleted: string
     rate: string
     elapsed: string

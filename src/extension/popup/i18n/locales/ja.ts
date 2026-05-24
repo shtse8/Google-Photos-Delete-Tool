@@ -18,6 +18,7 @@ const ja: Translations = {
     emptyingTrash: 'ゴミ箱を空にしています…',
   },
   stats: {
+    sectionLabel: '統計',
     deleted: '削除済み',
     rate: '毎分',
     elapsed: '経過',
@@ -27,7 +28,7 @@ const ja: Translations = {
     sectionLabel: '設定',
     maxCount: {
       label: '1回あたりの枚数',
-      hint: 'ギャラリーが空になるまで繰り返し · 0 = 無制限',
+      hint: 'ギャラリーが空になるまで繰り返し',
     },
     dryRun: {
       label: 'テスト実行',

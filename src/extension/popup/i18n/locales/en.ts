@@ -18,6 +18,7 @@ const en: Translations = {
     emptyingTrash: 'Emptying trash…',
   },
   stats: {
+    sectionLabel: 'Stats',
     deleted: 'Deleted',
     rate: 'Per minute',
     elapsed: 'Elapsed',
@@ -27,7 +28,7 @@ const en: Translations = {
     sectionLabel: 'Settings',
     maxCount: {
       label: 'Photos per batch',
-      hint: 'Looped until the gallery is empty · 0 = unlimited',
+      hint: 'Looped until the gallery is empty',
     },
     dryRun: {
       label: 'Dry run',

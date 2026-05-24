@@ -52,29 +52,27 @@ export const SELECTOR_DEFS = {
       '[role="grid"]',
     ],
   },
-  /**
-   * Toolbar delete button — kept for backward compatibility. Prefer
-   * findDeleteToolbarButton() which is locale-aware.
-   */
-  deleteButton: {
-    name: 'Delete button',
-    primary: 'button[aria-label="Move to trash"]',
-    fallbacks: [
-      'button[aria-label="Delete"]',
-      'button[data-delete-origin]',
-    ],
-  },
 } as const satisfies Record<string, SelectorDef>
 
-/** Simple backward-compatible flat selectors (primary only) */
-export const SELECTORS = {
-  counter: SELECTOR_DEFS.counter.primary,
-  checkbox: SELECTOR_DEFS.checkbox.primary,
-  photoContainer: SELECTOR_DEFS.photoContainer.primary,
-  deleteButton: SELECTOR_DEFS.deleteButton.primary,
-} as const
-
+/**
+ * Cache of "I already warned about this fallback" keys, bounded so it
+ * cannot grow without limit on a long-running content script. In
+ * practice we have ≤ 4 selector definitions × ≤ 4 fallbacks each, so
+ * 32 is well above the real maximum and still negligible memory.
+ */
+const FALLBACK_WARN_CAP = 32
 const warnedFallbacks = new Set<string>()
+
+function warnFallback(def: SelectorDef, fallback: string): void {
+  const key = `${def.name}:${fallback}`
+  if (warnedFallbacks.has(key)) return
+  if (warnedFallbacks.size >= FALLBACK_WARN_CAP) return
+  warnedFallbacks.add(key)
+  console.warn(
+    `[gpdt:selectors] primary selector for "${def.name}" failed (${def.primary}), ` +
+    `using fallback: ${fallback}`,
+  )
+}
 
 /**
  * Query a single element using a SelectorDef, trying primary first,
@@ -87,14 +85,7 @@ export function queryOne(def: SelectorDef, root: ParentNode = document): Element
   for (const fallback of def.fallbacks) {
     const el = root.querySelector(fallback)
     if (el) {
-      const key = `${def.name}:${fallback}`
-      if (!warnedFallbacks.has(key)) {
-        warnedFallbacks.add(key)
-        console.warn(
-          `[gpdt:selectors] primary selector for "${def.name}" failed (${def.primary}), ` +
-          `using fallback: ${fallback}`,
-        )
-      }
+      warnFallback(def, fallback)
       return el
     }
   }
@@ -113,14 +104,7 @@ export function queryAll(def: SelectorDef, root: ParentNode = document): Element
   for (const fallback of def.fallbacks) {
     const els = [...root.querySelectorAll(fallback)]
     if (els.length > 0) {
-      const key = `${def.name}:${fallback}`
-      if (!warnedFallbacks.has(key)) {
-        warnedFallbacks.add(key)
-        console.warn(
-          `[gpdt:selectors] primary selector for "${def.name}" failed (${def.primary}), ` +
-          `using fallback: ${fallback}`,
-        )
-      }
+      warnFallback(def, fallback)
       return els
     }
   }
@@ -207,8 +191,12 @@ export const CANCEL_KEYWORDS: readonly string[] = Object.freeze([
   'إلغاء', 'إغلاق',
 ])
 
-/** Matches the Unicode block of Latin combining diacritical marks (U+0300..U+036F). */
-const COMBINING_DIACRITICS = /[̀-ͯ]/g
+/**
+ * Matches the Unicode block of Latin combining diacritical marks
+ * (U+0300..U+036F). Spelled with `\u` escapes rather than literal
+ * characters so the source stays readable in any editor/diff tool.
+ */
+const COMBINING_DIACRITICS = new RegExp("[\\u0300-\\u036f]", "g")
 
 /**
  * Lowercase + strip Latin combining diacritics, then re-compose so that

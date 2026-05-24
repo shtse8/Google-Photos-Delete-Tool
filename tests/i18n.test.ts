@@ -1,12 +1,24 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, beforeAll, afterAll } from 'vitest'
 import {
   LOCALES,
   DEFAULT_LOCALE,
   setLocale,
   getLocale,
   t,
+  tHtml,
   type LocaleCode,
 } from '../src/extension/popup/i18n'
+
+// Several tests intentionally probe missing keys to verify the
+// fallback behaviour; we silence the i18n module's "missing
+// translation" warn so the test output stays clean.
+let warnSpy: ReturnType<typeof vi.spyOn>
+beforeAll(() => {
+  warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+})
+afterAll(() => {
+  warnSpy.mockRestore()
+})
 
 describe('LOCALES', () => {
   it('lists English first (it is the default)', () => {
@@ -40,7 +52,7 @@ describe('LOCALES', () => {
       'status.scrolling', 'status.paused', 'status.done',
       'status.error', 'status.idle',
       'status.navigatingTrash', 'status.emptyingTrash',
-      'stats.deleted', 'stats.rate', 'stats.elapsed', 'stats.eta',
+      'stats.sectionLabel', 'stats.deleted', 'stats.rate', 'stats.elapsed', 'stats.eta',
       'settings.sectionLabel',
       'settings.maxCount.label', 'settings.maxCount.hint',
       'settings.dryRun.label', 'settings.dryRun.hint',
@@ -110,4 +122,78 @@ describe('t()', () => {
     setLocale('de'); expect(t('actions.start')).toBe('Starten')
     setLocale('ja'); expect(t('actions.start')).toBe('開始')
   })
+})
+
+describe('t() — parameter interpolation', () => {
+  beforeEach(() => setLocale('en'))
+
+  it('substitutes {name} placeholders', () => {
+    // Picked the navigate-first note because it carries a real
+    // {url} placeholder in every locale already.
+    expect(t('notes.navigateFirst', { url: 'photos.google.com' }))
+      .toBe('Open photos.google.com first.')
+  })
+
+  it('leaves unknown placeholders as literal text', () => {
+    // `{unknown}` is not in the params object — must NOT be removed
+    // or replaced with `undefined`; staying as-is makes the missing
+    // param obvious in the rendered UI.
+    expect(t('notes.navigateFirst', { other: 'x' }))
+      .toBe('Open {url} first.')
+  })
+
+  it('HTML-escapes substituted values by default', () => {
+    expect(t('notes.navigateFirst', { url: '<script>evil</script>' }))
+      .toBe('Open &lt;script&gt;evil&lt;/script&gt; first.')
+  })
+
+  it('escapes all unsafe characters: < > & " \'', () => {
+    setLocale('fr')
+    expect(t('notes.navigateFirst', { url: `a&b<c>d"e'f` }))
+      .toBe('Ouvrez d’abord a&amp;b&lt;c&gt;d&quot;e&#39;f.')
+  })
+
+  it('passing no params leaves placeholders intact', () => {
+    expect(t('notes.navigateFirst')).toBe('Open {url} first.')
+  })
+
+  it('accepts numeric param values', () => {
+    expect(t('notes.navigateFirst', { url: 42 })).toBe('Open 42 first.')
+  })
+})
+
+describe('tHtml() — verbatim interpolation', () => {
+  beforeEach(() => setLocale('en'))
+
+  it('substitutes {name} placeholders without escaping', () => {
+    const anchor = '<a href="https://photos.google.com/" target="_blank">photos.google.com</a>'
+    expect(tHtml('notes.navigateFirst', { url: anchor }))
+      .toBe(`Open ${anchor} first.`)
+  })
+
+  it('still leaves unknown placeholders intact', () => {
+    expect(tHtml('notes.navigateFirst', { other: '<b>x</b>' }))
+      .toBe('Open {url} first.')
+  })
+
+  it('matches t() when no HTML is involved', () => {
+    expect(tHtml('notes.navigateFirst', { url: 'photos.google.com' }))
+      .toBe(t('notes.navigateFirst', { url: 'photos.google.com' }))
+  })
+
+  it('returns the key unchanged for missing translations', () => {
+    expect(tHtml('does.not.exist', { x: '<b>1</b>' })).toBe('does.not.exist')
+  })
+})
+
+describe('every locale carries the {url} placeholder for the note', () => {
+  // The popup uses the {url} substitution in every locale via
+  // I18N_HTML_PARAMS. A locale missing the placeholder would render
+  // its translation literally, dropping the link entirely. Guard it.
+  for (const locale of LOCALES) {
+    it(`locale "${locale.code}" includes {url} in notes.navigateFirst`, () => {
+      setLocale(locale.code)
+      expect(t('notes.navigateFirst')).toContain('{url}')
+    })
+  }
 })

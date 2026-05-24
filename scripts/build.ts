@@ -14,6 +14,7 @@ import {
   copyFileSync,
   existsSync,
   renameSync,
+  rmSync,
 } from 'fs'
 
 const root = resolve(import.meta.dir, '..')
@@ -29,25 +30,36 @@ const extensionEntries = [
   { name: 'popup', input: 'src/extension/popup/popup.ts' },
 ]
 
-for (const entry of extensionEntries) {
+// Wipe the extension output dir up-front rather than relying on the
+// first Vite invocation to do it (which broke if anyone reordered the
+// entries above).
+rmSync(extensionDir, { recursive: true, force: true })
+mkdirSync(extensionDir, { recursive: true })
+
+for (let i = 0; i < extensionEntries.length; i++) {
+  const entry = extensionEntries[i]
   console.log(`[extension] Building ${entry.name}...`)
   await build({
     configFile: false,
     root,
     build: {
       outDir: extensionDir,
-      emptyOutDir: entry === extensionEntries[0],
+      emptyOutDir: false, // we already wiped it; reuse the same dir across entries
       target: 'es2022',
+      sourcemap: false, // shipped artifact — no maps
       lib: {
         entry: resolve(root, entry.input),
         formats: ['iife'],
         name: `__gpdt_${entry.name}`,
         fileName: () => `${entry.name}.js`,
+        // Vite ≥ 6 supports `cssFileName` here, which removes the need
+        // for the post-build rename. Setting it on every entry is fine
+        // — only the entry that ships CSS (popup) actually uses it.
+        cssFileName: 'popup',
       },
       rollupOptions: {
         output: {
           inlineDynamicImports: true,
-          assetFileNames: entry.name === 'popup' ? 'popup.[ext]' : '[name].[ext]',
         },
       },
       minify: true,
@@ -80,10 +92,13 @@ for (const size of [16, 32, 48, 128]) {
   if (existsSync(src)) copyFileSync(src, resolve(iconsOut, name))
 }
 
-// Fix CSS filename (Vite lib mode uses package name by default)
+// Fallback for environments where `cssFileName` isn't honoured yet
+// (older Vite). Always run the rename — overwrite any stale popup.css
+// from a previous build instead of silently keeping it.
 const wrongCss = resolve(extensionDir, 'google-photos-delete-tool.css')
 const correctCss = resolve(extensionDir, 'popup.css')
-if (existsSync(wrongCss) && !existsSync(correctCss)) {
+if (existsSync(wrongCss)) {
+  if (existsSync(correctCss)) rmSync(correctCss)
   renameSync(wrongCss, correctCss)
 }
 
@@ -198,7 +213,6 @@ writeFileSync(
 )
 
 // Clean up temp
-const { rmSync } = await import('fs')
 rmSync(bookmarkletBuildDir, { recursive: true, force: true })
 
 console.log('✅ Bookmarklet → dist/bookmarklet.txt + dist/bookmarklet.html')

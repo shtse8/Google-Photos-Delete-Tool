@@ -18,6 +18,7 @@ const nl: Translations = {
     emptyingTrash: 'Prullenbak legen…',
   },
   stats: {
+    sectionLabel: 'Statistieken',
     deleted: 'Verwijderd',
     rate: 'Per minuut',
     elapsed: 'Verstreken',
@@ -27,7 +28,7 @@ const nl: Translations = {
     sectionLabel: 'Instellingen',
     maxCount: {
       label: 'Foto’s per batch',
-      hint: 'In lussen tot de galerij leeg is · 0 = geen limiet',
+      hint: 'In lussen tot de galerij leeg is',
     },
     dryRun: {
       label: 'Proefrit',

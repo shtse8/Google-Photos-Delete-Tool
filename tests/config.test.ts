@@ -21,12 +21,6 @@ describe('Config', () => {
     expect(merged.pollDelay).toBe(DEFAULT_CONFIG.pollDelay)
   })
 
-  it('should accept 0 as the documented "no limit" sentinel', () => {
-    const cfg: Partial<Config> = { maxCount: 0 }
-    const merged = { ...DEFAULT_CONFIG, ...cfg }
-    expect(merged.maxCount).toBe(0)
-  })
-
   it('should preserve all fields when no overrides', () => {
     const merged = { ...DEFAULT_CONFIG }
     expect(merged).toEqual(DEFAULT_CONFIG)

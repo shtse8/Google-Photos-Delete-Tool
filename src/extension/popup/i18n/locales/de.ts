@@ -18,6 +18,7 @@ const de: Translations = {
     emptyingTrash: 'Papierkorb wird geleert…',
   },
   stats: {
+    sectionLabel: 'Statistik',
     deleted: 'Gelöscht',
     rate: 'Pro Minute',
     elapsed: 'Vergangen',
@@ -27,7 +28,7 @@ const de: Translations = {
     sectionLabel: 'Einstellungen',
     maxCount: {
       label: 'Fotos pro Stapel',
-      hint: 'Schleife bis Galerie leer · 0 = unbegrenzt',
+      hint: 'Schleife bis Galerie leer',
     },
     dryRun: {
       label: 'Testlauf',

@@ -18,6 +18,7 @@ const it: Translations = {
     emptyingTrash: 'Svuotamento del cestino…',
   },
   stats: {
+    sectionLabel: 'Statistiche',
     deleted: 'Eliminate',
     rate: 'Al minuto',
     elapsed: 'Trascorso',
@@ -27,7 +28,7 @@ const it: Translations = {
     sectionLabel: 'Impostazioni',
     maxCount: {
       label: 'Foto per lotto',
-      hint: 'Ciclo fino a galleria vuota · 0 = senza limite',
+      hint: 'Ciclo fino a galleria vuota',
     },
     dryRun: {
       label: 'Prova a vuoto',

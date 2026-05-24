@@ -24,13 +24,19 @@
           id="lang-trigger"
           aria-haspopup="listbox"
           aria-expanded="false"
+          aria-controls="lang-menu"
           data-i18n-attr="aria-label:settings.language.trigger"
         >
           <span class="lang-icon" id="lang-icon" aria-hidden="true"></span>
           <span class="lang-code" id="lang-code">EN</span>
           <span class="lang-chevron" id="lang-chevron" aria-hidden="true"></span>
         </button>
-        <ul class="lang-menu hidden" id="lang-menu" role="listbox"></ul>
+        <ul
+          class="lang-menu hidden"
+          id="lang-menu"
+          role="listbox"
+          data-i18n-attr="aria-label:settings.language.label"
+        ></ul>
       </div>
     </header>
 
@@ -47,7 +53,7 @@
     </div>
 
     <!-- ─── Stats grid ──────────────────────────────────────────── -->
-    <section class="stats" aria-label="Stats">
+    <section class="stats" data-i18n-attr="aria-label:stats.sectionLabel" aria-label="Stats">
       <article class="stat">
         <div class="stat-value" id="stat-deleted">0</div>
         <div class="stat-label" data-i18n="stats.deleted">Deleted</div>
@@ -86,7 +92,7 @@
           <span class="field-icon" id="field-icon-max" aria-hidden="true"></span>
           <span class="field-text">
             <span class="field-name" data-i18n="settings.maxCount.label">Photos per batch</span>
-            <span class="field-hint" data-i18n="settings.maxCount.hint">Select &amp; delete in loops until the gallery is empty</span>
+            <span class="field-hint" data-i18n="settings.maxCount.hint">Looped until the gallery is empty</span>
           </span>
         </label>
         <input
@@ -94,14 +100,20 @@
           id="max-count"
           class="field-input"
           value="500"
-          min="0"
+          min="1"
           max="100000"
           step="50"
           inputmode="numeric"
-          data-i18n-attr="aria-label:settings.maxCount.label"
         >
       </div>
 
+      <!--
+        The toggle's `<label class="toggle">` wraps the checkbox; the
+        OUTER `<label for="…">` already provides the accessible name
+        (its descendant `.field-name` span is the visible text). No
+        extra aria-label on the wrapper or screen readers would read
+        the label twice.
+      -->
       <div class="field">
         <label class="field-label" for="dry-run">
           <span class="field-icon" id="field-icon-dry" aria-hidden="true"></span>
@@ -110,7 +122,7 @@
             <span class="field-hint" data-i18n="settings.dryRun.hint">Count only, no deletion</span>
           </span>
         </label>
-        <label class="toggle" data-i18n-attr="aria-label:settings.dryRun.label">
+        <label class="toggle">
           <input type="checkbox" id="dry-run">
           <span class="toggle-track">
             <span class="toggle-thumb"></span>
@@ -126,7 +138,7 @@
             <span class="field-hint" data-i18n="settings.emptyTrash.hint">Permanently delete afterwards</span>
           </span>
         </label>
-        <label class="toggle" data-i18n-attr="aria-label:settings.emptyTrash.label">
+        <label class="toggle">
           <input type="checkbox" id="empty-trash">
           <span class="toggle-track toggle-track-danger">
             <span class="toggle-thumb"></span>
@@ -155,8 +167,10 @@
       </button>
     </div>
 
-    <!-- ─── Note ────────────────────────────────────────────────── -->
-    <p class="note hidden" id="note" role="alert"></p>
+    <!-- Note uses role="status" (polite) rather than role="alert" so it
+         doesn't fight with the actual error banner above for screen-
+         reader attention. -->
+    <p class="note hidden" id="note" role="status"></p>
   </main>
 
   <script src="popup.js"></script>

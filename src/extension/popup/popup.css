@@ -47,6 +47,12 @@
   --success: #16a34a;
   --info: #2563eb;
 
+  /* Focus rings — single source of truth so dark mode can override
+     and brand-color tweaks propagate everywhere. */
+  --ring-accent: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  --ring-danger: 0 0 0 3px rgba(220, 38, 38, 0.25);
+  --ring-strong: 0 0 0 3px rgba(99, 102, 241, 0.4);
+
   --shadow-card: 0 10px 35px -10px rgba(15, 23, 42, 0.18),
                   0 2px 6px -2px rgba(15, 23, 42, 0.08);
   --shadow-btn-primary: 0 6px 16px -6px var(--accent-glow);
@@ -104,9 +110,11 @@
 }
 
 html, body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+  /* System-font stack only — we don't bundle web fonts, so don't
+     advertise font families we can't deliver (Inter etc. used to be
+     here but resolved to the fallback on every install). */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
                 'SF Pro Text', Roboto, 'Helvetica Neue', sans-serif;
-  font-feature-settings: 'cv11', 'ss01', 'ss03';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: var(--text);
@@ -220,6 +228,10 @@ body {
   color: var(--text-strong);
   border-color: var(--border-strong);
 }
+.lang-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-accent);
+}
 
 .lang-icon, .lang-chevron {
   display: inline-flex;
@@ -241,7 +253,9 @@ body {
   top: calc(100% + 6px);
   right: 0;
   min-width: 156px;
-  max-height: 240px;
+  /* Enough to show every supported locale without scrolling
+     (9 × ~32px = ~288px). Raise when we ship more locales. */
+  max-height: 320px;
   overflow-y: auto;
   background: var(--bg-surface-strong);
   border: 1px solid var(--border);
@@ -271,8 +285,13 @@ body {
   user-select: none;
   transition: background var(--t-fast);
 }
-.lang-option:hover {
+.lang-option:hover,
+.lang-option:focus {
   background: var(--bg-stat-hover);
+  outline: none;
+}
+.lang-option:focus-visible {
+  box-shadow: var(--ring-accent);
 }
 .lang-option[aria-selected="true"] {
   background: var(--bg-stat);
@@ -429,6 +448,28 @@ body {
   100% { transform: translateX(100%); }
 }
 
+/* Indeterminate mode: no width target is known (deletion total is
+   only knowable once the gallery is exhausted), so we slide a 30%
+   wide fill across the track instead of filling to a percentage. The
+   explicit !important overrides the inline width="" that JS sets on
+   transition, and the disabled width-transition keeps the slide
+   smooth instead of fighting the keyframe animation. */
+.progress-fill.indeterminate {
+  width: 30% !important;
+  transition: none;
+  animation: progressIndeterminate 1.4s ease-in-out infinite;
+}
+@keyframes progressIndeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(333%); }
+}
+/* Suppress the secondary shine animation while indeterminate — the
+   sliding fill IS the activity indicator. */
+.progress-fill.indeterminate::after {
+  animation: none;
+  background: none;
+}
+
 .progress-label {
   font-size: 11px;
   font-weight: 600;
@@ -533,6 +574,7 @@ body {
   outline: none;
   transition: border-color var(--t-fast), box-shadow var(--t-fast);
   font-variant-numeric: tabular-nums;
+  appearance: textfield;
   -moz-appearance: textfield;
 }
 .field-input::-webkit-outer-spin-button,
@@ -542,7 +584,23 @@ body {
 }
 .field-input:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  box-shadow: var(--ring-accent);
+}
+
+/* The whole-panel `.settings.disabled` rule fades every field at
+   once while the engine is running. When ONLY one field is disabled
+   in isolation (e.g. maxCount while dry-run is checked but the
+   engine is idle), the browser's default :disabled barely shifts
+   the colour — these rules make the state legible. The matching
+   label is faded too via :has so the user sees the whole row dim. */
+.field-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--text-muted);
+}
+.field:has(.field-input:disabled) .field-label {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ─── Toggle switch ───────────────────────────────────────────── */
@@ -588,7 +646,20 @@ body {
   background: #fff;
 }
 .toggle input:focus-visible ~ .toggle-track {
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  box-shadow: var(--ring-accent);
+}
+
+/* Matching disabled state for the toggle when a setting is gated by
+   another (e.g. emptyTrash greyed out while dry-run is checked).
+   Default browser styling does next to nothing, so fade the track,
+   the thumb, and the surrounding row. */
+.toggle input:disabled ~ .toggle-track {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.field:has(.toggle input:disabled) .field-label {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Danger variant of the toggle — for the "Empty trash" switch which
@@ -597,7 +668,7 @@ body {
   background: linear-gradient(135deg, #f97316, var(--danger));
 }
 .toggle input:focus-visible ~ .toggle-track-danger {
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+  box-shadow: var(--ring-danger);
 }
 
 /* Danger-tinted icon chip for the matching field-icon */
@@ -637,7 +708,7 @@ body {
 }
 .btn:active { transform: scale(0.96); }
 .btn:focus-visible {
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35);
+  box-shadow: var(--ring-strong);
 }
 
 .btn-icon {
@@ -720,5 +791,12 @@ body {
   .progress-fill::after,
   .status-dot.running::after {
     animation: none;
+  }
+  /* Without an animation the indeterminate slide would settle at its
+     333% end-state — off-screen and invisible. Park the fill at the
+     start instead so users still get a partial "active" indicator. */
+  .progress-fill.indeterminate {
+    animation: none;
+    transform: translateX(0);
   }
 }

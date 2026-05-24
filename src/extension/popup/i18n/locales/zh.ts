@@ -18,6 +18,7 @@ const zh: Translations = {
     emptyingTrash: '正在清空回收站…',
   },
   stats: {
+    sectionLabel: '统计',
     deleted: '已删除',
     rate: '每分钟',
     elapsed: '已用',
@@ -27,7 +28,7 @@ const zh: Translations = {
     sectionLabel: '设置',
     maxCount: {
       label: '每批照片数',
-      hint: '循环直至清空相册 · 0 = 无限制',
+      hint: '循环直至清空相册',
     },
     dryRun: {
       label: '试运行',

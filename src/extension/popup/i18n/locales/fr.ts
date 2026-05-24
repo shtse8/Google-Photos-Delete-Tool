@@ -18,6 +18,7 @@ const fr: Translations = {
     emptyingTrash: 'Vidage de la corbeille…',
   },
   stats: {
+    sectionLabel: 'Statistiques',
     deleted: 'Supprimées',
     rate: 'Par minute',
     elapsed: 'Écoulé',
@@ -27,7 +28,7 @@ const fr: Translations = {
     sectionLabel: 'Réglages',
     maxCount: {
       label: 'Photos par lot',
-      hint: 'Tranches successives jusqu’à la fin · 0 = illimité',
+      hint: 'Tranches successives jusqu’à la fin',
     },
     dryRun: {
       label: 'Mode test',
