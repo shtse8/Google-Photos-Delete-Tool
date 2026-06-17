@@ -5,6 +5,7 @@ import {
   DELETE_KEYWORDS,
   CANCEL_KEYWORDS,
   EMPTY_TRASH_PHRASES,
+  findConfirmButton,
 } from '../src/core/selectors'
 
 describe('normalizeText', () => {
@@ -24,6 +25,12 @@ describe('normalizeText', () => {
     expect(normalizeText('À la corbeille')).toBe('a la corbeille')
     expect(normalizeText('Löschen')).toBe('loschen')
     expect(normalizeText('Eliminár')).toBe('eliminar')
+  })
+
+  it('does not delete plain ASCII characters while stripping diacritics', () => {
+    expect(normalizeText('Delete duplicate photo')).toBe('delete duplicate photo')
+    expect(normalizeText('Move to album')).toBe('move to album')
+    expect(normalizeText('Photo uploaded in June')).toBe('photo uploaded in june')
   })
 
   it('collapses whitespace and trims', () => {
@@ -200,5 +207,25 @@ describe('EMPTY_TRASH_PHRASES', () => {
         `expected NO EMPTY_TRASH match for "${label}"`,
       ).toBe(false)
     }
+  })
+})
+
+
+describe('findConfirmButton', () => {
+  const dialogWithButtons = (labels: string[]) => ({
+    querySelectorAll: () => labels.map(label => ({
+      getAttribute: (key: string) => (key === 'aria-label' ? label : null),
+      textContent: '',
+    })),
+  }) as unknown as HTMLElement
+
+  it('returns the destructive confirmation button when it is explicitly labelled', () => {
+    const dialog = dialogWithButtons(['Cancel', 'Move to trash'])
+    expect(findConfirmButton(dialog)?.getAttribute('aria-label')).toBe('Move to trash')
+  })
+
+  it('fails closed instead of guessing the last non-cancel button', () => {
+    const dialog = dialogWithButtons(['Cancel', 'OK'])
+    expect(findConfirmButton(dialog)).toBeNull()
   })
 })

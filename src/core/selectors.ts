@@ -160,6 +160,24 @@ export const DELETE_KEYWORDS: readonly string[] = Object.freeze([
 ])
 
 /**
+ * Labels that indicate a non-trash contextual removal (for example
+ * "Remove from album"). These are explicitly excluded when choosing
+ * the main selected-items delete toolbar action because this tool's
+ * destructive workflow must move photos to Trash, not merely detach them
+ * from an album/shared surface.
+ */
+const CONTEXTUAL_REMOVE_KEYWORDS: readonly string[] = Object.freeze([
+  'album', 'shared album', 'from album', 'collage', 'animation',
+  'retirer de l album', 'retirer de l album partage',
+  'quitar del album', 'eliminar del album',
+  'aus album entfernen',
+  'rimuovi dall album',
+  'remover do album',
+  'remove from album',
+])
+
+
+/**
  * Keywords that indicate a cancel / dismiss / close action.
  * Used to negatively score buttons inside a dialog so we don't
  * accidentally click "Cancel" instead of "Confirm".
@@ -196,7 +214,7 @@ export const CANCEL_KEYWORDS: readonly string[] = Object.freeze([
  * (U+0300..U+036F). Spelled with `\u` escapes rather than literal
  * characters so the source stays readable in any editor/diff tool.
  */
-const COMBINING_DIACRITICS = new RegExp("[\\u0300-\\u036f]", "g")
+const COMBINING_DIACRITICS = /[\u0300-\u036f]/g
 
 /**
  * Lowercase + strip Latin combining diacritics, then re-compose so that
@@ -312,21 +330,27 @@ export function findDeleteToolbarButton(): HTMLElement | null {
     if (el && isVisible(el) && !isInsideDialog(el)) return el
   }
 
-  // Locale-aware path: scan all buttons.
-  const allButtons = [
-    ...document.querySelectorAll<HTMLElement>('button, [role="button"]'),
-  ]
-  for (const btn of allButtons) {
-    if (!isVisible(btn)) continue
-    if (isInsideDialog(btn)) continue
-    const candidate = getButtonTextCandidates(btn)
-    if (!candidate) continue
-    if (containsAnyKeyword(candidate, DELETE_KEYWORDS)) {
-      return btn
-    }
+  // Locale-aware path: only scan generic buttons after at least one
+  // photo is selected. Without this guard a page-level button such as
+  // "Remove from album" could be considered before Google Photos has
+  // actually exposed the selected-items toolbar.
+  if (queryAll(SELECTOR_DEFS.checkboxChecked).length === 0) {
+    return null
   }
 
-  return null
+  const scored = [
+    ...document.querySelectorAll<HTMLElement>('button, [role="button"]'),
+  ]
+    .filter(btn => isVisible(btn) && !isInsideDialog(btn))
+    .map(btn => ({
+      btn,
+      label: getButtonTextCandidates(btn),
+      score: scoreActionButton(btn),
+    }))
+    .filter(({ label }) => label && !containsAnyKeyword(label, CONTEXTUAL_REMOVE_KEYWORDS))
+    .sort((a, b) => b.score - a.score)
+
+  return scored[0]?.score > 0 ? scored[0].btn : null
 }
 
 /**
@@ -415,10 +439,9 @@ export function findConfirmDialog(): HTMLElement | null {
 
 /**
  * Find the destructive-action button inside a dialog (e.g. "Move to trash"
- * confirm button). Filters out cancel-like buttons, prefers ones whose
- * label matches a delete keyword. Falls back to the last non-cancel
- * button if no keyword match (Material Design typically places the
- * primary action last).
+ * confirm button). Filters out cancel-like buttons and returns only a
+ * positive destructive keyword match. For a bulk-delete tool, guessing the
+ * last non-cancel button is not safe enough.
  */
 export function findConfirmButton(dialog: HTMLElement): HTMLElement | null {
   const buttons = [
@@ -428,12 +451,5 @@ export function findConfirmButton(dialog: HTMLElement): HTMLElement | null {
 
   const scored = buttons.map(btn => ({ btn, score: scoreActionButton(btn) }))
   scored.sort((a, b) => b.score - a.score)
-  if (scored[0].score > 0) return scored[0].btn
-
-  // No positive keyword match — fall back to the last non-cancel button.
-  const nonCancel = buttons.filter(btn => {
-    const candidate = getButtonTextCandidates(btn)
-    return !containsAnyKeyword(candidate, CANCEL_KEYWORDS)
-  })
-  return nonCancel[nonCancel.length - 1] ?? null
+  return scored[0].score > 0 ? scored[0].btn : null
 }

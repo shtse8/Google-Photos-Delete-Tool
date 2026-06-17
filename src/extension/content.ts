@@ -69,12 +69,22 @@ const start = async (opts: StartOptions): Promise<void> => {
     engine = local
     starting = false
 
-    await local.run()
+    const result = await local.run()
 
-    // Post-run: if the user asked for empty-trash AND the run wasn't
-    // stopped AND wasn't a dry-run, navigate to /trash for the flow.
-    // (Stops short-circuit this so a Stop never triggers a navigation.)
+    // Post-run: only chain into permanent Empty Trash after a clean,
+    // completed delete run that actually deleted at least one item.
+    // DeleteEngine reports actionable failures as status='error' rather
+    // than throwing, so status gating is mandatory for this destructive
+    // follow-up. Stops and dry-runs also short-circuit.
     if (local.isStopped || dryRun) return
+    if (result.status !== 'done' || result.deleted <= 0) {
+      console.warn(
+        `${LOG} skipping empty-trash navigation — ` +
+        `run status=${result.status}, deleted=${result.deleted}`,
+      )
+      await storageRemove([STORAGE_KEYS.emptyTrashAfter])
+      return
+    }
 
     let wantEmpty = false
     try {
