@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.4] - 2026-06-17
+
+### Fixed
+- Update Chrome Web Store release workflow for the current upload CLI credential environment variables.
+
 ## [2.0.3] - 2026-06-17
 
 ### Fixed

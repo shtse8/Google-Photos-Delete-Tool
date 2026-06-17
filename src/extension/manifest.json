@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Google Photos Delete Tool",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "The fastest way to bulk delete your Google Photos — up to 25x faster than manual deletion.",
   "permissions": [
     "activeTab",
