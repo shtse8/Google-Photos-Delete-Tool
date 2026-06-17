@@ -1,9 +1,11 @@
 /**
  * Google Photos DOM selectors with fallbacks.
  *
- * Google frequently changes class names. Each selector has a primary and
- * fallback list. The query helpers try each in order and log warnings
- * when the primary fails but a fallback succeeds.
+ * Google frequently changes class names AND localizes button labels.
+ * Each CSS selector has a primary and fallback list. For action buttons
+ * we also use keyword-based matching (aria-label / tooltip / text content,
+ * normalized and matched against multilingual keyword lists) so the tool
+ * works regardless of UI language.
  */
 
 export interface SelectorDef {
@@ -32,54 +34,58 @@ export const SELECTOR_DEFS = {
       '[data-lat][aria-checked="false"]',
     ],
   },
+  checkboxChecked: {
+    name: 'Photo checkbox (checked)',
+    primary: '.ckGgle[aria-checked=true]',
+    fallbacks: [
+      '[role="checkbox"][aria-checked="true"]',
+      '[data-lat][aria-checked="true"]',
+    ],
+  },
   photoContainer: {
     name: 'Photo container',
     primary: '.yDSiEe.uGCjIb.zcLWac.eejsDc.TWmIyd',
     fallbacks: [
       '.yDSiEe.uGCjIb.zcLWac',
+      '[role="main"]',
       '[role="list"]',
       '[role="grid"]',
     ],
   },
-  deleteButton: {
-    name: 'Delete button',
-    primary: 'button[aria-label="Move to trash"]',
-    fallbacks: [
-      'button[aria-label="Delete"]',
-      'button[data-delete-origin]',
-    ],
-  },
 } as const satisfies Record<string, SelectorDef>
 
-/** Simple backward-compatible flat selectors (primary only) */
-export const SELECTORS = {
-  counter: SELECTOR_DEFS.counter.primary,
-  checkbox: SELECTOR_DEFS.checkbox.primary,
-  photoContainer: SELECTOR_DEFS.photoContainer.primary,
-  deleteButton: SELECTOR_DEFS.deleteButton.primary,
-} as const
-
+/**
+ * Cache of "I already warned about this fallback" keys, bounded so it
+ * cannot grow without limit on a long-running content script. In
+ * practice we have ≤ 4 selector definitions × ≤ 4 fallbacks each, so
+ * 32 is well above the real maximum and still negligible memory.
+ */
+const FALLBACK_WARN_CAP = 32
 const warnedFallbacks = new Set<string>()
+
+function warnFallback(def: SelectorDef, fallback: string): void {
+  const key = `${def.name}:${fallback}`
+  if (warnedFallbacks.has(key)) return
+  if (warnedFallbacks.size >= FALLBACK_WARN_CAP) return
+  warnedFallbacks.add(key)
+  console.warn(
+    `[gpdt:selectors] primary selector for "${def.name}" failed (${def.primary}), ` +
+    `using fallback: ${fallback}`,
+  )
+}
 
 /**
  * Query a single element using a SelectorDef, trying primary first,
  * then fallbacks. Logs a warning when a fallback is used.
  */
-export function queryOne(def: SelectorDef): Element | null {
-  const primary = document.querySelector(def.primary)
+export function queryOne(def: SelectorDef, root: ParentNode = document): Element | null {
+  const primary = root.querySelector(def.primary)
   if (primary) return primary
 
   for (const fallback of def.fallbacks) {
-    const el = document.querySelector(fallback)
+    const el = root.querySelector(fallback)
     if (el) {
-      const key = `${def.name}:${fallback}`
-      if (!warnedFallbacks.has(key)) {
-        warnedFallbacks.add(key)
-        console.warn(
-          `[Selectors] Primary selector for "${def.name}" failed (${def.primary}), ` +
-          `using fallback: ${fallback}`
-        )
-      }
+      warnFallback(def, fallback)
       return el
     }
   }
@@ -91,24 +97,359 @@ export function queryOne(def: SelectorDef): Element | null {
  * Query all elements using a SelectorDef, trying primary first,
  * then fallbacks.
  */
-export function queryAll(def: SelectorDef): Element[] {
-  const primary = [...document.querySelectorAll(def.primary)]
+export function queryAll(def: SelectorDef, root: ParentNode = document): Element[] {
+  const primary = [...root.querySelectorAll(def.primary)]
   if (primary.length > 0) return primary
 
   for (const fallback of def.fallbacks) {
-    const els = [...document.querySelectorAll(fallback)]
+    const els = [...root.querySelectorAll(fallback)]
     if (els.length > 0) {
-      const key = `${def.name}:${fallback}`
-      if (!warnedFallbacks.has(key)) {
-        warnedFallbacks.add(key)
-        console.warn(
-          `[Selectors] Primary selector for "${def.name}" failed (${def.primary}), ` +
-          `using fallback: ${fallback}`
-        )
-      }
+      warnFallback(def, fallback)
       return els
     }
   }
 
   return []
+}
+
+// ─── Locale-aware action button finding ────────────────────────────
+
+/**
+ * Keywords that indicate a destructive "delete" / "trash" action.
+ * Already lowercase and ASCII-folded (no diacritics) so they match
+ * against the normalized form of an element's label.
+ */
+export const DELETE_KEYWORDS: readonly string[] = Object.freeze([
+  // English
+  'trash', 'bin', 'delete', 'remove',
+  // French
+  'corbeille', 'supprimer', 'supprime',
+  // Spanish
+  'papelera', 'eliminar', 'borrar',
+  // German (ö → o after stripping diacritics)
+  'papierkorb', 'loschen', 'entfernen',
+  // Italian
+  'cestino', 'elimina', 'rimuovi',
+  // Portuguese
+  'lixo', 'lixeira', 'excluir', 'remover',
+  // Dutch
+  'prullenbak', 'verwijder',
+  // Polish (ń → n after stripping)
+  'kosz', 'usun',
+  // Czech / Slovak
+  'kos', 'odstranit', 'smazat',
+  // Romanian
+  'sterge',
+  // Scandinavian
+  'papirkorg', 'papperskorg', 'slett', 'radera', 'roskakori', 'poista',
+  // Greek
+  'διαγραφ', 'κάδος', 'καδος', 'σκουπιδ',
+  // Russian / Ukrainian
+  'корзин', 'удалить', 'кошик', 'видалити',
+  // Turkish — only long enough labels to avoid false-positive substring
+  // matches (e.g. "cop" would match "copy" in any English UI string).
+  'silmek', 'kaldir',
+  // CJK (no diacritic stripping needed)
+  'ゴミ箱', '削除', 'ごみ箱',
+  '휴지통', '삭제',
+  '回收站', '废纸篓', '垃圾桶', '删除', '刪除',
+  // Hebrew
+  'אשפה', 'מחק',
+  // Arabic
+  'مهملات', 'حذف',
+])
+
+/**
+ * Labels that indicate a non-trash contextual removal (for example
+ * "Remove from album"). These are explicitly excluded when choosing
+ * the main selected-items delete toolbar action because this tool's
+ * destructive workflow must move photos to Trash, not merely detach them
+ * from an album/shared surface.
+ */
+const CONTEXTUAL_REMOVE_KEYWORDS: readonly string[] = Object.freeze([
+  'album', 'shared album', 'from album', 'collage', 'animation',
+  'retirer de l album', 'retirer de l album partage',
+  'quitar del album', 'eliminar del album',
+  'aus album entfernen',
+  'rimuovi dall album',
+  'remover do album',
+  'remove from album',
+])
+
+
+/**
+ * Keywords that indicate a cancel / dismiss / close action.
+ * Used to negatively score buttons inside a dialog so we don't
+ * accidentally click "Cancel" instead of "Confirm".
+ *
+ * IMPORTANT: substring matching is used, so very short keywords
+ * (≤2 chars in Latin script) are intentionally excluded to avoid
+ * false positives. E.g. `'no'` would match "ces**no**", `'back'`
+ * would match "**back**ground".
+ */
+export const CANCEL_KEYWORDS: readonly string[] = Object.freeze([
+  'cancel', 'dismiss', 'close',
+  'annuler', 'fermer', 'retour',
+  'cancelar', 'cerrar',
+  'abbrechen', 'schliessen', 'nein',
+  'annulla', 'chiudi', 'indietro',
+  'annuleren', 'sluiten',
+  'anuluj', 'zamknij', 'wstecz',
+  'zrusit', 'zavrit',
+  'avbryt', 'stang', 'tilbake',
+  'avbryta', 'avsluta',
+  'peruuta', 'sulje',
+  'ακύρωση', 'ακυρωση',
+  'отмена', 'закрыть', 'скасувати',
+  'iptal', 'kapat',
+  'キャンセル', '閉じる', '戻る',
+  '취소', '닫기',
+  '取消', '关闭', '關閉',
+  'ביטול', 'סגור',
+  'إلغاء', 'إغلاق',
+])
+
+/**
+ * Matches the Unicode block of Latin combining diacritical marks
+ * (U+0300..U+036F). Spelled with `\u` escapes rather than literal
+ * characters so the source stays readable in any editor/diff tool.
+ */
+const COMBINING_DIACRITICS = /[\u0300-\u036f]/g
+
+/**
+ * Lowercase + strip Latin combining diacritics, then re-compose so that
+ * CJK characters (which NFD decomposes into base + combining-voicing-mark
+ * outside the Latin block) survive unchanged. Safe for null/undefined.
+ *
+ * Examples:
+ *   normalizeText('Déplacer') === 'deplacer'
+ *   normalizeText('Löschen')  === 'loschen'
+ *   normalizeText('ゴミ箱')   === 'ゴミ箱'
+ *   normalizeText('취소')      === '취소'
+ */
+export function normalizeText(s: string | null | undefined): string {
+  if (!s) return ''
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(COMBINING_DIACRITICS, '')
+    .normalize('NFC')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Cache normalized keyword lists by array reference for performance. */
+const normCache = new WeakMap<readonly string[], string[]>()
+function getNormalizedKeywords(keywords: readonly string[]): string[] {
+  let cached = normCache.get(keywords)
+  if (!cached) {
+    cached = keywords.map(normalizeText).filter(k => k.length > 0)
+    normCache.set(keywords, cached)
+  }
+  return cached
+}
+
+/**
+ * True if the normalized form of `text` contains any of `keywords` as a
+ * substring. Both sides are normalized via {@link normalizeText} so the
+ * comparison works for Latin (case + diacritic insensitive) and CJK
+ * (precomposed/decomposed insensitive).
+ */
+export function containsAnyKeyword(text: string | null | undefined, keywords: readonly string[]): boolean {
+  const normalized = normalizeText(text)
+  if (!normalized) return false
+  const normKeywords = getNormalizedKeywords(keywords)
+  return normKeywords.some(k => normalized.includes(k))
+}
+
+/**
+ * Collect all candidate texts on an element that a human user would read
+ * to decide what the button does: aria-label, data-tooltip, title, text content.
+ */
+export function getButtonTextCandidates(el: Element): string {
+  const parts: string[] = []
+  const al = el.getAttribute?.('aria-label')
+  if (al) parts.push(al)
+  const dt = el.getAttribute?.('data-tooltip')
+  if (dt) parts.push(dt)
+  const title = el.getAttribute?.('title')
+  if (title) parts.push(title)
+  const text = (el as HTMLElement).textContent?.trim()
+  if (text) parts.push(text)
+  return parts.join(' ')
+}
+
+function isVisible(el: Element): boolean {
+  if (typeof window === 'undefined') return true
+  const he = el as HTMLElement
+  if (!he.isConnected) return false
+  const rect = he.getBoundingClientRect?.()
+  if (rect && rect.width === 0 && rect.height === 0) return false
+  if (he.hidden) return false
+  const style = window.getComputedStyle?.(he)
+  if (style && (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0')) {
+    return false
+  }
+  return true
+}
+
+function isInsideDialog(el: Element): boolean {
+  return !!el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]')
+}
+
+/** Score a button: higher = more likely the destructive action. */
+export function scoreActionButton(
+  el: Element,
+  positive: readonly string[] = DELETE_KEYWORDS,
+  negative: readonly string[] = CANCEL_KEYWORDS,
+): number {
+  const candidate = getButtonTextCandidates(el)
+  let score = 0
+  if (containsAnyKeyword(candidate, positive)) score += 100
+  if (containsAnyKeyword(candidate, negative)) score -= 1000
+  return score
+}
+
+/**
+ * Find the toolbar "delete / move to trash" button that appears after
+ * photos are selected. Tries fast CSS selectors first, then falls back
+ * to scanning all buttons by accessible label / tooltip / text and
+ * matching against multilingual keyword lists.
+ *
+ * Returns null if no candidate is found (caller should retry / wait).
+ */
+export function findDeleteToolbarButton(): HTMLElement | null {
+  // Fast path: CSS selectors (covers English UI quickly).
+  const cssCandidates: string[] = [
+    'button[aria-label="Move to trash"]',
+    'button[aria-label="Delete"]',
+    'button[data-delete-origin]',
+  ]
+  for (const sel of cssCandidates) {
+    const el = document.querySelector<HTMLButtonElement>(sel)
+    if (el && isVisible(el) && !isInsideDialog(el)) return el
+  }
+
+  // Locale-aware path: only scan generic buttons after at least one
+  // photo is selected. Without this guard a page-level button such as
+  // "Remove from album" could be considered before Google Photos has
+  // actually exposed the selected-items toolbar.
+  if (queryAll(SELECTOR_DEFS.checkboxChecked).length === 0) {
+    return null
+  }
+
+  const scored = [
+    ...document.querySelectorAll<HTMLElement>('button, [role="button"]'),
+  ]
+    .filter(btn => isVisible(btn) && !isInsideDialog(btn))
+    .map(btn => ({
+      btn,
+      label: getButtonTextCandidates(btn),
+      score: scoreActionButton(btn),
+    }))
+    .filter(({ label }) => label && !containsAnyKeyword(label, CONTEXTUAL_REMOVE_KEYWORDS))
+    .sort((a, b) => b.score - a.score)
+
+  return scored[0]?.score > 0 ? scored[0].btn : null
+}
+
+/**
+ * Multi-word phrases that uniquely identify the "Empty trash" / "Empty bin"
+ * action on the /trash page. We require longer phrases here (not just
+ * "trash") because /trash also exposes "Delete forever" and "Restore"
+ * buttons that we must not accidentally match.
+ */
+export const EMPTY_TRASH_PHRASES: readonly string[] = Object.freeze([
+  // English
+  'empty trash', 'empty bin', 'empty the trash', 'empty the bin',
+  // French
+  'vider la corbeille', 'vider corbeille',
+  // Spanish
+  'vaciar papelera', 'vaciar la papelera',
+  // German
+  'papierkorb leeren',
+  // Italian
+  'svuota cestino', 'svuota il cestino',
+  // Portuguese
+  'esvaziar lixo', 'esvaziar lixeira', 'esvaziar a lixeira',
+  // Dutch
+  'prullenbak legen', 'leeg prullenbak', 'leeg de prullenbak',
+  // Polish, Czech
+  'oproznij kosz', 'vyprazdnit kos',
+  // Russian
+  'опорожнить корзину', 'очистить корзину',
+  // Japanese, Korean, Chinese
+  'ゴミ箱を空に', 'ごみ箱を空に',
+  '휴지통 비우기',
+  '清空回收站', '清空垃圾桶', '清空垃圾箱',
+])
+
+/**
+ * Find the "Empty trash" toolbar button visible on the /trash page.
+ * Uses the multi-phrase keyword list above so we don't accidentally
+ * match "Delete forever" (which also lives on /trash).
+ */
+export function findEmptyTrashButton(): HTMLElement | null {
+  // Fast path: a couple of well-known English aria-labels.
+  const cssCandidates: string[] = [
+    'button[aria-label="Empty trash"]',
+    'button[aria-label="Empty bin"]',
+  ]
+  for (const sel of cssCandidates) {
+    const el = document.querySelector<HTMLButtonElement>(sel)
+    if (el && isVisible(el) && !isInsideDialog(el)) return el
+  }
+
+  // Locale-aware path: scan all buttons.
+  const allButtons = [
+    ...document.querySelectorAll<HTMLElement>('button, [role="button"]'),
+  ]
+  for (const btn of allButtons) {
+    if (!isVisible(btn)) continue
+    if (isInsideDialog(btn)) continue
+    const candidate = getButtonTextCandidates(btn)
+    if (!candidate) continue
+    if (containsAnyKeyword(candidate, EMPTY_TRASH_PHRASES)) {
+      return btn
+    }
+  }
+
+  return null
+}
+
+/**
+ * Find a currently-open confirmation dialog. Returns the topmost
+ * visible one (highest z-index) when multiple are open.
+ */
+export function findConfirmDialog(): HTMLElement | null {
+  const candidates = [
+    ...document.querySelectorAll<HTMLElement>(
+      '[role="dialog"], [role="alertdialog"], [aria-modal="true"]',
+    ),
+  ].filter(isVisible)
+  if (candidates.length === 0) return null
+  if (candidates.length === 1) return candidates[0]
+  candidates.sort((a, b) => {
+    const za = parseInt(window.getComputedStyle(a).zIndex, 10) || 0
+    const zb = parseInt(window.getComputedStyle(b).zIndex, 10) || 0
+    return zb - za
+  })
+  return candidates[0]
+}
+
+/**
+ * Find the destructive-action button inside a dialog (e.g. "Move to trash"
+ * confirm button). Filters out cancel-like buttons and returns only a
+ * positive destructive keyword match. For a bulk-delete tool, guessing the
+ * last non-cancel button is not safe enough.
+ */
+export function findConfirmButton(dialog: HTMLElement): HTMLElement | null {
+  const buttons = [
+    ...dialog.querySelectorAll<HTMLElement>('button, [role="button"]'),
+  ].filter(isVisible)
+  if (buttons.length === 0) return null
+
+  const scored = buttons.map(btn => ({ btn, score: scoreActionButton(btn) }))
+  scored.sort((a, b) => b.score - a.score)
+  return scored[0].score > 0 ? scored[0].btn : null
 }

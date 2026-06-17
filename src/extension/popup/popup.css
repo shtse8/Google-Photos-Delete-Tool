@@ -1,339 +1,686 @@
 /* ─── Reset & Base ────────────────────────────────────────────── */
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
 :root {
-  /* Light mode (default) */
-  --bg-primary: #f8f9fa;
-  --bg-card: rgba(255, 255, 255, 0.85);
-  --bg-stat: rgba(0, 0, 0, 0.03);
-  --bg-input: rgba(0, 0, 0, 0.05);
-  --bg-progress: rgba(0, 0, 0, 0.06);
+  /* ── Light theme tokens ─────────────────────────────────────── */
+  --bg-app: #f4f5fb;
+  --bg-app-gradient: radial-gradient(
+    1200px 600px at 0% 0%,
+    rgba(124, 58, 237, 0.08),
+    transparent 60%
+  ), radial-gradient(
+    1000px 500px at 100% 0%,
+    rgba(59, 130, 246, 0.08),
+    transparent 60%
+  );
+  --bg-surface: rgba(255, 255, 255, 0.78);
+  --bg-surface-strong: rgba(255, 255, 255, 0.95);
+  --bg-stat: rgba(15, 23, 42, 0.04);
+  --bg-stat-hover: rgba(15, 23, 42, 0.06);
+  --bg-input: rgba(15, 23, 42, 0.05);
+  --bg-track: rgba(15, 23, 42, 0.08);
+  --bg-error: rgba(239, 68, 68, 0.10);
+  --bg-note: rgba(15, 23, 42, 0.04);
 
-  --text-primary: #1a1a2e;
-  --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
+  --text-strong: #0f172a;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --text-on-accent: #ffffff;
 
-  --border-color: rgba(0, 0, 0, 0.08);
-  --border-focus: #4f8cff;
+  --border: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.15);
+  --border-focus: #6366f1;
+  --border-error: rgba(239, 68, 68, 0.30);
 
-  --accent: #4f8cff;
-  --accent-gradient: linear-gradient(135deg, #4f8cff, #6c5ce7);
-  --danger: #ef4444;
-  --danger-hover: #dc2626;
+  --accent-from: #6366f1;
+  --accent-to: #8b5cf6;
+  --accent-glow: rgba(99, 102, 241, 0.35);
   --warning: #f59e0b;
   --warning-hover: #d97706;
-  --success: #22c55e;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --success: #16a34a;
+  --info: #2563eb;
 
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08);
-  --shadow-btn: 0 2px 8px rgba(79, 140, 255, 0.3);
+  /* Focus rings — single source of truth so dark mode can override
+     and brand-color tweaks propagate everywhere. */
+  --ring-accent: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  --ring-danger: 0 0 0 3px rgba(220, 38, 38, 0.25);
+  --ring-strong: 0 0 0 3px rgba(99, 102, 241, 0.4);
 
-  --radius-lg: 16px;
+  --shadow-card: 0 10px 35px -10px rgba(15, 23, 42, 0.18),
+                  0 2px 6px -2px rgba(15, 23, 42, 0.08);
+  --shadow-btn-primary: 0 6px 16px -6px var(--accent-glow);
+  --shadow-stat: inset 0 0 0 1px var(--border);
+
+  --radius-2xl: 20px;
+  --radius-xl: 14px;
+  --radius-lg: 12px;
   --radius-md: 10px;
-  --radius-sm: 6px;
+  --radius-sm: 8px;
 
-  --transition: 0.2s ease;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --t-fast: 120ms var(--ease);
+  --t-norm: 200ms var(--ease);
+  --t-slow: 320ms var(--ease);
 }
 
-/* ─── Dark Mode ───────────────────────────────────────────────── */
+/* ─── Dark theme ──────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-primary: #0f0f1a;
-    --bg-card: rgba(30, 30, 50, 0.85);
+    --bg-app: #0b0d17;
+    --bg-app-gradient: radial-gradient(
+      1200px 600px at 0% 0%,
+      rgba(124, 58, 237, 0.18),
+      transparent 60%
+    ), radial-gradient(
+      1000px 500px at 100% 0%,
+      rgba(59, 130, 246, 0.16),
+      transparent 60%
+    );
+    --bg-surface: rgba(22, 26, 44, 0.78);
+    --bg-surface-strong: rgba(28, 32, 52, 0.96);
     --bg-stat: rgba(255, 255, 255, 0.05);
-    --bg-input: rgba(255, 255, 255, 0.08);
-    --bg-progress: rgba(255, 255, 255, 0.08);
+    --bg-stat-hover: rgba(255, 255, 255, 0.08);
+    --bg-input: rgba(255, 255, 255, 0.06);
+    --bg-track: rgba(255, 255, 255, 0.08);
+    --bg-error: rgba(239, 68, 68, 0.14);
+    --bg-note: rgba(255, 255, 255, 0.04);
 
-    --text-primary: #f0f0f0;
-    --text-secondary: #a1a1aa;
-    --text-muted: #71717a;
+    --text-strong: #f8fafc;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --text-faint: #64748b;
 
-    --border-color: rgba(255, 255, 255, 0.1);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.15);
+    --border-error: rgba(239, 68, 68, 0.4);
 
-    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --accent-glow: rgba(139, 92, 246, 0.45);
+
+    --shadow-card: 0 18px 60px -16px rgba(0, 0, 0, 0.55),
+                    0 2px 8px -2px rgba(0, 0, 0, 0.3);
+    --shadow-stat: inset 0 0 0 1px var(--border);
   }
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  width: 300px;
+html, body {
+  /* System-font stack only — we don't bundle web fonts, so don't
+     advertise font families we can't deliver (Inter etc. used to be
+     here but resolved to the fallback on every install). */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                'SF Pro Text', Roboto, 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color: var(--text);
 }
 
-/* ─── Card Container ──────────────────────────────────────────── */
-.card {
-  background: var(--bg-card);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-color);
-  padding: 20px;
+/* The popup IS the card — no outer rectangle, no inset margin. */
+body {
+  width: 320px;
+  margin: 0;
+  background:
+    var(--bg-app-gradient),
+    var(--bg-app);
+}
+
+/* ─── App container ───────────────────────────────────────────── */
+.app {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  padding: 18px;
+  background: transparent;
+  animation: appear 280ms var(--ease);
+}
+
+@keyframes appear {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ─── Header ──────────────────────────────────────────────────── */
-.header {
+.app-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.header-icon {
-  font-size: 28px;
-  line-height: 1;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
-.header-title {
-  font-size: 16px;
+.brand-icon {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  color: var(--text-on-accent);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 6px 16px -8px var(--accent-glow);
+}
+.brand-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.brand-text { min-width: 0; }
+
+.brand-title {
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  color: var(--text-strong);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.header-subtitle {
-  font-size: 11px;
+.brand-subtitle {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  letter-spacing: 0.01em;
+  margin-top: 2px;
+}
+
+/* ─── Language picker ─────────────────────────────────────────── */
+.lang-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.lang-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 6px 6px;
+  background: var(--bg-stat);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 1px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.lang-trigger:hover {
+  background: var(--bg-stat-hover);
+  color: var(--text);
+}
+.lang-trigger[aria-expanded="true"] {
+  background: var(--bg-stat-hover);
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+}
+.lang-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-accent);
 }
 
-/* ─── Status Bar ──────────────────────────────────────────────── */
-.status-bar {
+.lang-icon, .lang-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lang-icon svg { width: 14px; height: 14px; }
+.lang-chevron svg {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--t-norm);
+}
+.lang-trigger[aria-expanded="true"] .lang-chevron svg {
+  transform: rotate(180deg);
+}
+
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 156px;
+  /* Enough to show every supported locale without scrolling
+     (9 × ~32px = ~288px). Raise when we ship more locales. */
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg-surface-strong);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 4px;
+  z-index: 10;
+  list-style: none;
+  animation: menuPop 160ms var(--ease);
+}
+@keyframes menuPop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--t-fast);
+}
+.lang-option:hover,
+.lang-option:focus {
+  background: var(--bg-stat-hover);
+  outline: none;
+}
+.lang-option:focus-visible {
+  box-shadow: var(--ring-accent);
+}
+.lang-option[aria-selected="true"] {
+  background: var(--bg-stat);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.lang-option-code {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Status pill ─────────────────────────────────────────────── */
+.status {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
   background: var(--bg-stat);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--text-faint);
   flex-shrink: 0;
-  transition: background var(--transition);
+  position: relative;
+  transition: background var(--t-norm);
 }
-
 .status-dot.running {
   background: var(--success);
-  animation: pulse 1.5s ease-in-out infinite;
 }
-
-.status-dot.paused {
-  background: var(--warning);
-  animation: pulse 2s ease-in-out infinite;
+.status-dot.running::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--success);
+  opacity: 0;
+  animation: dotPulse 1.6s ease-out infinite;
 }
-
-.status-dot.done {
-  background: var(--accent);
+@keyframes dotPulse {
+  0%   { transform: scale(0.6); opacity: 0.65; }
+  100% { transform: scale(1.7); opacity: 0; }
 }
+.status-dot.paused { background: var(--warning); }
+.status-dot.done   { background: var(--info); }
+.status-dot.error  { background: var(--danger); }
 
-.status-dot.error {
-  background: var(--danger);
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.85); }
-}
-
-/* ─── Error Bar ───────────────────────────────────────────────── */
-.error-bar {
+/* ─── Error banner ────────────────────────────────────────────── */
+.error {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 8px 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
+  padding: 10px 12px;
+  background: var(--bg-error);
+  border: 1px solid var(--border-error);
+  border-radius: var(--radius-md);
+  font-size: 11.5px;
   color: var(--danger);
+  line-height: 1.4;
 }
-
 .error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  margin-top: 1px;
 }
-
+.error-icon svg { width: 16px; height: 16px; }
 .error-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
+  word-break: break-word;
 }
 
-/* ─── Stats Grid ──────────────────────────────────────────────── */
-.stats-grid {
+/* ─── Stats grid ──────────────────────────────────────────────── */
+.stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
-.stat-card {
+.stat {
   background: var(--bg-stat);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: 10px 12px;
   text-align: center;
-  transition: background var(--transition);
+  transition: background var(--t-norm), transform var(--t-norm);
+  box-shadow: var(--shadow-stat);
+}
+.stat:hover {
+  background: var(--bg-stat-hover);
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.2;
+  color: var(--text-strong);
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .stat-label {
-  font-size: 10px;
-  color: var(--text-muted);
+  font-size: 9.5px;
+  color: var(--text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 2px;
+  letter-spacing: 0.08em;
+  margin-top: 3px;
+  font-weight: 600;
 }
 
-/* ─── Progress Bar ────────────────────────────────────────────── */
-.progress-container {
+/* ─── Progress bar ────────────────────────────────────────────── */
+.progress {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.progress-bar {
+.progress-track {
   flex: 1;
-  height: 6px;
-  background: var(--bg-progress);
-  border-radius: 3px;
+  height: 7px;
+  background: var(--bg-track);
+  border-radius: 999px;
   overflow: hidden;
+  position: relative;
 }
-
 .progress-fill {
   height: 100%;
-  background: var(--accent-gradient);
-  border-radius: 3px;
   width: 0%;
-  transition: width 0.4s ease;
+  background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+  border-radius: 999px;
+  transition: width 380ms var(--ease);
+  position: relative;
+  overflow: hidden;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  transform: translateX(-100%);
+  animation: progressShine 1.8s ease-in-out infinite;
+}
+@keyframes progressShine {
+  100% { transform: translateX(100%); }
+}
+
+/* Indeterminate mode: no width target is known (deletion total is
+   only knowable once the gallery is exhausted), so we slide a 30%
+   wide fill across the track instead of filling to a percentage. The
+   explicit !important overrides the inline width="" that JS sets on
+   transition, and the disabled width-transition keeps the slide
+   smooth instead of fighting the keyframe animation. */
+.progress-fill.indeterminate {
+  width: 30% !important;
+  transition: none;
+  animation: progressIndeterminate 1.4s ease-in-out infinite;
+}
+@keyframes progressIndeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(333%); }
+}
+/* Suppress the secondary shine animation while indeterminate — the
+   sliding fill IS the activity indicator. */
+.progress-fill.indeterminate::after {
+  animation: none;
+  background: none;
 }
 
 .progress-label {
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   min-width: 32px;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-/* ─── Settings ────────────────────────────────────────────────── */
+/* ─── Settings panel ──────────────────────────────────────────── */
 .settings {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 12px;
+  background: var(--bg-stat);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: opacity var(--t-norm);
+}
+.settings.disabled {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
-.setting-row {
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding-bottom: 2px;
+}
+.settings-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.settings-icon svg { width: 12px; height: 12px; }
+
+.field {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.setting-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+.field-icon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.field-icon svg { width: 14px; height: 14px; }
+
+.field-text {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
 }
-
-.setting-hint {
-  font-size: 10px;
-  color: var(--text-muted);
+.field-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+.field-hint {
+  font-size: 10.5px;
+  color: var(--text-faint);
   font-weight: 400;
+  line-height: 1.3;
 }
 
-.setting-input {
+.field-input {
   width: 90px;
-  padding: 6px 10px;
+  padding: 7px 10px;
   background: var(--bg-input);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 500;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
   text-align: right;
   outline: none;
-  transition: border-color var(--transition);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
   font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
-
-.setting-input:focus {
+.field-input::-webkit-outer-spin-button,
+.field-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.field-input:focus {
   border-color: var(--border-focus);
+  box-shadow: var(--ring-accent);
 }
 
-/* ─── Toggle Switch ───────────────────────────────────────────── */
+/* The whole-panel `.settings.disabled` rule fades every field at
+   once while the engine is running. When ONLY one field is disabled
+   in isolation (e.g. maxCount while dry-run is checked but the
+   engine is idle), the browser's default :disabled barely shifts
+   the colour — these rules make the state legible. The matching
+   label is faded too via :has so the user sees the whole row dim. */
+.field-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--text-muted);
+}
+.field:has(.field-input:disabled) .field-label {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Toggle switch ───────────────────────────────────────────── */
 .toggle {
   position: relative;
   display: inline-block;
-  width: 36px;
-  height: 20px;
+  width: 38px;
+  height: 22px;
   flex-shrink: 0;
 }
-
 .toggle input {
+  position: absolute;
   opacity: 0;
   width: 0;
   height: 0;
 }
-
-.toggle-slider {
+.toggle-track {
   position: absolute;
-  cursor: pointer;
   inset: 0;
   background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  transition: all var(--transition);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all var(--t-norm);
 }
-
-.toggle-slider::before {
-  content: '';
+.toggle-thumb {
   position: absolute;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
+  top: 2px;
   left: 2px;
-  bottom: 2px;
-  background: var(--text-muted);
+  background: var(--text-faint);
   border-radius: 50%;
-  transition: all var(--transition);
+  transition: all var(--t-norm);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
-
-.toggle input:checked + .toggle-slider {
-  background: var(--accent);
-  border-color: var(--accent);
+.toggle input:checked ~ .toggle-track {
+  background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  border-color: transparent;
 }
-
-.toggle input:checked + .toggle-slider::before {
+.toggle input:checked ~ .toggle-track .toggle-thumb {
   transform: translateX(16px);
   background: #fff;
 }
+.toggle input:focus-visible ~ .toggle-track {
+  box-shadow: var(--ring-accent);
+}
 
-/* ─── Buttons ─────────────────────────────────────────────────── */
+/* Matching disabled state for the toggle when a setting is gated by
+   another (e.g. emptyTrash greyed out while dry-run is checked).
+   Default browser styling does next to nothing, so fade the track,
+   the thumb, and the surrounding row. */
+.toggle input:disabled ~ .toggle-track {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.field:has(.toggle input:disabled) .field-label {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Danger variant of the toggle — for the "Empty trash" switch which
+   represents a permanent / irreversible action. */
+.toggle input:checked ~ .toggle-track-danger {
+  background: linear-gradient(135deg, #f97316, var(--danger));
+}
+.toggle input:focus-visible ~ .toggle-track-danger {
+  box-shadow: var(--ring-danger);
+}
+
+/* Danger-tinted icon chip for the matching field-icon */
+.field-icon-danger {
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.10);
+}
+@media (prefers-color-scheme: dark) {
+  .field-icon-danger { background: rgba(239, 68, 68, 0.16); }
+}
+
+/* ─── Controls ────────────────────────────────────────────────── */
 .controls {
   display: flex;
   gap: 8px;
@@ -341,70 +688,115 @@ body {
 
 .btn {
   flex: 1;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 16px;
+  gap: 8px;
+  padding: 11px 14px;
   border: none;
   border-radius: var(--radius-md);
+  font: inherit;
   font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: all var(--transition);
   outline: none;
+  transition: transform var(--t-fast), background var(--t-fast),
+              box-shadow var(--t-fast), opacity var(--t-fast);
+  position: relative;
+  isolation: isolate;
+}
+.btn:active { transform: scale(0.96); }
+.btn:focus-visible {
+  box-shadow: var(--ring-strong);
 }
 
-.btn:active {
-  transform: scale(0.97);
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
+.btn-icon svg { width: 14px; height: 14px; }
 
 .btn-primary {
-  background: var(--accent-gradient);
-  color: #fff;
-  box-shadow: var(--shadow-btn);
+  background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  color: var(--text-on-accent);
+  box-shadow: var(--shadow-btn-primary);
 }
-
 .btn-primary:hover {
-  opacity: 0.9;
   transform: translateY(-1px);
+  box-shadow: 0 10px 24px -8px var(--accent-glow);
 }
-
 .btn-primary:active {
-  transform: scale(0.97) translateY(0);
-}
-
-.btn-danger {
-  background: var(--danger);
-  color: #fff;
-}
-
-.btn-danger:hover {
-  background: var(--danger-hover);
+  transform: scale(0.96) translateY(0);
 }
 
 .btn-warning {
   background: var(--warning);
-  color: #fff;
+  color: var(--text-on-accent);
+  box-shadow: 0 6px 16px -8px rgba(245, 158, 11, 0.5);
 }
+.btn-warning:hover { background: var(--warning-hover); }
 
-.btn-warning:hover {
-  background: var(--warning-hover);
+.btn-danger {
+  background: var(--danger);
+  color: var(--text-on-accent);
+  box-shadow: 0 6px 16px -8px rgba(220, 38, 38, 0.5);
 }
-
-.btn-icon {
-  font-size: 11px;
-}
+.btn-danger:hover { background: var(--danger-hover); }
 
 /* ─── Note ────────────────────────────────────────────────────── */
 .note {
   text-align: center;
   font-size: 11px;
-  color: var(--text-muted);
-  padding: 6px;
+  color: var(--text-faint);
+  padding: 8px 10px;
+  background: var(--bg-note);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border);
+}
+.note a {
+  color: var(--accent-from);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--t-fast);
+}
+.note a:hover {
+  color: var(--accent-to);
+  text-decoration: none;
 }
 
 /* ─── Utilities ───────────────────────────────────────────────── */
-.hidden {
-  display: none !important;
+.hidden { display: none !important; }
+
+/* ─── Scrollbar styling for the language menu ─────────────────── */
+.lang-menu::-webkit-scrollbar { width: 6px; }
+.lang-menu::-webkit-scrollbar-track { background: transparent; }
+.lang-menu::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.lang-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+/* ─── Reduced-motion accessibility ────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .progress-fill::after,
+  .status-dot.running::after {
+    animation: none;
+  }
+  /* Without an animation the indeterminate slide would settle at its
+     333% end-state — off-screen and invisible. Park the fill at the
+     start instead so users still get a partial "active" indicator. */
+  .progress-fill.indeterminate {
+    animation: none;
+    transform: translateX(0);
+  }
 }

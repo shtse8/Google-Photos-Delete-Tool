@@ -122,4 +122,30 @@ describe('DeletionLog', () => {
     expect(log.totalDeleted).toBe(0)
     expect(log.batchCount).toBe(0)
   })
+
+  it('ratePerMinute does not spike artificially on the first batch', () => {
+    // Regression: the denominator used to be `now - oldestEntry`,
+    // which for the very first batch (say, 1 s old) of 100 deletions
+    // returned 100 * 60 = 6000 photos/min. The window-bounded
+    // denominator caps that to the realistic ~100/min.
+    const log = new DeletionLog()
+    // Use a non-zero base time — Date.now() is never 0 in real life,
+    // and DeletionLog's `startTime > 0` guard would otherwise read 0
+    // as "not started" and use the full window.
+    vi.setSystemTime(new Date(1_000_000))
+    log.start()
+
+    // Long pause — engine sat idle for 60 s.
+    vi.setSystemTime(new Date(1_060_000))
+    log.record(100)
+
+    // Measure 1 s after that batch.
+    vi.setSystemTime(new Date(1_061_000))
+    const rate = log.ratePerMinute() // default window = 120 s
+
+    // 100 deletions over the 61 s of run ≈ 98 photos/min. Without
+    // the fix this returned 6000.
+    expect(rate).toBeGreaterThan(50)
+    expect(rate).toBeLessThan(120)
+  })
 })

@@ -3,7 +3,7 @@
  * Paste the built IIFE into Chrome DevTools console on photos.google.com.
  * Creates a floating widget UI with controls, progress bar, and stats.
  */
-import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatus } from '../core'
+import { DeleteEngine, formatElapsed, type Progress, type EngineStatus } from '../core'
 
 ;(() => {
   // Remove any existing widget
@@ -12,6 +12,19 @@ import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatu
   const container = document.createElement('div')
   container.id = 'gpdt-container'
   container.innerHTML = `
+<style>
+  /* Indeterminate animation for the progress bar — used while
+     running because we don't know the total photo count up front, so
+     a percentage would be misleading. */
+  @keyframes gpdt-slide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(333%); }
+  }
+  #gpdt-bar.gpdt-indeterminate {
+    width: 30% !important;
+    animation: gpdt-slide 1.4s ease-in-out infinite;
+  }
+</style>
 <div id="gpdt-widget" style="
   position:fixed; bottom:20px; right:20px; z-index:99999;
   background:rgba(30,30,50,0.92); color:#e8e8e8; border-radius:14px;
@@ -32,7 +45,7 @@ import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatu
     <!-- Config: Max count -->
     <div style="margin-bottom:8px;">
       <label style="font-size:11px;color:#888;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Max photos to delete</label>
-      <input id="gpdt-max" type="number" value="10000" min="1" style="
+      <input id="gpdt-max" type="number" value="500" min="1" style="
         width:100%;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);
         background:rgba(255,255,255,0.06);color:#e8e8e8;font-size:12px;outline:none;
         box-sizing:border-box;
@@ -125,7 +138,6 @@ import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatu
   // --- UI update ---
 
   const updateUI = (p: Progress): void => {
-    const maxCount = parseInt(maxInput.value, 10) || 10_000
     const running = !['idle', 'done', 'error'].includes(p.status)
 
     // Show/hide button groups
@@ -136,10 +148,20 @@ import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatu
     maxInput.disabled = running
     dryRunCheck.disabled = running
 
-    // Progress bar
+    // Progress bar. The user's maxCount is a per-batch number, not a
+    // deletion target, so a percentage would be misleading (it would
+    // hit 100% after the first batch). Run an indeterminate slide
+    // animation while working, snap to full on done.
     progressEl.style.display = (p.deleted > 0 || running) ? 'block' : 'none'
-    if (maxCount > 0) {
-      bar.style.width = `${Math.min(100, (p.deleted / maxCount) * 100)}%`
+    if (running || p.status === 'paused') {
+      bar.classList.add('gpdt-indeterminate')
+      bar.style.width = ''
+    } else if (p.status === 'done') {
+      bar.classList.remove('gpdt-indeterminate')
+      bar.style.width = '100%'
+    } else {
+      bar.classList.remove('gpdt-indeterminate')
+      bar.style.width = '0%'
     }
 
     // Pause button text
@@ -159,16 +181,12 @@ import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatu
     // Stats line
     const elapsed = Date.now() - p.startedAt
     const rate = engine ? engine.log.ratePerMinute() : 0
-    const etaMs = engine ? engine.log.estimateRemaining(maxCount) : null
 
     let statsLine = statusText[p.status] || p.status
     if (p.deleted > 0) {
       statsLine += ` · ${p.deleted.toLocaleString()} deleted`
       if (rate > 0 && running) {
         statsLine += ` · ${Math.round(rate)}/min`
-      }
-      if (etaMs !== null && etaMs > 0 && running) {
-        statsLine += ` · ETA ${formatEta(etaMs)}`
       }
       if (!running && p.status === 'done') {
         statsLine = `✅ Done — ${p.deleted.toLocaleString()} deleted in ${formatElapsed(elapsed)}`
@@ -188,14 +206,17 @@ import { DeleteEngine, formatElapsed, formatEta, type Progress, type EngineStatu
   startBtn.addEventListener('click', () => {
     if (engine) return
 
-    const maxCount = parseInt(maxInput.value, 10) || 10_000
+    const parsed = parseInt(maxInput.value, 10)
+    const maxCount = Number.isFinite(parsed) && parsed > 0 ? parsed : 500
     const dryRun = dryRunCheck.checked
 
-    // Reset UI
+    // Reset UI — wipe any stats left over from a previous run so the
+    // user doesn't see e.g. "ETA 15m" on a fresh start.
     errorEl.style.display = 'none'
     bar.style.width = '0%'
     bar.style.background = 'linear-gradient(90deg, #10b981, #3b82f6)'
     startBtn.textContent = '▶ Start Deleting'
+    stats.textContent = ''
 
     engine = new DeleteEngine({ maxCount, dryRun }, (p) => {
       updateUI(p)

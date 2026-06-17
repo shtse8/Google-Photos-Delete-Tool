@@ -7,105 +7,170 @@
   <title>Google Photos Delete Tool</title>
 </head>
 <body>
-  <main class="card">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-icon">🗑️</div>
-      <div class="header-text">
-        <h1 class="header-title">Delete Tool</h1>
-        <p class="header-subtitle">Google Photos</p>
+  <main class="app">
+
+    <!-- ─── Header ──────────────────────────────────────────────── -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-icon" id="brand-icon" aria-hidden="true"></span>
+        <div class="brand-text">
+          <h1 class="brand-title" data-i18n="header.title">Photos Cleanup</h1>
+          <p class="brand-subtitle" data-i18n="header.subtitle">Google Photos bulk delete</p>
+        </div>
+      </div>
+      <div class="lang-picker">
+        <button
+          class="lang-trigger"
+          id="lang-trigger"
+          aria-haspopup="listbox"
+          aria-expanded="false"
+          aria-controls="lang-menu"
+          data-i18n-attr="aria-label:settings.language.trigger"
+        >
+          <span class="lang-icon" id="lang-icon" aria-hidden="true"></span>
+          <span class="lang-code" id="lang-code">EN</span>
+          <span class="lang-chevron" id="lang-chevron" aria-hidden="true"></span>
+        </button>
+        <ul
+          class="lang-menu hidden"
+          id="lang-menu"
+          role="listbox"
+          data-i18n-attr="aria-label:settings.language.label"
+        ></ul>
       </div>
     </header>
 
-    <!-- Status indicator -->
-    <div class="status-bar" id="status-bar">
+    <!-- ─── Status pill ─────────────────────────────────────────── -->
+    <div class="status" id="status">
       <span class="status-dot" id="status-dot"></span>
-      <span class="status-text" id="status-text">Ready</span>
+      <span class="status-text" id="status-text" data-i18n="status.ready">Ready</span>
     </div>
 
-    <!-- Error display -->
-    <div class="error-bar hidden" id="error-bar">
-      <span class="error-icon">⚠️</span>
+    <!-- ─── Error banner ────────────────────────────────────────── -->
+    <div class="error hidden" id="error" role="alert">
+      <span class="error-icon" id="error-icon" aria-hidden="true"></span>
       <span class="error-text" id="error-text"></span>
     </div>
 
-    <!-- Stats dashboard -->
-    <div class="stats-grid">
-      <div class="stat-card">
+    <!-- ─── Stats grid ──────────────────────────────────────────── -->
+    <section class="stats" data-i18n-attr="aria-label:stats.sectionLabel" aria-label="Stats">
+      <article class="stat">
         <div class="stat-value" id="stat-deleted">0</div>
-        <div class="stat-label">Deleted</div>
-      </div>
-      <div class="stat-card">
+        <div class="stat-label" data-i18n="stats.deleted">Deleted</div>
+      </article>
+      <article class="stat">
         <div class="stat-value" id="stat-rate">—</div>
-        <div class="stat-label">Per min</div>
-      </div>
-      <div class="stat-card">
+        <div class="stat-label" data-i18n="stats.rate">Per minute</div>
+      </article>
+      <article class="stat">
         <div class="stat-value" id="stat-elapsed">0s</div>
-        <div class="stat-label">Elapsed</div>
-      </div>
-      <div class="stat-card">
+        <div class="stat-label" data-i18n="stats.elapsed">Elapsed</div>
+      </article>
+      <article class="stat">
         <div class="stat-value" id="stat-eta">—</div>
-        <div class="stat-label">ETA</div>
-      </div>
-    </div>
+        <div class="stat-label" data-i18n="stats.eta">ETA</div>
+      </article>
+    </section>
 
-    <!-- Progress bar -->
-    <div class="progress-container">
-      <div class="progress-bar">
+    <!-- ─── Progress bar ────────────────────────────────────────── -->
+    <div class="progress">
+      <div class="progress-track">
         <div class="progress-fill" id="progress-fill"></div>
       </div>
-      <div class="progress-label" id="progress-label">0%</div>
+      <span class="progress-label" id="progress-label">0%</span>
     </div>
 
-    <!-- Settings -->
-    <div class="settings" id="settings-panel">
-      <div class="setting-row">
-        <label class="setting-label" for="max-count">Max photos</label>
+    <!-- ─── Settings ────────────────────────────────────────────── -->
+    <section class="settings" id="settings-panel">
+      <header class="settings-header">
+        <span class="settings-icon" id="settings-icon" aria-hidden="true"></span>
+        <span class="settings-title" data-i18n="settings.sectionLabel">Settings</span>
+      </header>
+
+      <div class="field">
+        <label class="field-label" for="max-count">
+          <span class="field-icon" id="field-icon-max" aria-hidden="true"></span>
+          <span class="field-text">
+            <span class="field-name" data-i18n="settings.maxCount.label">Photos per batch</span>
+            <span class="field-hint" data-i18n="settings.maxCount.hint">Looped until the gallery is empty</span>
+          </span>
+        </label>
         <input
           type="number"
           id="max-count"
-          class="setting-input"
-          value="10000"
+          class="field-input"
+          value="500"
           min="1"
           max="100000"
-          step="100"
-          aria-label="Maximum number of photos to delete"
+          step="50"
+          inputmode="numeric"
         >
       </div>
-      <div class="setting-row">
-        <label class="setting-label" for="dry-run">
-          Dry run
-          <span class="setting-hint">Count only, no deletion</span>
+
+      <!--
+        The toggle's `<label class="toggle">` wraps the checkbox; the
+        OUTER `<label for="…">` already provides the accessible name
+        (its descendant `.field-name` span is the visible text). No
+        extra aria-label on the wrapper or screen readers would read
+        the label twice.
+      -->
+      <div class="field">
+        <label class="field-label" for="dry-run">
+          <span class="field-icon" id="field-icon-dry" aria-hidden="true"></span>
+          <span class="field-text">
+            <span class="field-name" data-i18n="settings.dryRun.label">Dry run</span>
+            <span class="field-hint" data-i18n="settings.dryRun.hint">Count only, no deletion</span>
+          </span>
         </label>
         <label class="toggle">
-          <input type="checkbox" id="dry-run" aria-label="Enable dry run mode">
-          <span class="toggle-slider"></span>
+          <input type="checkbox" id="dry-run">
+          <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+          </span>
         </label>
       </div>
-    </div>
 
-    <!-- Controls -->
+      <div class="field">
+        <label class="field-label" for="empty-trash">
+          <span class="field-icon field-icon-danger" id="field-icon-empty" aria-hidden="true"></span>
+          <span class="field-text">
+            <span class="field-name" data-i18n="settings.emptyTrash.label">Empty trash</span>
+            <span class="field-hint" data-i18n="settings.emptyTrash.hint">Permanently delete afterwards</span>
+          </span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="empty-trash">
+          <span class="toggle-track toggle-track-danger">
+            <span class="toggle-thumb"></span>
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <!-- ─── Controls ────────────────────────────────────────────── -->
     <div class="controls">
-      <button class="btn btn-primary" id="start-btn" aria-label="Start deleting">
-        <span class="btn-icon">▶</span>
-        <span class="btn-text">Start</span>
+      <button class="btn btn-primary" id="start-btn" data-i18n-attr="aria-label:actions.start">
+        <span class="btn-icon" id="start-icon" aria-hidden="true"></span>
+        <span class="btn-text" data-i18n="actions.start">Start</span>
       </button>
-      <button class="btn btn-warning hidden" id="pause-btn" aria-label="Pause">
-        <span class="btn-icon">⏸</span>
-        <span class="btn-text">Pause</span>
+      <button class="btn btn-warning hidden" id="pause-btn" data-i18n-attr="aria-label:actions.pause">
+        <span class="btn-icon" id="pause-icon" aria-hidden="true"></span>
+        <span class="btn-text" data-i18n="actions.pause">Pause</span>
       </button>
-      <button class="btn btn-primary hidden" id="resume-btn" aria-label="Resume">
-        <span class="btn-icon">▶</span>
-        <span class="btn-text">Resume</span>
+      <button class="btn btn-primary hidden" id="resume-btn" data-i18n-attr="aria-label:actions.resume">
+        <span class="btn-icon" id="resume-icon" aria-hidden="true"></span>
+        <span class="btn-text" data-i18n="actions.resume">Resume</span>
       </button>
-      <button class="btn btn-danger hidden" id="stop-btn" aria-label="Stop">
-        <span class="btn-icon">⏹</span>
-        <span class="btn-text">Stop</span>
+      <button class="btn btn-danger hidden" id="stop-btn" data-i18n-attr="aria-label:actions.stop">
+        <span class="btn-icon" id="stop-icon" aria-hidden="true"></span>
+        <span class="btn-text" data-i18n="actions.stop">Stop</span>
       </button>
     </div>
 
-    <!-- Note area -->
-    <div class="note hidden" id="note" role="alert"></div>
+    <!-- Note uses role="status" (polite) rather than role="alert" so it
+         doesn't fight with the actual error banner above for screen-
+         reader attention. -->
+    <p class="note hidden" id="note" role="status"></p>
   </main>
 
   <script src="popup.js"></script>

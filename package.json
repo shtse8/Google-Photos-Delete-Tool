@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "release": "standard-version",
-    "zip": "cd dist/extension && zip -r ../../google-photos-delete-tool.zip ."
+    "zip": "bun run scripts/zip.ts",
+    "package": "bun run scripts/build.ts && bun run scripts/zip.ts"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",

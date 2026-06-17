@@ -43,7 +43,13 @@ export class DeletionLog {
 
   /**
    * Deletion rate in photos per minute.
-   * Uses a sliding window of the last `windowMs` milliseconds for accuracy.
+   *
+   * Uses a sliding window of the last `windowMs` milliseconds. The
+   * denominator is `min(windowMs, elapsed-since-start)` so the very
+   * first batch of a run (or the first batch after a long pause) does
+   * NOT artificially spike the rate — measuring "100 photos in the 50
+   * milliseconds since the entry's own timestamp" would otherwise read
+   * as 120 000 photos/minute.
    */
   ratePerMinute(windowMs = 120_000): number {
     const now = Date.now()
@@ -53,10 +59,13 @@ export class DeletionLog {
     if (recentEntries.length === 0) return 0
 
     const recentCount = recentEntries.reduce((sum, e) => sum + e.count, 0)
-    const windowElapsed = now - recentEntries[0].timestamp
-
-    if (windowElapsed <= 0) return 0
-    return (recentCount / windowElapsed) * 60_000
+    // Cap the denominator at the full window OR the elapsed time since
+    // the run started (whichever is smaller), never the time since the
+    // oldest in-window entry.
+    const elapsedSinceStart = this.startTime > 0 ? now - this.startTime : windowMs
+    const denominator = Math.min(windowMs, elapsedSinceStart)
+    if (denominator <= 0) return 0
+    return (recentCount / denominator) * 60_000
   }
 
   /**
