@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.5] - 2026-06-17
+
+### Fixed
+- Pin Chrome Web Store release workflow to the compatible upload CLI after the latest CLI introduced a publisher ID requirement.
+
 ## [2.0.4] - 2026-06-17
 
 ### Fixed
