@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.3] - 2026-06-17
+
+### Fixed
+- Prevent empty-trash follow-up when the delete run errors, stops, or deletes zero photos.
+- Fix locale/diacritics normalization for multilingual Google Photos labels.
+- Make destructive confirmation detection fail closed instead of guessing non-cancel buttons.
+- Avoid contextual non-trash remove actions when finding the Google Photos delete toolbar button.
+
+### Added
+- Regression tests for destructive-action selector safety.
+
 ## [1.1.0] - 2026-02-14
 
 ### Added
