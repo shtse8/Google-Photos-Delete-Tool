@@ -4,7 +4,6 @@
   <img src="https://mark.sylphx.com/api/v1/banner?type=constellation&theme=tokyonight&text=Google+Photos+Delete+Tool&desc=This+tool+provides+an+efficient%2C+stable%2C+and+automated+way+to+delete+multiple+ph&height=200&animation=rise&credit=0" alt="Google-Photos-Delete-Tool — Sylphx Mark banner" width="100%" />
 </p>
 
-
 [![CI](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml)
 [![Release](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
