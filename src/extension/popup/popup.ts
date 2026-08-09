@@ -5,6 +5,7 @@ import { verifyLicense } from '../../core/license'
 import { TRASH_URL } from '../../core/empty-trash-baton'
 import { storageGet, storageSet, tabsCreate, tabsQuery, tabsSendMessage } from '../api'
 import type { PhotoFilter, PhotoType } from '../../core/photo-filter'
+import { ACTIVE_STATUSES, TERMINAL_STATUSES, type RunStatus } from '../../core/status'
 import {
   LOCALES,
   detectBrowserLocale,
@@ -582,13 +583,6 @@ function refreshStatusLabel(): void {
   statusText.textContent = t(key)
 }
 
-const ACTIVE_STATUSES = new Set<string>([
-  'selecting', 'deleting', 'scrolling',
-  'navigatingTrash', 'emptyingTrash',
-])
-
-const TERMINAL_STATUSES = new Set<string>(['done', 'error', 'idle'])
-
 interface ProgressMessageData {
   deleted: number
   status: string
@@ -619,7 +613,7 @@ function applyProgressUpdate(data: ProgressMessageData): void {
   if (status === 'done') {
     progressFill.classList.remove('indeterminate')
     progressFill.style.width = '100%'
-  } else if (ACTIVE_STATUSES.has(status) || status === 'paused') {
+  } else if (ACTIVE_STATUSES.has(status as RunStatus) || status === 'paused') {
     progressFill.classList.add('indeterminate')
     progressFill.style.width = ''
   } else {
@@ -631,7 +625,7 @@ function applyProgressUpdate(data: ProgressMessageData): void {
   statDeleted.textContent = Number(deleted).toLocaleString()
 
   if (deleted > 0 && startedAt > 0) {
-    const useAsOf = TERMINAL_STATUSES.has(status) && progressAsOf > 0
+    const useAsOf = TERMINAL_STATUSES.has(status as RunStatus) && progressAsOf > 0
     const elapsed = useAsOf ? progressAsOf - startedAt : Date.now() - startedAt
     const rate = Math.round(deleted / (elapsed / 60_000))
     statRate.textContent = rate.toLocaleString()
@@ -644,7 +638,7 @@ function applyProgressUpdate(data: ProgressMessageData): void {
   if (status === 'done') {
     utilityRow.classList.remove('hidden')
     void refreshReport()
-  } else if (TERMINAL_STATUSES.has(status)) {
+  } else if (TERMINAL_STATUSES.has(status as RunStatus)) {
     utilityRow.classList.add('hidden')
     lastReport = null
   }
