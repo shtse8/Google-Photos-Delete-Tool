@@ -1,9 +1,14 @@
 /**
- * Build script that runs separate Vite builds for each output target:
- * - Chrome extension (MV3, self-contained IIFE entries)
- * - Standalone inject script (console paste)
- * - Userscript (Tampermonkey/Violentmonkey with metadata header)
- * - Bookmarklet (minified javascript: URL)
+ * Build script — one source of truth for every shipped artifact:
+ *   - Chrome extension (MV3, dist/extension/)          → google-photos-delete-tool.zip
+ *   - Firefox extension (MV3, dist/extension-firefox/) → google-photos-delete-tool-firefox.zip
+ *   - Standalone inject script (console paste)
+ *   - Userscript (Tampermonkey/Violentmonkey with metadata header)
+ *
+ * The two extension manifests are derived from ONE source
+ * (src/extension/manifest.json); the Firefox variant swaps
+ * `background.service_worker` for `background.scripts` (Firefox MV3 does
+ * not support service_worker) and adds browser_specific_settings.
  */
 import { build } from 'vite'
 import { resolve } from 'path'
@@ -13,16 +18,14 @@ import {
   mkdirSync,
   copyFileSync,
   existsSync,
-  renameSync,
   rmSync,
+  renameSync,
 } from 'fs'
 
 const root = resolve(import.meta.dir, '..')
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf-8'))
 
-// ─── Chrome Extension ────────────────────────────────────────────
-
-const extensionDir = resolve(root, 'dist/extension')
+// ─── Extension build (shared entries) ───────────────────────────
 
 const extensionEntries = [
   { name: 'content', input: 'src/extension/content.ts' },
@@ -30,81 +33,111 @@ const extensionEntries = [
   { name: 'popup', input: 'src/extension/popup/popup.ts' },
 ]
 
-// Wipe the extension output dir up-front rather than relying on the
-// first Vite invocation to do it (which broke if anyone reordered the
-// entries above).
-rmSync(extensionDir, { recursive: true, force: true })
-mkdirSync(extensionDir, { recursive: true })
+async function buildExtension(outDir: string): Promise<void> {
+  rmSync(outDir, { recursive: true, force: true })
+  mkdirSync(outDir, { recursive: true })
 
-for (let i = 0; i < extensionEntries.length; i++) {
-  const entry = extensionEntries[i]
-  console.log(`[extension] Building ${entry.name}...`)
-  await build({
-    configFile: false,
-    root,
-    build: {
-      outDir: extensionDir,
-      emptyOutDir: false, // we already wiped it; reuse the same dir across entries
-      target: 'es2022',
-      sourcemap: false, // shipped artifact — no maps
-      lib: {
-        entry: resolve(root, entry.input),
-        formats: ['iife'],
-        name: `__gpdt_${entry.name}`,
-        fileName: () => `${entry.name}.js`,
-        // Vite ≥ 6 supports `cssFileName` here, which removes the need
-        // for the post-build rename. Setting it on every entry is fine
-        // — only the entry that ships CSS (popup) actually uses it.
-        cssFileName: 'popup',
-      },
-      rollupOptions: {
-        output: {
-          inlineDynamicImports: true,
+  for (const entry of extensionEntries) {
+    console.log(`[extension:${outDir.split('/').pop()}] Building ${entry.name}...`)
+    await build({
+      configFile: false,
+      root,
+      build: {
+        outDir,
+        emptyOutDir: false, // we already wiped it; reuse the same dir across entries
+        target: 'es2022',
+        sourcemap: false, // shipped artifact — no maps
+        lib: {
+          entry: resolve(root, entry.input),
+          formats: ['iife'],
+          name: `__gpdt_${entry.name}`,
+          fileName: () => `${entry.name}.js`,
+          cssFileName: 'popup',
         },
+        rollupOptions: {
+          output: { inlineDynamicImports: true },
+        },
+        minify: true,
       },
-      minify: true,
-    },
-    logLevel: 'warn',
-  })
+      logLevel: 'warn',
+    })
+  }
+
+  // popup.html
+  writeFileSync(
+    resolve(outDir, 'popup.html'),
+    readFileSync(resolve(root, 'src/extension/popup/popup.html'), 'utf-8'),
+  )
+
+  // Icons
+  const iconsOut = resolve(outDir, 'icons')
+  mkdirSync(iconsOut, { recursive: true })
+  for (const size of [16, 32, 48, 128]) {
+    const name = `icon-${size}.png`
+    const src = resolve(root, `src/extension/icons/${name}`)
+    if (existsSync(src)) copyFileSync(src, resolve(iconsOut, name))
+  }
+
+  // Fallback for environments where `cssFileName` isn't honoured yet
+  // (older Vite). Always run the rename — overwrite any stale popup.css
+  // from a previous build instead of silently keeping it.
+  const wrongCss = resolve(outDir, 'google-photos-delete-tool.css')
+  const correctCss = resolve(outDir, 'popup.css')
+  if (existsSync(wrongCss)) {
+    if (existsSync(correctCss)) rmSync(correctCss)
+    renameSync(wrongCss, correctCss)
+  }
 }
 
-console.log('[extension] Copying assets...')
+// ─── Manifests ──────────────────────────────────────────────────
 
-// Manifest with version
-const manifest = JSON.parse(
+const baseManifest = JSON.parse(
   readFileSync(resolve(root, 'src/extension/manifest.json'), 'utf-8'),
 )
-manifest.version = pkg.version
-writeFileSync(resolve(extensionDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
 
-// popup.html
+function chromeManifest(): Record<string, unknown> {
+  return { ...baseManifest, version: pkg.version }
+}
+
+/**
+ * Firefox MV3 manifest: `background.scripts` instead of
+ * `service_worker` (Firefox bug 1573659 — service_worker is unsupported
+ * in Firefox MV3; background.scripts is the supported shape).
+ */
+function firefoxManifest(): Record<string, unknown> {
+  const m: Record<string, unknown> = { ...baseManifest, version: pkg.version }
+  delete (m.background as { service_worker?: string })?.service_worker
+  m.background = { scripts: ['background.js'] }
+  m.browser_specific_settings = {
+    gecko: {
+      id: 'google-photos-delete-tool@shtse8.github.io',
+      strict_min_version: '121.0',
+    },
+  }
+  return m
+}
+
+// ─── Chrome extension ───────────────────────────────────────────
+
+const chromeDir = resolve(root, 'dist/extension')
+await buildExtension(chromeDir)
 writeFileSync(
-  resolve(extensionDir, 'popup.html'),
-  readFileSync(resolve(root, 'src/extension/popup/popup.html'), 'utf-8'),
+  resolve(chromeDir, 'manifest.json'),
+  JSON.stringify(chromeManifest(), null, 2),
 )
+console.log('✅ Chrome extension → dist/extension/')
 
-// Icons
-const iconsOut = resolve(extensionDir, 'icons')
-mkdirSync(iconsOut, { recursive: true })
-for (const size of [16, 32, 48, 128]) {
-  const name = `icon-${size}.png`
-  const src = resolve(root, `src/extension/icons/${name}`)
-  if (existsSync(src)) copyFileSync(src, resolve(iconsOut, name))
-}
+// ─── Firefox extension ──────────────────────────────────────────
 
-// Fallback for environments where `cssFileName` isn't honoured yet
-// (older Vite). Always run the rename — overwrite any stale popup.css
-// from a previous build instead of silently keeping it.
-const wrongCss = resolve(extensionDir, 'google-photos-delete-tool.css')
-const correctCss = resolve(extensionDir, 'popup.css')
-if (existsSync(wrongCss)) {
-  if (existsSync(correctCss)) rmSync(correctCss)
-  renameSync(wrongCss, correctCss)
-}
+const firefoxDir = resolve(root, 'dist/extension-firefox')
+await buildExtension(firefoxDir)
+writeFileSync(
+  resolve(firefoxDir, 'manifest.json'),
+  JSON.stringify(firefoxManifest(), null, 2),
+)
+console.log('✅ Firefox extension → dist/extension-firefox/')
 
-console.log('✅ Extension → dist/extension/')
-
-// ─── Standalone Inject ───────────────────────────────────────────
+// ─── Standalone Inject ──────────────────────────────────────────
 
 console.log('[standalone] Building inject.js...')
 await build({
@@ -127,7 +160,7 @@ await build({
 })
 console.log('✅ Standalone → dist/standalone/inject.js')
 
-// ─── Userscript ──────────────────────────────────────────────────
+// ─── Userscript ─────────────────────────────────────────────────
 
 console.log('[userscript] Building...')
 const userscriptDir = resolve(root, 'dist/userscript')
@@ -157,7 +190,7 @@ const userscriptHeader = `// ==UserScript==
 // @name         Google Photos Delete Tool
 // @namespace    https://github.com/shtse8/Google-Photos-Delete-Tool
 // @version      ${pkg.version}
-// @description  The fastest way to bulk delete your Google Photos
+// @description  Bulk delete photos on photos.google.com with batch select, dry-run, and empty-trash (consent-gated)
 // @author       Kyle Tse
 // @match        https://photos.google.com/*
 // @grant        none
@@ -175,53 +208,10 @@ writeFileSync(userscriptPath, userscriptHeader + '\n' + userscriptCode)
 
 console.log('✅ Userscript → dist/userscript/google-photos-delete.user.js')
 
-// ─── Bookmarklet ─────────────────────────────────────────────────
-
-console.log('[bookmarklet] Building...')
-const bookmarkletBuildDir = resolve(root, 'dist/_bookmarklet_tmp')
-
-await build({
-  configFile: false,
-  root,
-  build: {
-    outDir: bookmarkletBuildDir,
-    emptyOutDir: true,
-    target: 'es2022',
-    lib: {
-      entry: resolve(root, 'src/standalone/inject.ts'),
-      formats: ['iife'],
-      name: 'GPDT',
-      fileName: () => 'bookmarklet.js',
-    },
-    rollupOptions: { output: { inlineDynamicImports: true } },
-    minify: true,
-  },
-  logLevel: 'warn',
-})
-
-const minified = readFileSync(resolve(bookmarkletBuildDir, 'bookmarklet.js'), 'utf-8').trim()
-const bookmarkletUrl = `javascript:${encodeURIComponent(minified)}`
-
-// Output bookmarklet.txt
-writeFileSync(resolve(root, 'dist/bookmarklet.txt'), bookmarkletUrl)
-
-// Output bookmarklet.html from template
-const template = readFileSync(resolve(root, 'src/bookmarklet/template.html'), 'utf-8')
-writeFileSync(
-  resolve(root, 'dist/bookmarklet.html'),
-  template.replace('{{BOOKMARKLET_URL}}', bookmarkletUrl),
-)
-
-// Clean up temp
-rmSync(bookmarkletBuildDir, { recursive: true, force: true })
-
-console.log('✅ Bookmarklet → dist/bookmarklet.txt + dist/bookmarklet.html')
-
-// ─── Summary ─────────────────────────────────────────────────────
+// ─── Summary ────────────────────────────────────────────────────
 
 console.log('\n📦 Build complete!')
-console.log('   dist/extension/                     Chrome extension')
-console.log('   dist/standalone/inject.js            Console paste')
-console.log('   dist/userscript/*.user.js            Tampermonkey')
-console.log('   dist/bookmarklet.txt                 Bookmarklet URL')
-console.log('   dist/bookmarklet.html                Draggable link page')
+console.log('   dist/extension/                  Chrome extension (MV3)')
+console.log('   dist/extension-firefox/          Firefox extension (MV3)')
+console.log('   dist/standalone/inject.js        Console paste')
+console.log('   dist/userscript/*.user.js        Tampermonkey/Violentmonkey')
