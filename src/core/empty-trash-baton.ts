@@ -25,6 +25,15 @@ export interface PendingEval {
   reason: 'missing' | 'expired' | 'wrong-page' | 'ok'
 }
 
+/**
+ * Exact /trash path match — `/trash` or `/trash/...`. A substring check
+ * would wrongly accept any future path containing "/trash" (e.g.
+ * "/trashbin"), which could trigger an accidental permanent empty.
+ */
+export function isTrashPath(pathname: string): boolean {
+  return pathname === TRASH_PATH || pathname.startsWith(`${TRASH_PATH}/`)
+}
+
 export function evaluatePendingEmptyTrash(
   pending: { at?: number } | null | undefined,
   now: number,
@@ -32,7 +41,7 @@ export function evaluatePendingEmptyTrash(
 ): PendingEval {
   if (!pending || typeof pending.at !== 'number') return { shouldRun: false, reason: 'missing' }
   if (now - pending.at > PENDING_EMPTY_TTL_MS) return { shouldRun: false, reason: 'expired' }
-  if (!pathname.includes(TRASH_PATH)) return { shouldRun: false, reason: 'wrong-page' }
+  if (!isTrashPath(pathname)) return { shouldRun: false, reason: 'wrong-page' }
   return { shouldRun: true, reason: 'ok' }
 }
 

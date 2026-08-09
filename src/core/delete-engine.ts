@@ -1,5 +1,4 @@
 import { DEFAULT_CONFIG, type Config } from './config'
-import { EventEmitter } from './event-emitter'
 import { DeletionLog } from './deletion-log'
 import type { EngineDom, PhotoTile } from './dom-adapter'
 import { shouldSelectTile, type PhotoFilter } from './photo-filter'
@@ -36,16 +35,6 @@ export interface EngineOptions {
   onProgress?: (progress: Progress) => void
 }
 
-/** Events emitted by DeleteEngine */
-export interface EngineEvents {
-  progress: [Progress]
-  error: [Error]
-  done: [Progress]
-  paused: []
-  resumed: []
-  /** Emitted after each batch deletion with the batch count */
-  deleted: [number]
-}
 
 /**
  * Core deletion engine — shared between extension and standalone script.
@@ -67,7 +56,7 @@ export interface EngineEvents {
  * whatever selection remains (unless stopped or errored), so the last
  * partial batch is always deleted (or counted, in dry-run).
  */
-export class DeleteEngine extends EventEmitter<EngineEvents> {
+export class DeleteEngine {
   private readonly config: Config
   private readonly dom: EngineDom
   private readonly filter: PhotoFilter
@@ -95,7 +84,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
   }
 
   constructor(options: EngineOptions) {
-    super()
     this.dom = options.dom
     this.config = { ...DEFAULT_CONFIG, ...options.config }
     this.filter = options.filter ?? { kind: 'all' }
@@ -117,7 +105,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     })
     this.progress.status = 'paused'
     this.emitProgress()
-    this.emit('paused')
   }
 
   /** Resume a paused deletion process. */
@@ -127,7 +114,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     this.pauseResolve?.()
     this.pausePromise = null
     this.pauseResolve = null
-    this.emit('resumed')
   }
 
   /** Stop the deletion process permanently. Cannot be resumed. */
@@ -254,7 +240,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
         this.progress.status = 'error'
         this.progress.error = msg
         this.emitProgress()
-        this.emit('error', err instanceof Error ? err : new Error(msg))
       }
     } finally {
       // Flush remaining selection — this handles the "last partial batch".
@@ -274,7 +259,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
               this.progress.status = 'error'
               this.progress.error = msg
               this.emitProgress()
-              this.emit('error', err instanceof Error ? err : new Error(msg))
             }
           }
         }
@@ -285,7 +269,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
       }
       this.emitProgress()
       if (this.progress.status === 'done') {
-        this.emit('done', { ...this.progress })
       }
 
       diagnostics.setEngine({
@@ -414,7 +397,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
         this.progress.status = 'error'
         this.progress.error = msg
         this.emitProgress()
-        this.emit('error', err instanceof Error ? err : new Error(msg))
       }
     } finally {
       if (this.progress.status !== 'error') {
@@ -425,7 +407,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
       this.dryRunLabelsArr = [...seen]
       this.emitProgress()
       if (this.progress.status === 'done') {
-        this.emit('done', { ...this.progress })
       }
       if (missingIdWarned) {
         console.warn(`${LOG} [dry-run] some photos had no aria-label ancestor — count may be approximate`)
@@ -537,7 +518,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
   private emitProgress(): void {
     const snapshot = { ...this.progress }
     this.onProgress?.(snapshot)
-    this.emit('progress', snapshot)
   }
 
   /**
@@ -721,7 +701,6 @@ export class DeleteEngine extends EventEmitter<EngineEvents> {
     this.progress.selected = 0
     this.log.record(count)
     this.emitProgress()
-    this.emit('deleted', count)
     console.log(`${LOG} batch deleted — total now ${this.progress.deleted}`)
 
     // Best-effort: scroll the photo container back to the top so the

@@ -274,10 +274,6 @@ describe('DeleteEngine — abort-aware stop', () => {
 
     expect(result.status).toBe('idle')
     expect(result.error).toBeUndefined()
-    // No 'error' event was emitted.
-    const errorEvents: unknown[] = []
-    engine.on('error', (e) => errorEvents.push(e))
-    expect(errorEvents).toHaveLength(0)
     errorSpy.mockRestore()
   })
 
@@ -437,17 +433,16 @@ describe('DeleteEngine — error paths', () => {
     expect(result.error).toMatch(/not found/)
   })
 
-  it('emits an error event on failure', async () => {
+  it('reports error status when the delete flow fails', async () => {
     const dom = new FakeDom()
     dom.setTiles(['Photo - a'])
     const engine = new DeleteEngine({
       dom: Object.assign(dom, { findDeleteToolbarButton: () => null }) as unknown as EngineDom,
       config: { ...FAST_CONFIG, maxCount: 1, actionTimeout: 30 } as never,
     })
-    const errorSpy = vi.fn()
-    engine.on('error', errorSpy)
 
-    await engine.run()
-    expect(errorSpy).toHaveBeenCalled()
+    const result = await engine.run()
+    expect(result.status).toBe('error')
+    expect(typeof result.error).toBe('string')
   })
 })

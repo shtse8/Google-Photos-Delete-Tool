@@ -33,6 +33,16 @@ describe('evaluatePendingEmptyTrash', () => {
     expect(evaluatePendingEmptyTrash({ at: now }, now, '/albums').reason).toBe('wrong-page')
     expect(evaluatePendingEmptyTrash({ at: now }, now, '/').reason).toBe('wrong-page')
   })
+
+  it('rejects lookalike paths that merely contain /trash', () => {
+    expect(evaluatePendingEmptyTrash({ at: now }, now, '/trashbin').reason).toBe('wrong-page')
+    expect(evaluatePendingEmptyTrash({ at: now }, now, '/not-trash').reason).toBe('wrong-page')
+  })
+
+  it('accepts /trash and /trash/... subpaths', () => {
+    expect(evaluatePendingEmptyTrash({ at: now }, now, '/trash').shouldRun).toBe(true)
+    expect(evaluatePendingEmptyTrash({ at: now }, now, '/trash/').shouldRun).toBe(true)
+  })
 })
 
 describe('createLocalStorageBaton', () => {

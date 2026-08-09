@@ -27,7 +27,7 @@ src/
 │   ├── license.ts           # local Ed25519 Pro verification (zero server)
 │   ├── photo-filter.ts      # pack-driven tile type classification
 │   ├── diagnostics.ts       # selector-drift evidence collector
-│   └── …                    # config, status, utils, event-emitter, log
+│   └── …                    # config, status, utils, deletion-log
 ├── ui/panel/        # ONE shared floating control panel
 ├── extension/       # Chrome + Firefox MV3 (content, background, popup,
 │                    # api.ts callback wrappers, dual manifest)

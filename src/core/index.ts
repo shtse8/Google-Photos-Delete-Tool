@@ -27,10 +27,8 @@ export {
   StopRequested,
   type Progress,
   type EngineOptions,
-  type EngineEvents,
 } from './delete-engine'
 export { sleep, waitUntil, formatElapsed, formatEta, describeButton } from './utils'
-export { EventEmitter } from './event-emitter'
 export { DeletionLog, type DeletionEntry } from './deletion-log'
 export type { EngineDom, ClickTarget, ScrollTarget, PhotoTile } from './dom-adapter'
 export { browserDom } from './browser-dom'
