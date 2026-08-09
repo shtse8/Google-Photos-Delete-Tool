@@ -56,8 +56,3 @@ export function shouldSelectTile(label: string | null | undefined, filter: Photo
   if (filter.kind === 'all') return true
   return classifyLabel(label) === filter.type
 }
-
-export function filterLabel(filter: PhotoFilter): string {
-  if (filter.kind === 'all') return 'all photos'
-  return filter.type
-}

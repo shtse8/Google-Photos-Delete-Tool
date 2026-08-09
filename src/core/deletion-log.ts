@@ -67,9 +67,4 @@ export class DeletionLog {
     if (denominator <= 0) return 0
     return (recentCount / denominator) * 60_000
   }
-
-  /** Get a copy of all recorded entries. */
-  getEntries(): readonly DeletionEntry[] {
-    return [...this.entries]
-  }
 }

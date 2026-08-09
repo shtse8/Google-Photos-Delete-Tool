@@ -66,16 +66,6 @@ describe('DeletionLog', () => {
     expect(rate).toBeGreaterThan(0)
   })
 
-  it('should return immutable entries', () => {
-    const log = new DeletionLog()
-    log.start()
-    log.record(10)
-
-    const entries = log.getEntries()
-    expect(entries).toHaveLength(1)
-    expect(entries[0].count).toBe(10)
-  })
-
   it('should reset on start()', () => {
     const log = new DeletionLog()
     log.start()
