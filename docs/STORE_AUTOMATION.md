@@ -107,12 +107,14 @@ manual upload is the entire cost, forever.
 gh workflow run "Update CWS Listing (manual)"
 ```
 
-Fails loudly while the item is in review (`ITEM_NOT_UPDATABLE`) — that is
-the declared state until Google clears the review. Note: Google's
-metadata endpoints are the only API path and community tooling reports
-they may sunset after 2026-10-15; if Google rejects the call, update the
-dashboard once from the same file — the file stays the source either way.
-Edge/AMO listing metadata is Partner-Center/AMO-dashboard only by design.
+Fails loudly while the item is in review — observed live: the API
+returns `ITEM_NOT_UPDATABLE` (upload path) or HTTP `304 Not Modified`
+(metadata path) until Google clears the review. Re-dispatch after review
+clears. Note: Google's metadata endpoints are the only API path and
+community tooling reports they may sunset after 2026-10-15; if Google
+rejects or sunsets the call, update the dashboard once from the same file
+— the file stays the source either way. Edge/AMO listing metadata is
+Partner-Center/AMO-dashboard only by design.
 
 ## Runbook
 
