@@ -1,0 +1,64 @@
+name: Publish to Chrome Web Store (manual)
+
+# Decoupled storefront publish: CWS rejects uploads while an item is in
+# pending review (ITEM_NOT_UPDATABLE), so a tag-time publish can be
+# blocked by Google's review queue with no retry path. This workflow lets
+# the owner publish any already-built tag manually once review clears.
+#
+#   gh workflow run "Publish to Chrome Web Store (manual)" -f tag=v3.0.1
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag to build and publish (default: latest release tag)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build, Upload & Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Verify artifacts
+        run: bun run verify
+
+      - name: Create extension ZIP
+        run: bun run zip
+
+      - name: Publish to Chrome Web Store
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: |
+          bun x chrome-webstore-upload-cli@3.5.0 upload \
+            --source google-photos-delete-tool.zip \
+            --extension-id "$CHROME_EXTENSION_ID" \
+            --client-id "$CHROME_CLIENT_ID" \
+            --client-secret "$CHROME_CLIENT_SECRET" \
+            --refresh-token "$CHROME_REFRESH_TOKEN"
+
+          bun x chrome-webstore-upload-cli@3.5.0 publish \
+            --extension-id "$CHROME_EXTENSION_ID" \
+            --client-id "$CHROME_CLIENT_ID" \
+            --client-secret "$CHROME_CLIENT_SECRET" \
+            --refresh-token "$CHROME_REFRESH_TOKEN"
