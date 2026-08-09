@@ -11,6 +11,7 @@
  * not support service_worker) and adds browser_specific_settings.
  */
 import { build } from 'vite'
+import { fileURLToPath } from 'node:url'
 import { resolve } from 'path'
 import {
   readFileSync,
@@ -22,7 +23,7 @@ import {
   renameSync,
 } from 'fs'
 
-const root = resolve(import.meta.dir, '..')
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf-8'))
 
 // ─── Extension build (shared entries) ───────────────────────────

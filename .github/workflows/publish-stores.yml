@@ -1,0 +1,37 @@
+name: Publish Stores (manual)
+
+# Publish a release tag to the stores right now.
+#
+#   gh workflow run "Publish Stores (manual)" -f stores=cws -f tag=v3.0.1
+#   gh workflow run "Publish Stores (manual)" -f stores=auto
+#
+# Stores are only published when their recorded live state (store-state
+# branch) is behind the target tag. Platform review blocks exit 0 with a
+# notice; real failures exit 1.
+
+on:
+  workflow_dispatch:
+    inputs:
+      stores:
+        description: 'Stores: cws,edge,amo (comma list) or auto'
+        required: false
+        default: 'auto'
+      tag:
+        description: 'Git tag to build and publish (default: latest release tag)'
+        required: false
+        default: ''
+
+concurrency:
+  group: store-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    uses: ./.github/workflows/store-publish.yml
+    with:
+      stores: ${{ inputs.stores }}
+      tag: ${{ inputs.tag }}
+    secrets: inherit

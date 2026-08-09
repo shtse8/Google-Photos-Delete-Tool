@@ -18,9 +18,12 @@
     "package": "bun run build && bun run verify && bun run zip",
     "license:keygen": "bun run scripts/license.ts keygen",
     "license:issue": "bun run scripts/license.ts issue",
-    "license:verify": "bun run scripts/license.ts verify"
+    "license:verify": "bun run scripts/license.ts verify",
+    "listing:check": "bun run scripts/listing.ts",
+    "listing:cws": "bun run scripts/listing.ts --cws-metadata"
   },
   "devDependencies": {
+    "@types/archiver": "6",
     "@types/chrome": "^0.0.287",
     "@types/node": "^26.2.0",
     "archiver": "^7.0.1",

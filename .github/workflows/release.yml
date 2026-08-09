@@ -1,5 +1,11 @@
 name: Release
 
+# Release model: a tag creates GitHub release assets ONLY. Store
+# publishes (Chrome Web Store, Edge, AMO) are decoupled and stateful —
+# they run through store-publish.yml (dispatch: publish-stores.yml,
+# scheduled retry: store-retry.yml). This keeps a Google/Microsoft review
+# queue from turning the release red (previously the tag-time CWS publish
+# failed with ITEM_NOT_UPDATABLE whenever the item was in review).
 on:
   push:
     tags: ['v*']
@@ -9,7 +15,7 @@ permissions:
 
 jobs:
   build-and-release:
-    name: Build, Release & Publish
+    name: Build & Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,25 +61,3 @@ jobs:
             dist/standalone/inject.js
             dist/userscript/google-photos-delete.user.js
           generate_release_notes: true
-
-      # Chrome Web Store publish (requires secrets)
-      - name: Publish to Chrome Web Store
-        if: env.CHROME_EXTENSION_ID != ''
-        env:
-          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        run: |
-          bun x chrome-webstore-upload-cli@3.5.0 upload \
-            --source google-photos-delete-tool.zip \
-            --extension-id "$CHROME_EXTENSION_ID" \
-            --client-id "$CHROME_CLIENT_ID" \
-            --client-secret "$CHROME_CLIENT_SECRET" \
-            --refresh-token "$CHROME_REFRESH_TOKEN"
-
-          bun x chrome-webstore-upload-cli@3.5.0 publish \
-            --extension-id "$CHROME_EXTENSION_ID" \
-            --client-id "$CHROME_CLIENT_ID" \
-            --client-secret "$CHROME_CLIENT_SECRET" \
-            --refresh-token "$CHROME_REFRESH_TOKEN"

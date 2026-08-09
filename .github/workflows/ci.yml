@@ -32,6 +32,9 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Verify storefront listing
+        run: bun run listing:check
+
       - name: Verify artifacts
         run: bun run verify
 

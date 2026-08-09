@@ -1,0 +1,27 @@
+name: Store Publish Retry (scheduled)
+
+# The no-human release loop. Every 6 hours it compares the latest release
+# tag against what is actually live in each store (store-state branch) and
+# publishes anything that is behind, as soon as each store's review queue
+# allows. Google/Microsoft review blocks are expected: the run reports a
+# notice and retries on the next cycle.
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: store-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    uses: ./.github/workflows/store-publish.yml
+    with:
+      stores: auto
+      tag: ''
+    secrets: inherit

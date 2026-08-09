@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "appliesTo": "3.0.1",
+  "shared": {
+    "name": "Google Photos Delete Tool",
+    "tagline": "Consent-gated bulk delete for Google Photos",
+    "homepageUrl": "https://github.com/shtse8/Google-Photos-Delete-Tool",
+    "supportUrl": "https://github.com/shtse8/Google-Photos-Delete-Tool/issues",
+    "privacyUrl": "https://github.com/shtse8/Google-Photos-Delete-Tool/blob/master/PRIVACY.md"
+  },
+  "screenshots": [
+    {
+      "file": "dry-run.png",
+      "size": "1280x800",
+      "caption": "Dry run: counts the current view without clicking anything; Pro adds a per-type breakdown."
+    },
+    {
+      "file": "running.png",
+      "size": "1280x800",
+      "caption": "Real run: honest stats (deleted, rate, elapsed), pause/resume/stop, ETA after a dry-run total."
+    },
+    {
+      "file": "filters.png",
+      "size": "1280x800",
+      "caption": "Pro type filters: delete only screenshots, videos, animations, collages, or photos."
+    },
+    {
+      "file": "empty-trash.png",
+      "size": "1280x800",
+      "caption": "Empty trash (opt-in): only reported done after the trash is verified empty."
+    }
+  ],
+  "cws": {
+    "title": "Google Photos Delete Tool",
+    "summary": "Bulk delete Google Photos safely: batch select, dry-run, empty trash. Chrome & Firefox extension plus userscript. Open source.",
+    "category": "Productivity",
+    "locale": "en",
+    "description": [
+      "Google Photos has no \u201cdelete all\u201d. This extension automates the tedious select \u2192 trash \u2192 confirm loop in safe batches of up to 500, so you can reclaim storage in minutes. Everything runs in your browser: it clicks the same UI elements a human would click, and it stops the moment it cannot positively identify a button.",
+      "Safety model (non-negotiable)",
+      "Fail-closed matching: the delete, confirm, and empty-trash buttons are matched by multilingual keywords against aria-labels and tooltips. An unknown UI means stop and error, never a guess.",
+      "Consent gate: the first real (non-dry) run requires you to confirm what you are about to do. Nothing is ever scheduled or unattended.",
+      "60-day Trash: deleted photos go to the Google Photos Trash, where they stay for 60 days. \u201cEmpty trash afterwards\u201d is opt-in, permanent, and only reported done after the trash is verified empty.",
+      "Instant stop: pause, resume, or stop anytime; a stopped run never reports a false error.",
+      "Features",
+      "Batch delete: up to 500 per batch (Google's selection cap), auto-scroll, and the final partial batch is flushed.",
+      "Dry run: scroll-and-count mode that never clicks anything; Pro adds a per-type breakdown.",
+      "Empty trash (opt-in): navigates to /trash, empties it, and verifies the postcondition.",
+      "Type filters (Pro): delete only screenshots, videos, animations, collages, or photos.",
+      "9-language extension UI, compile-time-complete translations.",
+      "Self-diagnosing reports: the Report issue button opens a pre-filled GitHub issue with a structured diagnostic blob, so UI drift becomes actionable data.",
+      "Free vs Pro",
+      "The delete engine, dry run, and empty trash are free forever. A one-time Pro license unlocks the analysis layer: type filters and the dry-run report/export. Verification is local (Ed25519) \u2014 no account, no backend, no telemetry.",
+      "Privacy",
+      "Zero data collection, zero servers, zero telemetry. Open source (MIT). Versioned selector packs make a UI-drift fix a data patch, not code surgery. Full statement: PRIVACY.md",
+      "Also available",
+      "Userscript for Tampermonkey / Violentmonkey (same engine, same safety model) and a Firefox add-on. Support: GitHub issues."
+    ]
+  },
+  "edge": {
+    "name": "Google Photos Delete Tool",
+    "shortDescription": "Bulk delete Google Photos safely: batch select, dry-run, empty trash. Open source.",
+    "category": "Productivity",
+    "description": [
+      "Google Photos has no \u201cdelete all\u201d. This extension automates the select \u2192 trash \u2192 confirm loop in safe batches of up to 500, so you can reclaim storage in minutes. Everything runs in your browser and stops the moment it cannot positively identify a button.",
+      "Safety: fail-closed multilingual button matching (unknown UI = stop, never guess), a consent gate on the first real run, deleted photos go to the 60-day Trash, empty-trash afterwards is opt-in and verified, and stop is instant.",
+      "Features: batch delete up to 500 per batch with auto-scroll, dry run that counts without clicking, verified empty trash (opt-in), pause/resume/stop, 9-language UI, and self-diagnosing issue reports.",
+      "Free vs Pro: the delete engine, dry run, and empty trash are free forever. A one-time Pro license adds type filters (screenshots, videos, animations, collages, photos) and the dry-run report/export. Verification is local \u2014 no account, no backend.",
+      "Privacy: zero data collection, zero servers, zero telemetry. Open source (MIT). Support: GitHub issues."
+    ]
+  },
+  "amo": {
+    "name": "Google Photos Delete Tool",
+    "summary": "Bulk-delete Google Photos in safe batches of up to 500: dry-run first, empty trash optionally, stop anytime. Fail-closed matching, consent-gated, zero telemetry. Free forever; one-time Pro adds type filters and dry-run export. Open source.",
+    "category": "Photos, Music & Videos",
+    "description": [
+      "Google Photos has no \u201cdelete all\u201d. This add-on automates the select \u2192 trash \u2192 confirm loop in safe batches of up to 500, so you can reclaim storage in minutes. Everything runs in your browser and stops the moment it cannot positively identify a button.",
+      "Safety: fail-closed multilingual button matching (unknown UI = stop, never guess), a consent gate on the first real run, deleted photos go to the 60-day Trash, empty-trash afterwards is opt-in and verified, and stop is instant.",
+      "Features: batch delete up to 500 per batch with auto-scroll, dry run that counts without clicking, verified empty trash (opt-in), pause/resume/stop, 9-language UI, and self-diagnosing issue reports.",
+      "Free vs Pro: the delete engine, dry run, and empty trash are free forever. A one-time Pro license adds type filters (screenshots, videos, animations, collages, photos) and the dry-run report/export. Verification is local (Ed25519) \u2014 no account, no backend, no telemetry.",
+      "Privacy: zero data collection, zero servers, zero telemetry. Open source (MIT). Support: GitHub issues."
+    ]
+  }
+}

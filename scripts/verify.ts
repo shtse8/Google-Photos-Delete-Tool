@@ -13,9 +13,10 @@
  *   - popup assets (html/css/icons) present
  */
 import { readFileSync, existsSync } from 'fs'
+import { fileURLToPath } from 'node:url'
 import { resolve } from 'path'
 
-const root = resolve(import.meta.dir, '..')
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf-8'))
 
 let failures = 0

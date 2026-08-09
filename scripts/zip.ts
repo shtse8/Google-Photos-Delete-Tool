@@ -7,10 +7,11 @@
  * Works on Linux, macOS and Windows (no external `zip` binary required).
  */
 import archiver from 'archiver'
+import { fileURLToPath } from 'node:url'
 import { createWriteStream, existsSync } from 'fs'
 import { resolve } from 'path'
 
-const root = resolve(import.meta.dir, '..')
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 
 const targets: Array<{ dir: string; zip: string }> = [
   { dir: 'dist/extension', zip: 'google-photos-delete-tool.zip' },

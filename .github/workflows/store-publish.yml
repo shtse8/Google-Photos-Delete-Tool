@@ -1,0 +1,520 @@
+name: Store Publish (reusable)
+
+# Single publish engine for every store. Called by:
+#   - publish-stores.yml  (workflow_dispatch — publish now)
+#   - store-retry.yml     (scheduled — publish the latest release tag as
+#                          soon as each store's review queue allows)
+#
+# Model: a git tag creates GitHub release assets only. Stores are
+# decoupled, stateful, and retryable:
+#   - store-state branch records what is LIVE per store (state.json)
+#   - a store is published only when its recorded state is behind the
+#     target tag
+#   - platform review blocks (ITEM_NOT_UPDATABLE, InProgressSubmission,
+#     NoModulesUpdated) are expected states: the run exits 0 with a
+#     notice and retries on the next schedule — never a red CI on a
+#     Google/Microsoft queue
+#   - real failures (auth, validation) exit 1 and do NOT advance state
+#
+# Evidence: success is only recorded after platform API readback
+# (CWS publish status, Edge operation status, AMO API response).
+
+on:
+  workflow_call:
+    inputs:
+      stores:
+        description: 'Stores to consider: cws,edge,amo (comma list) or auto'
+        required: true
+        type: string
+      tag:
+        description: 'Git tag to build and publish (default: latest release tag)'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      CHROME_EXTENSION_ID:
+        required: false
+      CHROME_CLIENT_ID:
+        required: false
+      CHROME_CLIENT_SECRET:
+        required: false
+      CHROME_REFRESH_TOKEN:
+        required: false
+      EDGE_CLIENT_ID:
+        required: false
+      EDGE_API_KEY:
+        required: false
+      EDGE_PRODUCT_ID:
+        required: false
+      FIREFOX_JWT_ISSUER:
+        required: false
+      FIREFOX_JWT_SECRET:
+        required: false
+
+jobs:
+  resolve:
+    name: Resolve target tag & pending stores
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      stores: ${{ steps.resolve.outputs.stores }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve tag and pending stores
+        id: resolve
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="$(gh release view --json tagName -q .tagName)"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          git fetch origin store-state --depth=1 || true
+          PENDING=""
+          for store in cws edge amo; do
+            STATUS="$(node scripts/store-state.mjs pending "$store" "$TAG" 2>/dev/null || echo pending)"
+            if [ "$STATUS" = "pending" ]; then
+              PENDING="${PENDING:+$PENDING,}$store"
+            fi
+          done
+
+          REQUESTED="${{ inputs.stores }}"
+          if [ "$REQUESTED" = "auto" ]; then
+            echo "stores=$PENDING" >> "$GITHUB_OUTPUT"
+          else
+            SELECTED=""
+            for store in ${REQUESTED//,/ }; do
+              case ",$PENDING," in
+                *",$store,"*) SELECTED="${SELECTED:+$SELECTED,}$store" ;;
+                *) echo "::notice::$store is already at $TAG (or unknown); skipped" ;;
+              esac
+            done
+            echo "stores=$SELECTED" >> "$GITHUB_OUTPUT"
+          fi
+          echo "target=$TAG pending=[$PENDING] requested=[$REQUESTED] selected=[${SELECTED:-}]"
+
+  build:
+    name: Build tag artifacts
+    needs: resolve
+    if: needs.resolve.outputs.stores != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Assert tag matches package version
+        run: |
+          TAG="${{ needs.resolve.outputs.tag }}"
+          PKG="$(bun -e 'console.log(JSON.parse(require("fs").readFileSync("package.json","utf8")).version)')"
+          test "${TAG#v}" = "$PKG" || { echo "::error::release tag $TAG does not match package.json version ($PKG)"; exit 1; }
+
+      - name: Build
+        run: bun run build
+
+      - name: Verify artifacts
+        run: bun run verify
+
+      - name: Create extension ZIPs
+        run: bun run zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-zips
+          path: |
+            google-photos-delete-tool.zip
+            google-photos-delete-tool-firefox.zip
+          retention-days: 7
+
+  # ─────────────────────────── Chrome Web Store ───────────────────
+  cws:
+    name: Publish to Chrome Web Store
+    needs: [resolve, build]
+    if: contains(needs.resolve.outputs.stores, 'cws')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Credential guard
+        id: creds
+        env:
+          HAS_CWS: ${{ secrets.CHROME_EXTENSION_ID != '' && secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' && secrets.CHROME_REFRESH_TOKEN != '' }}
+        run: |
+          if [ "$HAS_CWS" = "true" ]; then
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::CWS skipped: CHROME_* secrets not configured (see docs/STORE_AUTOMATION.md)"
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Store state check
+        id: state
+        if: steps.creds.outputs.ready == 'yes'
+        run: |
+          git fetch origin store-state --depth=1 || true
+          echo "status=$(node scripts/store-state.mjs pending cws ${{ needs.resolve.outputs.tag }})" >> "$GITHUB_OUTPUT"
+
+      - name: Already live
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status != 'pending'
+        run: echo "::notice::CWS already at ${{ needs.resolve.outputs.tag }}; nothing to do"
+
+      - uses: actions/download-artifact@v4
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        with:
+          name: store-zips
+          path: zips
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (CLI)
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        run: bun install --frozen-lockfile
+
+      - name: Upload to Chrome Web Store
+        id: upload
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: |
+          set +e
+          OUT="$(bun x chrome-webstore-upload-cli@3.5.0 upload \
+            --source zips/google-photos-delete-tool.zip \
+            --extension-id "$CHROME_EXTENSION_ID" \
+            --client-id "$CHROME_CLIENT_ID" \
+            --client-secret "$CHROME_CLIENT_SECRET" \
+            --refresh-token "$CHROME_REFRESH_TOKEN" 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          if [ $RC -eq 0 ]; then
+            echo "uploaded=yes" >> "$GITHUB_OUTPUT"
+          elif printf '%s' "$OUT" | grep -qi 'ITEM_NOT_UPDATABLE'; then
+            echo "::notice::CWS blocked: item is in pending review / ready to publish / deleted (ITEM_NOT_UPDATABLE). The retry loop will try again after review clears."
+            echo "blocked=yes" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            echo "::error::CWS upload failed (exit $RC)"
+            exit 1
+          fi
+
+      - name: Publish to Chrome Web Store
+        id: publish
+        if: steps.upload.outputs.uploaded == 'yes'
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: |
+          set +e
+          OUT="$(bun x chrome-webstore-upload-cli@3.5.0 publish \
+            --extension-id "$CHROME_EXTENSION_ID" \
+            --client-id "$CHROME_CLIENT_ID" \
+            --client-secret "$CHROME_CLIENT_SECRET" \
+            --refresh-token "$CHROME_REFRESH_TOKEN" 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          if [ $RC -eq 0 ]; then
+            echo "published=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::CWS publish failed (exit $RC) — inspect the dashboard; state not advanced"
+            exit 1
+          fi
+
+      - name: Record live state
+        if: steps.publish.outputs.published == 'yes'
+        run: |
+          set -euo pipefail
+          STATE_FILE=/tmp/store-state.json node scripts/store-state.mjs set cws ${{ needs.resolve.outputs.tag }}
+          git fetch origin store-state --depth=1 || git fetch origin
+          if git rev-parse --verify origin/store-state >/dev/null 2>&1; then
+            git checkout --detach origin/store-state
+          else
+            git checkout --orphan store-state --quiet
+            git rm -rf . --quiet
+          fi
+          cp /tmp/store-state.json state.json
+          git add state.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: cws=${{ needs.resolve.outputs.tag }}" --quiet || true
+          git push origin HEAD:store-state
+          echo "::notice::CWS ${{ needs.resolve.outputs.tag }} published; state recorded"
+
+
+  # ──────────────────────── Microsoft Edge Add-ons ────────────────
+  edge:
+    name: Publish to Microsoft Edge Add-ons
+    needs: [resolve, build]
+    if: contains(needs.resolve.outputs.stores, 'edge')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Credential guard
+        id: creds
+        env:
+          HAS_EDGE: ${{ secrets.EDGE_CLIENT_ID != '' && secrets.EDGE_API_KEY != '' && secrets.EDGE_PRODUCT_ID != '' }}
+        run: |
+          if [ "$HAS_EDGE" = "true" ]; then
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Edge skipped: EDGE_CLIENT_ID / EDGE_API_KEY / EDGE_PRODUCT_ID secrets not configured (see docs/STORE_AUTOMATION.md)"
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Store state check
+        id: state
+        if: steps.creds.outputs.ready == 'yes'
+        run: |
+          git fetch origin store-state --depth=1 || true
+          echo "status=$(node scripts/store-state.mjs pending edge ${{ needs.resolve.outputs.tag }})" >> "$GITHUB_OUTPUT"
+
+      - name: Already live
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status != 'pending'
+        run: echo "::notice::Edge already at ${{ needs.resolve.outputs.tag }}; nothing to do"
+
+      - uses: actions/download-artifact@v4
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        with:
+          name: store-zips
+          path: zips
+
+      - name: Upload package to Edge draft
+        id: upload
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        env:
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+        run: |
+          set -euo pipefail
+          RESP="$(curl -sS -i -X POST \
+            -H "Authorization: ApiKey $EDGE_API_KEY" \
+            -H "X-ClientID: $EDGE_CLIENT_ID" \
+            -H "Content-Type: application/zip" \
+            --data-binary @zips/google-photos-delete-tool.zip \
+            https://api.addons.microsoftedge.microsoft.com/v1/products/$EDGE_PRODUCT_ID/submissions/draft/package || true)"
+          CODE="$(printf '%s' "$RESP" | head -1 | awk '{print $2}')"
+          printf '%s\n' "$RESP" | tail -20
+          if [ "$CODE" != "202" ]; then
+            echo "::error::Edge upload failed (HTTP $CODE) — see response above"
+            exit 1
+          fi
+          OP="$(printf '%s' "$RESP" | grep -io 'location:[^[:space:]]*' | head -1 | cut -d: -f2 | tr -d '\r')"
+          if [ -z "$OP" ]; then
+            echo "::error::Edge upload returned 202 but no Location operation ID"
+            exit 1
+          fi
+          echo "op=$OP" >> "$GITHUB_OUTPUT"
+          echo "uploaded=yes" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for Edge package processing
+        if: steps.upload.outputs.uploaded == 'yes'
+        env:
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            BODY="$(curl -sS -X GET \
+              -H "Authorization: ApiKey $EDGE_API_KEY" \
+              -H "X-ClientID: $EDGE_CLIENT_ID" \
+              https://api.addons.microsoftedge.microsoft.com/v1/products/$EDGE_PRODUCT_ID/submissions/draft/package/operations/${{ steps.upload.outputs.op }})"
+            STATUS="$(printf '%s' "$BODY" | jq -r .status)"
+            echo "edge package status: $STATUS (attempt $i/30)"
+            if [ "$STATUS" = "Succeeded" ]; then
+              echo "processed=yes" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ "$STATUS" = "Failed" ]; then
+              printf '%s' "$BODY" | jq .
+              echo "::error::Edge package processing failed"
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "::error::Edge package still processing after 10 minutes"
+          exit 1
+
+      - name: Publish Edge draft submission
+        id: publish
+        if: steps.upload.outputs.uploaded == 'yes'
+        env:
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+        run: |
+          set -euo pipefail
+          NOTES='{"notes":"Release ${{ needs.resolve.outputs.tag }}. Open-source extension; DOM automation clicks the same UI elements a user would. Source: https://github.com/shtse8/Google-Photos-Delete-Tool"}'
+          RESP="$(curl -sS -i -X POST \
+            -H "Authorization: ApiKey $EDGE_API_KEY" \
+            -H "X-ClientID: $EDGE_CLIENT_ID" \
+            -H "Content-Type: application/json" \
+            -d "$NOTES" \
+            https://api.addons.microsoftedge.microsoft.com/v1/products/$EDGE_PRODUCT_ID/submissions || true)"
+          CODE="$(printf '%s' "$RESP" | head -1 | awk '{print $2}')"
+          printf '%s\n' "$RESP" | tail -20
+          if [ "$CODE" != "202" ]; then
+            echo "::error::Edge publish call failed (HTTP $CODE)"
+            exit 1
+          fi
+          OP="$(printf '%s' "$RESP" | grep -io 'location:[^[:space:]]*' | head -1 | cut -d: -f2 | tr -d '\r')"
+          [ -n "$OP" ] || { echo "::error::Edge publish returned 202 but no Location operation ID"; exit 1; }
+          echo "op=$OP" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for Edge publish status
+        id: wait
+        if: steps.publish.outputs.op != ''
+        env:
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            BODY="$(curl -sS -X GET \
+              -H "Authorization: ApiKey $EDGE_API_KEY" \
+              -H "X-ClientID: $EDGE_CLIENT_ID" \
+              https://api.addons.microsoftedge.microsoft.com/v1/products/$EDGE_PRODUCT_ID/submissions/operations/${{ steps.publish.outputs.op }})"
+            STATUS="$(printf '%s' "$BODY" | jq -r .status)"
+            CODE="$(printf '%s' "$BODY" | jq -r .errorCode)"
+            echo "edge publish status: $STATUS (attempt $i/30)"
+            if [ "$STATUS" = "Succeeded" ]; then
+              echo "published=yes" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ "$STATUS" = "Failed" ]; then
+              case "$CODE" in
+                InProgressSubmission)
+                  echo "::notice::Edge blocked: a submission is already in progress (InProgressSubmission). The retry loop will try again later."
+                  exit 0
+                  ;;
+                NoModulesUpdated)
+                  echo "::notice::Edge already at this version (NoModulesUpdated) — no new modules to publish."
+                  exit 0
+                  ;;
+                *)
+                  printf '%s' "$BODY" | jq .
+                  echo "::error::Edge publish failed ($CODE)"
+                  exit 1
+                  ;;
+              esac
+            fi
+            sleep 20
+          done
+          echo "::error::Edge publish still processing after 10 minutes"
+          exit 1
+
+      - name: Record live state
+        if: steps.wait.outputs.published == 'yes'
+        run: |
+          set -euo pipefail
+          STATE_FILE=/tmp/store-state.json node scripts/store-state.mjs set edge ${{ needs.resolve.outputs.tag }}
+          git fetch origin store-state --depth=1 || git fetch origin
+          if git rev-parse --verify origin/store-state >/dev/null 2>&1; then
+            git checkout --detach origin/store-state
+          else
+            git checkout --orphan store-state --quiet
+            git rm -rf . --quiet
+          fi
+          cp /tmp/store-state.json state.json
+          git add state.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: edge=${{ needs.resolve.outputs.tag }}" --quiet || true
+          git push origin HEAD:store-state
+          echo "::notice::Edge ${{ needs.resolve.outputs.tag }} published; state recorded"
+
+
+  # ───────────────────────────── Firefox AMO ──────────────────────
+  amo:
+    name: Publish to Firefox Add-ons (AMO)
+    needs: [resolve, build]
+    if: contains(needs.resolve.outputs.stores, 'amo')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Credential guard
+        id: creds
+        env:
+          HAS_AMO: ${{ secrets.FIREFOX_JWT_ISSUER != '' && secrets.FIREFOX_JWT_SECRET != '' }}
+        run: |
+          if [ "$HAS_AMO" = "true" ]; then
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::AMO skipped: FIREFOX_JWT_ISSUER / FIREFOX_JWT_SECRET secrets not configured (see docs/STORE_AUTOMATION.md)"
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Store state check
+        id: state
+        if: steps.creds.outputs.ready == 'yes'
+        run: |
+          git fetch origin store-state --depth=1 || true
+          echo "status=$(node scripts/store-state.mjs pending amo ${{ needs.resolve.outputs.tag }})" >> "$GITHUB_OUTPUT"
+
+      - name: Already live
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status != 'pending'
+        run: echo "::notice::AMO already at ${{ needs.resolve.outputs.tag }}; nothing to do"
+
+      - uses: actions/download-artifact@v4
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        with:
+          name: store-zips
+          path: zips
+
+      - name: Publish to Firefox Add-ons
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        uses: wdzeng/firefox-addon@v1
+        with:
+          addon-guid: google-photos-delete-tool@shtse8.github.io
+          xpi-path: zips/google-photos-delete-tool-firefox.zip
+          jwt-issuer: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          jwt-secret: ${{ secrets.FIREFOX_JWT_SECRET }}
+          approval-notes: |
+            Release ${{ needs.resolve.outputs.tag }}. Open-source extension (MIT); DOM
+            automation clicks the same UI elements a human would. Source:
+            https://github.com/shtse8/Google-Photos-Delete-Tool
+
+      - name: Record live state
+        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        run: |
+          set -euo pipefail
+          STATE_FILE=/tmp/store-state.json node scripts/store-state.mjs set amo ${{ needs.resolve.outputs.tag }}
+          git fetch origin store-state --depth=1 || git fetch origin
+          if git rev-parse --verify origin/store-state >/dev/null 2>&1; then
+            git checkout --detach origin/store-state
+          else
+            git checkout --orphan store-state --quiet
+            git rm -rf . --quiet
+          fi
+          cp /tmp/store-state.json state.json
+          git add state.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: amo=${{ needs.resolve.outputs.tag }}" --quiet || true
+          git push origin HEAD:store-state
+          echo "::notice::AMO ${{ needs.resolve.outputs.tag }} published; state recorded"

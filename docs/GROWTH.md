@@ -25,24 +25,34 @@ Already applied:
 - ✅ Repo description rewritten to v3 truth (keyword-rich).
 - ✅ Homepage → Chrome Web Store listing.
 
-Still to do (user authority — dashboard/credentials):
-- **CWS listing text**: still carries v2 wording ("10,000 default",
-  old feature list). Rewrite with v3 facts + disclose Pro. This is the
-  single highest-ROI ASO item (10k+ existing installs, ranking loop).
-- CWS screenshots: one dry-run screenshot, one real-run screenshot,
-  one Pro screenshot (filters + CSV export).
+Still to do:
+- **CWS listing text**: source is now `storefront/listing.json` (single
+  source of truth, limits enforced in CI). Push it with
+  `gh workflow run "Update CWS Listing (manual)"` — it fails loudly with
+  `ITEM_NOT_UPDATABLE` until Google clears the v3 review, then re-dispatch.
+- **CWS screenshots**: real captures per `storefront/README.md`
+  (dry-run, running, Pro filters, empty-trash). Upload once to the
+  dashboard; they are not API-updatable.
 
-## Phase 1 — More stores (1–2 days total)
+## Phase 1 — More stores (agent-native; bootstrap once)
 
-| Store | Status | Effort | Notes |
+Automation lives in `docs/STORE_AUTOMATION.md`. The model: a tag creates
+GitHub release assets; `store-retry.yml` (every 6h) publishes each store
+as soon as its review queue allows; `store-state` branch records what is
+live. After the one-time bootstrap below, no human is in the loop.
+
+| Store | Status | Automation | One-time human step |
 |---|---|---|---|
-| Chrome Web Store | live (v2.0.5; v3 in review) | — | ASO work above; publish v3.0.1 via `publish-cws.yml` after review clears |
-| **Microsoft Edge Add-ons** | not listed | 30–60 min | Edge is Chromium and MV3-ready (MV2 shuts down Dec 2026). The Chrome zip works as-is. Submit at Partner Center → Edge Add-ons (new submission, upload `google-photos-delete-tool.zip`, fill listing, privacy URL = this repo's PRIVACY.md). New storefront = new search surface = new users. |
-| **Firefox AMO** | zip ready | ~1 day (account + review) | Submit `google-photos-delete-tool-firefox.zip` at addons.mozilla.org. Firefox variant already has `browser_specific_settings.gecko.id`. AMO review takes days; budget for a rejection round-trip (usually listing-text fixes). |
-| **Opera add-ons** | not listed | 30 min | Opera runs Chrome extensions; the Chrome zip works. Submission at addons.opera.com (reviews can be slow — set expectations). Lower priority: Opera users can already install from CWS via Opera's "Install Chrome extensions" add-on. |
-| **Brave / Vivaldi / Arc** | — | none | Consume the Chrome Web Store; nothing to do. |
-| **Greasy Fork** | not listed | 20 min | Create account → submit `google-photos-delete.user.js`. The header already carries `@version` + `@updateURL`/`@downloadURL` pointing at GitHub releases, so Greasy Fork users auto-update on every release. Second-largest userscript surface after direct install. |
-| **OpenUserJS / Userscripts (iOS)** | optional | 10 min each | Copy of the same script; tiny volumes but free. |
+| Chrome Web Store | live (v2.0.5; v3 in review) | ✅ retry loop + `update-cws-listing.yml` | none (secrets present); re-dispatch after review clears |
+| **Microsoft Edge Add-ons** | not listed | ✅ retry loop (upload → poll → publish, v1.1 API) | create product once in Partner Center + add `EDGE_*` secrets |
+| **Firefox AMO** | zip ready | ✅ retry loop (`wdzeng/firefox-addon`) | create add-on once + add `FIREFOX_JWT_*` secrets |
+| **Greasy Fork** | not listed | ⚠️ no API — upload once, then self-updating | 20-min manual upload of `google-photos-delete.user.js` |
+| **Opera add-ons** | not listed | none | optional; Chrome zip works, reviews slow |
+| **Brave / Vivaldi / Arc** | — | none | consume the Chrome Web Store; nothing to do |
+| **OpenUserJS / Userscripts (iOS)** | optional | none | tiny volumes; free copy of the same script |
+
+Listing copy for every store is written once in `storefront/listing.json`
+(CWS pushes via API; Edge/AMO pasted at bootstrap).
 
 ## Phase 2 — Content marketing (the star engine)
 
