@@ -1,8 +1,12 @@
 /**
- * Service worker for the extension.
+ * Service worker (Chromium MV3) / background script (Firefox MV3).
  *
  * Single responsibility: reflect the engine's deletion count on the
  * action badge so users see progress without opening the popup.
+ *
+ * All async chrome.* calls go through src/extension/api.ts promise
+ * wrappers (callback-based) so this file is identical for both
+ * browsers. Only event listeners use the raw API.
  *
  * NOTE: a `chrome.action.onClicked` handler is intentionally NOT
  * registered here — when `default_popup` is set in the manifest
@@ -21,6 +25,8 @@ const LOG = '[gpdt:background]'
 const BADGE_INTERVAL_MS = 200
 const lastBadgeAt = new Map<number, number>()
 const pendingBadge = new Map<number, ReturnType<typeof setTimeout>>()
+
+import { setBadgeBackgroundColor, setBadgeText } from './api'
 
 interface ProgressData {
   deleted: number
@@ -56,13 +62,13 @@ function applyBadge(tabId: number, data: ProgressData): void {
   lastBadgeAt.set(tabId, Date.now())
   const text = data.status === 'idle' || data.status === 'done' ? '' : String(data.deleted)
   const color = data.status === 'error' ? '#ef4444' : '#22c55e'
-  try {
-    chrome.action.setBadgeText({ text, tabId })
-    chrome.action.setBadgeBackgroundColor({ color, tabId })
-  } catch (err) {
+  void setBadgeText({ text, tabId }).catch((err) => {
     // Tab may have closed between schedule and fire — non-fatal.
-    console.warn(`${LOG} badge update for tab ${tabId} failed:`, err)
-  }
+    console.warn(`${LOG} badge text update for tab ${tabId} failed:`, err)
+  })
+  void setBadgeBackgroundColor({ color, tabId }).catch((err) => {
+    console.warn(`${LOG} badge color update for tab ${tabId} failed:`, err)
+  })
 }
 
 // Cleanup when tabs close so the Maps don't accumulate stale entries.

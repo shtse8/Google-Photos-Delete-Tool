@@ -77,7 +77,7 @@
       <div class="progress-track">
         <div class="progress-fill" id="progress-fill"></div>
       </div>
-      <span class="progress-label" id="progress-label">0%</span>
+      <span class="progress-label" id="progress-label">0</span>
     </div>
 
     <!-- ─── Settings ────────────────────────────────────────────── -->
@@ -101,19 +101,12 @@
           class="field-input"
           value="500"
           min="1"
-          max="100000"
+          max="2000"
           step="50"
           inputmode="numeric"
         >
       </div>
 
-      <!--
-        The toggle's `<label class="toggle">` wraps the checkbox; the
-        OUTER `<label for="…">` already provides the accessible name
-        (its descendant `.field-name` span is the visible text). No
-        extra aria-label on the wrapper or screen readers would read
-        the label twice.
-      -->
       <div class="field">
         <label class="field-label" for="dry-run">
           <span class="field-icon" id="field-icon-dry" aria-hidden="true"></span>
@@ -145,6 +138,58 @@
           </span>
         </label>
       </div>
+
+      <div class="field">
+        <label class="field-label" for="filter">
+          <span class="field-icon" id="field-icon-filter" aria-hidden="true"></span>
+          <span class="field-text">
+            <span class="field-name" data-i18n="settings.filter.label">Filter</span>
+            <span class="field-hint" data-i18n="settings.filter.hint">Pro: restrict cleanup by type</span>
+          </span>
+        </label>
+        <select id="filter" class="field-input" disabled>
+          <option value="all" data-i18n="settings.filter.all">All items</option>
+          <option value="screenshot" data-i18n="settings.filter.screenshot">Screenshots</option>
+          <option value="video" data-i18n="settings.filter.video">Videos</option>
+          <option value="photo" data-i18n="settings.filter.photo">Photos</option>
+          <option value="animation" data-i18n="settings.filter.animation">Animations</option>
+          <option value="collage" data-i18n="settings.filter.collage">Collages</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="license-token">
+          <span class="field-icon" id="field-icon-license" aria-hidden="true"></span>
+          <span class="field-text">
+            <span class="field-name" data-i18n="settings.license.label">Pro license</span>
+            <span class="field-hint" data-i18n="settings.license.hint">Verified locally; never leaves your device</span>
+          </span>
+        </label>
+        <input type="text" id="license-token" class="field-input" placeholder="" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="btn btn-ghost btn-block" id="license-btn" data-i18n-attr="aria-label:settings.license.activate">
+        <span class="btn-text" data-i18n="settings.license.activate">Activate</span>
+      </button>
+      <p class="license-status" id="license-status"></p>
+    </section>
+
+    <!-- ─── Consent gate (destructive runs) ─────────────────────── -->
+    <section class="consent hidden" id="consent" aria-labelledby="consent-title">
+      <h2 class="consent-title" id="consent-title" data-i18n="consent.title">Before you start</h2>
+      <p class="consent-note" data-i18n="consent.trashNote">Photos move to Trash (recoverable for 60 days).</p>
+      <p class="consent-danger hidden" id="consent-permanent" data-i18n="consent.permanentNote">"Empty trash afterwards" is PERMANENT — no recovery.</p>
+      <label class="consent-check">
+        <input type="checkbox" id="consent-check">
+        <span data-i18n="consent.check">I understand, and I am on the Google Photos view I intend to clean.</span>
+      </label>
+      <div class="consent-actions">
+        <button class="btn btn-danger" id="consent-confirm" data-i18n-attr="aria-label:consent.confirm">
+          <span class="btn-text" data-i18n="consent.confirm">Confirm &amp; Start</span>
+        </button>
+        <button class="btn btn-ghost" id="consent-cancel" data-i18n-attr="aria-label:consent.cancel">
+          <span class="btn-text" data-i18n="consent.cancel">Cancel</span>
+        </button>
+      </div>
     </section>
 
     <!-- ─── Controls ────────────────────────────────────────────── -->
@@ -164,6 +209,22 @@
       <button class="btn btn-danger hidden" id="stop-btn" data-i18n-attr="aria-label:actions.stop">
         <span class="btn-icon" id="stop-icon" aria-hidden="true"></span>
         <span class="btn-text" data-i18n="actions.stop">Stop</span>
+      </button>
+    </div>
+
+    <!-- ─── Utility row ─────────────────────────────────────────── -->
+    <div class="utility hidden" id="utility">
+      <button class="btn btn-ghost" id="copy-btn" data-i18n-attr="aria-label:actions.copySummary">
+        <span class="btn-text" data-i18n="actions.copySummary">Copy summary</span>
+      </button>
+      <button class="btn btn-ghost hidden" id="export-btn" data-i18n-attr="aria-label:actions.exportCsv">
+        <span class="btn-text" data-i18n="actions.exportCsv">Export CSV</span>
+      </button>
+      <button class="btn btn-ghost" id="trash-btn" data-i18n-attr="aria-label:actions.viewTrash">
+        <span class="btn-text" data-i18n="actions.viewTrash">View trash</span>
+      </button>
+      <button class="btn btn-ghost" id="report-btn" data-i18n-attr="aria-label:actions.report">
+        <span class="btn-text" data-i18n="actions.report">Report issue</span>
       </button>
     </div>
 

@@ -800,3 +800,82 @@ body {
     transform: translateX(0);
   }
 }
+
+/* ─── v3: consent gate, license, utility row ─────────────────── */
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary, #a1a1aa);
+}
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text, #e8e8e8);
+}
+.btn-block {
+  width: 100%;
+  margin-top: 4px;
+}
+.license-status {
+  font-size: 11px;
+  color: var(--text-secondary, #a1a1aa);
+  margin: 4px 0 0;
+  min-height: 14px;
+}
+.license-status.ok { color: #22c55e; }
+.license-status.bad { color: #ef4444; }
+
+.consent {
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.07);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.consent-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #fbbf24;
+}
+.consent-note {
+  font-size: 12px;
+  color: var(--text-secondary, #c9c9d1);
+  margin: 0 0 4px;
+  line-height: 1.45;
+}
+.consent-danger {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ef4444;
+  margin: 0 0 6px;
+  line-height: 1.45;
+}
+.consent-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text, #e8e8e8);
+  margin: 8px 0;
+  cursor: pointer;
+}
+.consent-check input { margin-top: 2px; accent-color: #fbbf24; }
+.consent-actions {
+  display: flex;
+  gap: 8px;
+}
+.consent-actions .btn { flex: 1; }
+
+.utility {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.utility .btn {
+  flex: 1;
+  min-width: 96px;
+  padding: 7px 8px;
+  font-size: 11px;
+}

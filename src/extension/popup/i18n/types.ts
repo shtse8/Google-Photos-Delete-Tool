@@ -21,6 +21,7 @@ export interface Translations {
     idle: string
     navigatingTrash: string
     emptyingTrash: string
+    consentRequired: string
   }
   stats: {
     /** Accessible label for the stats `<section>`. */
@@ -35,6 +36,8 @@ export interface Translations {
     maxCount: { label: string; hint: string }
     dryRun: { label: string; hint: string }
     emptyTrash: { label: string; hint: string }
+    filter: { label: string; hint: string; all: string; screenshot: string; video: string; photo: string; animation: string; collage: string }
+    license: { label: string; hint: string; placeholder: string; activate: string; active: string; invalid: string }
     language: { label: string; trigger: string }
   }
   actions: {
@@ -42,6 +45,18 @@ export interface Translations {
     pause: string
     resume: string
     stop: string
+    report: string
+    copySummary: string
+    exportCsv: string
+    viewTrash: string
+  }
+  consent: {
+    title: string
+    trashNote: string
+    permanentNote: string
+    check: string
+    confirm: string
+    cancel: string
   }
   notes: {
     navigateFirst: string
