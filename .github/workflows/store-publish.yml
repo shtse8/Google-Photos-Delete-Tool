@@ -73,7 +73,7 @@ jobs:
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-          git fetch origin store-state --depth=1 || true
+          git fetch origin store-state:refs/remotes/origin/store-state --depth=1 || true
           PENDING=""
           for store in cws edge amo; do
             STATUS="$(node scripts/store-state.mjs pending "$store" "$TAG" 2>/dev/null || echo pending)"
@@ -166,7 +166,7 @@ jobs:
         id: state
         if: steps.creds.outputs.ready == 'yes'
         run: |
-          git fetch origin store-state --depth=1 || true
+          git fetch origin store-state:refs/remotes/origin/store-state --depth=1 || true
           echo "status=$(node scripts/store-state.mjs pending cws ${{ needs.resolve.outputs.tag }})" >> "$GITHUB_OUTPUT"
 
       - name: Already live
@@ -248,7 +248,7 @@ jobs:
         run: |
           set -euo pipefail
           STATE_FILE=/tmp/store-state.json node scripts/store-state.mjs set cws ${{ needs.resolve.outputs.tag }}
-          git fetch origin store-state --depth=1 || git fetch origin
+          git fetch origin store-state:refs/remotes/origin/store-state --depth=1 || git fetch origin
           if git rev-parse --verify origin/store-state >/dev/null 2>&1; then
             git checkout --detach origin/store-state
           else
@@ -289,7 +289,7 @@ jobs:
         id: state
         if: steps.creds.outputs.ready == 'yes'
         run: |
-          git fetch origin store-state --depth=1 || true
+          git fetch origin store-state:refs/remotes/origin/store-state --depth=1 || true
           echo "status=$(node scripts/store-state.mjs pending edge ${{ needs.resolve.outputs.tag }})" >> "$GITHUB_OUTPUT"
 
       - name: Already live
@@ -434,7 +434,7 @@ jobs:
         run: |
           set -euo pipefail
           STATE_FILE=/tmp/store-state.json node scripts/store-state.mjs set edge ${{ needs.resolve.outputs.tag }}
-          git fetch origin store-state --depth=1 || git fetch origin
+          git fetch origin store-state:refs/remotes/origin/store-state --depth=1 || git fetch origin
           if git rev-parse --verify origin/store-state >/dev/null 2>&1; then
             git checkout --detach origin/store-state
           else
@@ -475,7 +475,7 @@ jobs:
         id: state
         if: steps.creds.outputs.ready == 'yes'
         run: |
-          git fetch origin store-state --depth=1 || true
+          git fetch origin store-state:refs/remotes/origin/store-state --depth=1 || true
           echo "status=$(node scripts/store-state.mjs pending amo ${{ needs.resolve.outputs.tag }})" >> "$GITHUB_OUTPUT"
 
       - name: Already live
@@ -506,7 +506,7 @@ jobs:
         run: |
           set -euo pipefail
           STATE_FILE=/tmp/store-state.json node scripts/store-state.mjs set amo ${{ needs.resolve.outputs.tag }}
-          git fetch origin store-state --depth=1 || git fetch origin
+          git fetch origin store-state:refs/remotes/origin/store-state --depth=1 || git fetch origin
           if git rev-parse --verify origin/store-state >/dev/null 2>&1; then
             git checkout --detach origin/store-state
           else

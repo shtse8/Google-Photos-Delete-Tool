@@ -28,11 +28,16 @@ const [cmd, store, tag] = process.argv.slice(2)
 const STORES = ['cws', 'edge', 'amo']
 
 function readState() {
-  try {
-    return JSON.parse(execSync('git show origin/store-state:state.json', { encoding: 'utf-8' }))
-  } catch {
-    return {}
+  // origin/store-state after an explicit-refspec fetch; FETCH_HEAD as a
+  // fallback for single-branch clones where the tracking ref is not set up.
+  for (const ref of ['origin/store-state', 'FETCH_HEAD']) {
+    try {
+      return JSON.parse(execSync(`git show ${ref}:state.json`, { encoding: 'utf-8' }))
+    } catch {
+      // try next ref
+    }
   }
+  return {}
 }
 
 if (cmd === 'pending') {
