@@ -68,20 +68,6 @@ export class DeletionLog {
     return (recentCount / denominator) * 60_000
   }
 
-  /**
-   * Estimated time remaining in milliseconds, given a target count.
-   * Returns null if insufficient data for estimation.
-   */
-  estimateRemaining(targetCount: number): number | null {
-    const rate = this.ratePerMinute()
-    if (rate <= 0) return null
-
-    const remaining = targetCount - this.totalDeleted
-    if (remaining <= 0) return 0
-
-    return (remaining / rate) * 60_000
-  }
-
   /** Get a copy of all recorded entries. */
   getEntries(): readonly DeletionEntry[] {
     return [...this.entries]

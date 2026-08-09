@@ -1,64 +1,36 @@
 /**
- * Google Photos DOM selectors with fallbacks.
+ * Google Photos DOM finders.
  *
- * Google frequently changes class names AND localizes button labels.
- * Each CSS selector has a primary and fallback list. For action buttons
- * we also use keyword-based matching (aria-label / tooltip / text content,
- * normalized and matched against multilingual keyword lists) so the tool
- * works regardless of UI language.
+ * All selectors, action-button candidates, and keyword lists come from
+ * the versioned selector pack (`src/selector-packs/pack-v1.json`).
+ *
+ * Safety model: destructive actions require a POSITIVE keyword match
+ * (fail closed — we never guess "the last non-cancel button"). Each
+ * finder records what it observed into the shared diagnostics collector
+ * so a "Report issue" submission carries the exact drift evidence.
  */
 
-export interface SelectorDef {
-  /** Human-readable name for logging */
-  name: string
-  /** Primary selector (most specific) */
-  primary: string
-  /** Fallback selectors, tried in order */
-  fallbacks: string[]
-}
+import { PACK, type SelectorDef } from './selector-pack'
+import { diagnostics } from './diagnostics'
 
-export const SELECTOR_DEFS = {
-  counter: {
-    name: 'Selected photo count',
-    primary: '.rtExYb',
-    fallbacks: [
-      '[data-selection-count]',
-      '.Mfixef .rtExYb',
-    ],
-  },
-  checkbox: {
-    name: 'Photo checkbox',
-    primary: '.ckGgle[aria-checked=false]',
-    fallbacks: [
-      '[role="checkbox"][aria-checked="false"]',
-      '[data-lat][aria-checked="false"]',
-    ],
-  },
-  checkboxChecked: {
-    name: 'Photo checkbox (checked)',
-    primary: '.ckGgle[aria-checked=true]',
-    fallbacks: [
-      '[role="checkbox"][aria-checked="true"]',
-      '[data-lat][aria-checked="true"]',
-    ],
-  },
-  photoContainer: {
-    name: 'Photo container',
-    primary: '.yDSiEe.uGCjIb.zcLWac.eejsDc.TWmIyd',
-    fallbacks: [
-      '.yDSiEe.uGCjIb.zcLWac',
-      '[role="main"]',
-      '[role="list"]',
-      '[role="grid"]',
-    ],
-  },
-} as const satisfies Record<string, SelectorDef>
+export type { SelectorDef }
+export { PACK_VERSION } from './selector-pack'
+
+export const SELECTOR_DEFS: Record<'counter' | 'checkbox' | 'checkboxChecked' | 'photoContainer', SelectorDef> =
+  PACK.selectors
+
+export const TOOLBAR_DELETE_CANDIDATES: readonly string[] = Object.freeze([...PACK.actionButtons.toolbarDelete])
+export const EMPTY_TRASH_CANDIDATES: readonly string[] = Object.freeze([...PACK.actionButtons.emptyTrash])
+
+export const DELETE_KEYWORDS: readonly string[] = Object.freeze([...PACK.keywords.delete])
+export const CANCEL_KEYWORDS: readonly string[] = Object.freeze([...PACK.keywords.cancel])
+export const CONTEXTUAL_REMOVE_KEYWORDS: readonly string[] = Object.freeze([...PACK.keywords.contextualRemove])
+export const EMPTY_TRASH_PHRASES: readonly string[] = Object.freeze([...PACK.keywords.emptyTrashPhrases])
+export const TRASH_EMPTY_SIGNALS: readonly string[] = Object.freeze([...PACK.trashEmptySignals])
 
 /**
  * Cache of "I already warned about this fallback" keys, bounded so it
- * cannot grow without limit on a long-running content script. In
- * practice we have ≤ 4 selector definitions × ≤ 4 fallbacks each, so
- * 32 is well above the real maximum and still negligible memory.
+ * cannot grow without limit on a long-running content script.
  */
 const FALLBACK_WARN_CAP = 32
 const warnedFallbacks = new Set<string>()
@@ -76,156 +48,58 @@ function warnFallback(def: SelectorDef, fallback: string): void {
 
 /**
  * Query a single element using a SelectorDef, trying primary first,
- * then fallbacks. Logs a warning when a fallback is used.
+ * then fallbacks. Records the outcome into diagnostics.
  */
 export function queryOne(def: SelectorDef, root: ParentNode = document): Element | null {
   const primary = root.querySelector(def.primary)
-  if (primary) return primary
+  if (primary) {
+    diagnostics.recordSelector(def.name, 'primary')
+    return primary
+  }
 
   for (const fallback of def.fallbacks) {
     const el = root.querySelector(fallback)
     if (el) {
       warnFallback(def, fallback)
+      diagnostics.recordSelector(def.name, 'fallback', fallback)
       return el
     }
   }
 
+  diagnostics.recordSelector(def.name, 'none')
   return null
 }
 
 /**
  * Query all elements using a SelectorDef, trying primary first,
- * then fallbacks.
+ * then fallbacks. Records the outcome into diagnostics.
  */
 export function queryAll(def: SelectorDef, root: ParentNode = document): Element[] {
   const primary = [...root.querySelectorAll(def.primary)]
-  if (primary.length > 0) return primary
+  if (primary.length > 0) {
+    diagnostics.recordSelector(def.name, 'primary')
+    return primary
+  }
 
   for (const fallback of def.fallbacks) {
     const els = [...root.querySelectorAll(fallback)]
     if (els.length > 0) {
       warnFallback(def, fallback)
+      diagnostics.recordSelector(def.name, 'fallback', fallback)
       return els
     }
   }
 
+  diagnostics.recordSelector(def.name, 'none')
   return []
 }
 
-// ─── Locale-aware action button finding ────────────────────────────
-
-/**
- * Keywords that indicate a destructive "delete" / "trash" action.
- * Already lowercase and ASCII-folded (no diacritics) so they match
- * against the normalized form of an element's label.
- */
-export const DELETE_KEYWORDS: readonly string[] = Object.freeze([
-  // English
-  'trash', 'bin', 'delete', 'remove',
-  // French
-  'corbeille', 'supprimer', 'supprime',
-  // Spanish
-  'papelera', 'eliminar', 'borrar',
-  // German (ö → o after stripping diacritics)
-  'papierkorb', 'loschen', 'entfernen',
-  // Italian
-  'cestino', 'elimina', 'rimuovi',
-  // Portuguese
-  'lixo', 'lixeira', 'excluir', 'remover',
-  // Dutch
-  'prullenbak', 'verwijder',
-  // Polish (ń → n after stripping)
-  'kosz', 'usun',
-  // Czech / Slovak
-  'kos', 'odstranit', 'smazat',
-  // Romanian
-  'sterge',
-  // Scandinavian
-  'papirkorg', 'papperskorg', 'slett', 'radera', 'roskakori', 'poista',
-  // Greek
-  'διαγραφ', 'κάδος', 'καδος', 'σκουπιδ',
-  // Russian / Ukrainian
-  'корзин', 'удалить', 'кошик', 'видалити',
-  // Turkish — only long enough labels to avoid false-positive substring
-  // matches (e.g. "cop" would match "copy" in any English UI string).
-  'silmek', 'kaldir',
-  // CJK (no diacritic stripping needed)
-  'ゴミ箱', '削除', 'ごみ箱',
-  '휴지통', '삭제',
-  '回收站', '废纸篓', '垃圾桶', '删除', '刪除',
-  // Hebrew
-  'אשפה', 'מחק',
-  // Arabic
-  'مهملات', 'حذف',
-])
-
-/**
- * Labels that indicate a non-trash contextual removal (for example
- * "Remove from album"). These are explicitly excluded when choosing
- * the main selected-items delete toolbar action because this tool's
- * destructive workflow must move photos to Trash, not merely detach them
- * from an album/shared surface.
- */
-const CONTEXTUAL_REMOVE_KEYWORDS: readonly string[] = Object.freeze([
-  'album', 'shared album', 'from album', 'collage', 'animation',
-  'retirer de l album', 'retirer de l album partage',
-  'quitar del album', 'eliminar del album',
-  'aus album entfernen',
-  'rimuovi dall album',
-  'remover do album',
-  'remove from album',
-])
-
-
-/**
- * Keywords that indicate a cancel / dismiss / close action.
- * Used to negatively score buttons inside a dialog so we don't
- * accidentally click "Cancel" instead of "Confirm".
- *
- * IMPORTANT: substring matching is used, so very short keywords
- * (≤2 chars in Latin script) are intentionally excluded to avoid
- * false positives. E.g. `'no'` would match "ces**no**", `'back'`
- * would match "**back**ground".
- */
-export const CANCEL_KEYWORDS: readonly string[] = Object.freeze([
-  'cancel', 'dismiss', 'close',
-  'annuler', 'fermer', 'retour',
-  'cancelar', 'cerrar',
-  'abbrechen', 'schliessen', 'nein',
-  'annulla', 'chiudi', 'indietro',
-  'annuleren', 'sluiten',
-  'anuluj', 'zamknij', 'wstecz',
-  'zrusit', 'zavrit',
-  'avbryt', 'stang', 'tilbake',
-  'avbryta', 'avsluta',
-  'peruuta', 'sulje',
-  'ακύρωση', 'ακυρωση',
-  'отмена', 'закрыть', 'скасувати',
-  'iptal', 'kapat',
-  'キャンセル', '閉じる', '戻る',
-  '취소', '닫기',
-  '取消', '关闭', '關閉',
-  'ביטול', 'סגור',
-  'إلغاء', 'إغلاق',
-])
-
-/**
- * Matches the Unicode block of Latin combining diacritical marks
- * (U+0300..U+036F). Spelled with `\u` escapes rather than literal
- * characters so the source stays readable in any editor/diff tool.
- */
-const COMBINING_DIACRITICS = /[\u0300-\u036f]/g
+// ─── Text normalization & keyword matching ────────────────────────
 
 /**
  * Lowercase + strip Latin combining diacritics, then re-compose so that
  * CJK characters (which NFD decomposes into base + combining-voicing-mark
  * outside the Latin block) survive unchanged. Safe for null/undefined.
- *
- * Examples:
- *   normalizeText('Déplacer') === 'deplacer'
- *   normalizeText('Löschen')  === 'loschen'
- *   normalizeText('ゴミ箱')   === 'ゴミ箱'
- *   normalizeText('취소')      === '취소'
  */
 export function normalizeText(s: string | null | undefined): string {
   if (!s) return ''
@@ -234,9 +108,12 @@ export function normalizeText(s: string | null | undefined): string {
     .normalize('NFD')
     .replace(COMBINING_DIACRITICS, '')
     .normalize('NFC')
+    .replace(/[\u2019']/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
+
+const COMBINING_DIACRITICS = /[\u0300-\u036f]/g
 
 /** Cache normalized keyword lists by array reference for performance. */
 const normCache = new WeakMap<readonly string[], string[]>()
@@ -251,9 +128,8 @@ function getNormalizedKeywords(keywords: readonly string[]): string[] {
 
 /**
  * True if the normalized form of `text` contains any of `keywords` as a
- * substring. Both sides are normalized via {@link normalizeText} so the
- * comparison works for Latin (case + diacritic insensitive) and CJK
- * (precomposed/decomposed insensitive).
+ * substring. Both sides are normalized so the comparison works for Latin
+ * (case + diacritic insensitive) and CJK (precomposed/decomposed insensitive).
  */
 export function containsAnyKeyword(text: string | null | undefined, keywords: readonly string[]): boolean {
   const normalized = normalizeText(text)
@@ -312,20 +188,15 @@ export function scoreActionButton(
 
 /**
  * Find the toolbar "delete / move to trash" button that appears after
- * photos are selected. Tries fast CSS selectors first, then falls back
+ * photos are selected. Tries fast CSS candidates first, then falls back
  * to scanning all buttons by accessible label / tooltip / text and
  * matching against multilingual keyword lists.
  *
  * Returns null if no candidate is found (caller should retry / wait).
  */
 export function findDeleteToolbarButton(): HTMLElement | null {
-  // Fast path: CSS selectors (covers English UI quickly).
-  const cssCandidates: string[] = [
-    'button[aria-label="Move to trash"]',
-    'button[aria-label="Delete"]',
-    'button[data-delete-origin]',
-  ]
-  for (const sel of cssCandidates) {
+  // Fast path: CSS candidates (covers English UI quickly).
+  for (const sel of TOOLBAR_DELETE_CANDIDATES) {
     const el = document.querySelector<HTMLButtonElement>(sel)
     if (el && isVisible(el) && !isInsideDialog(el)) return el
   }
@@ -354,48 +225,13 @@ export function findDeleteToolbarButton(): HTMLElement | null {
 }
 
 /**
- * Multi-word phrases that uniquely identify the "Empty trash" / "Empty bin"
- * action on the /trash page. We require longer phrases here (not just
- * "trash") because /trash also exposes "Delete forever" and "Restore"
- * buttons that we must not accidentally match.
- */
-export const EMPTY_TRASH_PHRASES: readonly string[] = Object.freeze([
-  // English
-  'empty trash', 'empty bin', 'empty the trash', 'empty the bin',
-  // French
-  'vider la corbeille', 'vider corbeille',
-  // Spanish
-  'vaciar papelera', 'vaciar la papelera',
-  // German
-  'papierkorb leeren',
-  // Italian
-  'svuota cestino', 'svuota il cestino',
-  // Portuguese
-  'esvaziar lixo', 'esvaziar lixeira', 'esvaziar a lixeira',
-  // Dutch
-  'prullenbak legen', 'leeg prullenbak', 'leeg de prullenbak',
-  // Polish, Czech
-  'oproznij kosz', 'vyprazdnit kos',
-  // Russian
-  'опорожнить корзину', 'очистить корзину',
-  // Japanese, Korean, Chinese
-  'ゴミ箱を空に', 'ごみ箱を空に',
-  '휴지통 비우기',
-  '清空回收站', '清空垃圾桶', '清空垃圾箱',
-])
-
-/**
  * Find the "Empty trash" toolbar button visible on the /trash page.
- * Uses the multi-phrase keyword list above so we don't accidentally
- * match "Delete forever" (which also lives on /trash).
+ * Uses the multi-phrase keyword list so we don't accidentally match
+ * "Delete forever" (which also lives on /trash).
  */
 export function findEmptyTrashButton(): HTMLElement | null {
-  // Fast path: a couple of well-known English aria-labels.
-  const cssCandidates: string[] = [
-    'button[aria-label="Empty trash"]',
-    'button[aria-label="Empty bin"]',
-  ]
-  for (const sel of cssCandidates) {
+  // Fast path: well-known English aria-labels.
+  for (const sel of EMPTY_TRASH_CANDIDATES) {
     const el = document.querySelector<HTMLButtonElement>(sel)
     if (el && isVisible(el) && !isInsideDialog(el)) return el
   }
@@ -415,6 +251,17 @@ export function findEmptyTrashButton(): HTMLElement | null {
   }
 
   return null
+}
+
+/**
+ * True when the /trash page is already empty (empty-state message
+ * present and no "Empty trash" button visible). Used by the empty-trash
+ * flow so an already-empty trash resolves to `done` instead of error.
+ */
+export function isTrashEmpty(): boolean {
+  if (findEmptyTrashButton()) return false
+  const bodyText = typeof document !== 'undefined' ? (document.body?.innerText ?? '') : ''
+  return containsAnyKeyword(bodyText, TRASH_EMPTY_SIGNALS)
 }
 
 /**
