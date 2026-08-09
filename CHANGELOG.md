@@ -13,7 +13,7 @@ behavior, no dual paths. One engine, one control panel, two surfaces
 ### Added
 - Engine on an injected DOM adapter — the FULL run loop is now
   unit-testable (select → cap-flush → scroll → end-of-list →
-  flush-last → stop/pause/error). 160+ tests.
+  flush-last → stop/pause/error), selector/label/keyword coverage, i18n completeness.
 - Abort-aware Stop: a stopped run resolves to `idle`, never `error`.
 - Wave-based checkbox selection that can never re-click already-selected
   tiles (the old "checkbox flap" bug) plus counter-regression tracking.

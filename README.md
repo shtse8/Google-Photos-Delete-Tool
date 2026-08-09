@@ -157,7 +157,7 @@ src/
 ├── standalone/            # Dev-only console-paste mount
 └── userscript/            # Thin mount of the shared panel
 scripts/                   # build.ts · zip.ts · verify.ts · license.ts
-tests/                     # 160+ tests incl. full engine loop on a fake DOM
+tests/                     # engine loop on a scripted DOM fake + core/surface suites
 ```
 
 ### Release gate
