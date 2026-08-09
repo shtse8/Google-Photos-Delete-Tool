@@ -19,10 +19,15 @@ const read = (p: string) => readFileSync(resolve(root, p), 'utf-8')
 const pkg = JSON.parse(read('package.json'))
 const listing = JSON.parse(read('storefront/listing.json'))
 
+// When emitting a machine payload (--cws-metadata), stdout must carry ONLY
+// the JSON — diagnostics go to stderr so `bun run listing:cws > file` is safe.
+const emitting = process.argv.includes('--cws-metadata')
+const log = (msg: string) => (emitting ? console.error(msg) : console.log(msg))
+
 let failures = 0
 function check(ok: boolean, what: string): void {
   if (ok) {
-    console.log(`  ✓ ${what}`)
+    log(`  ✓ ${what}`)
   } else {
     failures++
     console.error(`  ✗ ${what}`)
@@ -69,7 +74,7 @@ if (failures > 0) {
   console.error(`\nlisting: ${failures} failure(s)`)
   process.exit(1)
 }
-console.log('\nlisting: OK')
+log('listing: OK')
 
 // ─── Emit CWS metadata payload (metadata-only update API) ────────
 if (process.argv.includes('--cws-metadata')) {
