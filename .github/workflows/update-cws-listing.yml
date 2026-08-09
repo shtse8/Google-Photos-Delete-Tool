@@ -70,6 +70,8 @@ jobs:
           if [ "$CODE" != "200" ]; then
             if printf '%s' "$JSON" | grep -qi 'ITEM_NOT_UPDATABLE'; then
               echo "::error::CWS listing blocked: item is in pending review / ready to publish / deleted. Re-dispatch this workflow after Google clears the review (see docs/STORE_AUTOMATION.md)."
+            elif [ "$CODE" = "304" ]; then
+              echo "::error::CWS returned 304 Not Modified — the metadata update was NOT applied (Google returns this while the item is in review or when it ignores the request). Re-dispatch after review clears; if it persists, update the dashboard once from storefront/listing.json (single source stays the file)."
             else
               echo "::error::CWS listing update failed (HTTP $CODE)"
             fi
