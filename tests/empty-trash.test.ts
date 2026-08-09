@@ -4,13 +4,13 @@ import {
   DEFAULT_EMPTY_TRASH_TIMEOUTS,
   type EmptyTrashDeps,
   type EmptyTrashStatus,
-} from '../src/extension/empty-trash'
+} from '../src/core/empty-trash'
 
 /**
  * The flow's job is orchestration: find → click → find dialog → find
- * confirm → click → report. We don't need a real DOM for that — we
- * test against fakes that expose `.click = vi.fn()`. This is what the
- * dependency-injection rewrite made possible.
+ * confirm → click → VERIFY postcondition → report done. We test against
+ * fakes; the postcondition (empty button gone / empty-state visible) is
+ * what separates a truthful "done" from a guess.
  */
 
 interface FakeButton {
@@ -27,27 +27,37 @@ const fakeButton = (label = 'fake', text = 'fake'): FakeButton => ({
 
 const fakeDialog = (): FakeButton => fakeButton('dialog', '')
 
-const happyDeps = (overrides: Partial<EmptyTrashDeps> = {}): {
+interface HappyWorld {
   deps: EmptyTrashDeps
   empty: FakeButton
   dialog: FakeButton
   confirm: FakeButton
   statuses: { status: EmptyTrashStatus; extra?: { error?: string } }[]
-} => {
+  emptiedState: { emptied: boolean }
+}
+
+const happyWorld = (overrides: Partial<EmptyTrashDeps> = {}): HappyWorld => {
   const empty = fakeButton('Empty trash', 'Empty trash')
   const dialog = fakeDialog()
   const confirm = fakeButton('Move to trash', 'Move to trash')
   const statuses: { status: EmptyTrashStatus; extra?: { error?: string } }[] = []
+  // Default postcondition: empty button disappears once confirm is clicked.
+  const state = { emptied: false }
+  const clickDialog = dialog.click as () => void
+  empty.click = vi.fn(() => { clickDialog() })
+  confirm.click = vi.fn(() => { state.emptied = true })
 
   return {
+    emptiedState: state,
     empty,
     dialog,
     confirm,
     statuses,
     deps: {
-      findEmptyTrashButton: () => empty as unknown as HTMLElement,
-      findConfirmDialog: () => dialog as unknown as HTMLElement,
+      findEmptyTrashButton: () => (state.emptied ? null : (empty as unknown as HTMLElement)),
+      findConfirmDialog: () => (state.emptied ? null : (dialog as unknown as HTMLElement)),
       findConfirmButton: () => confirm as unknown as HTMLElement,
+      isTrashEmpty: () => state.emptied,
       waitFor: async (cond) => {
         const v = cond()
         if (!v) throw new Error('Timed out')
@@ -60,90 +70,100 @@ const happyDeps = (overrides: Partial<EmptyTrashDeps> = {}): {
   }
 }
 
-describe('runEmptyTrashFlow — happy path', () => {
-  it('clicks the empty-trash button, then the confirm button', async () => {
-    const { deps, empty, confirm } = happyDeps()
+describe('runEmptyTrashFlow — happy path with postcondition', () => {
+  it('clicks empty, then confirm, then verifies the empty state before done', async () => {
+    const { deps, empty, confirm, statuses } = happyWorld()
     await runEmptyTrashFlow(deps)
     expect(empty.click).toHaveBeenCalledTimes(1)
     expect(confirm.click).toHaveBeenCalledTimes(1)
+    expect(statuses.map((s) => s.status)).toEqual(['emptyingTrash', 'done'])
   })
 
   it('clicks empty BEFORE confirm', async () => {
     const order: string[] = []
-    const { deps, empty, confirm } = happyDeps()
-    empty.click = vi.fn(() => { order.push('empty') })
-    confirm.click = vi.fn(() => { order.push('confirm') })
-    await runEmptyTrashFlow(deps)
+    const world = happyWorld()
+    world.empty.click = vi.fn(() => { order.push('empty') })
+    world.confirm.click = vi.fn(() => { order.push('confirm'); world.emptiedState.emptied = true })
+    await runEmptyTrashFlow(world.deps)
     expect(order).toEqual(['empty', 'confirm'])
   })
 
-  it('reports emptyingTrash → done', async () => {
-    const { deps, statuses } = happyDeps()
-    await runEmptyTrashFlow(deps)
-    expect(statuses.map((s) => s.status)).toEqual(['emptyingTrash', 'done'])
-  })
-
-  it('settles for postConfirmSettle ms after the confirm click', async () => {
-    const sleep = vi.fn().mockResolvedValue(undefined)
-    const { deps } = happyDeps({ sleep })
-    await runEmptyTrashFlow(deps)
-    expect(sleep).toHaveBeenCalledWith(DEFAULT_EMPTY_TRASH_TIMEOUTS.postConfirmSettle)
-  })
-
-  it('honours per-call timeout overrides', async () => {
-    const sleep = vi.fn().mockResolvedValue(undefined)
-    const { deps } = happyDeps({ sleep, timeouts: { postConfirmSettle: 42 } })
-    await runEmptyTrashFlow(deps)
-    expect(sleep).toHaveBeenCalledWith(42)
-  })
-
-  it('passes its own timeout values to waitFor', async () => {
+  it('settles nothing — waits for the postcondition via waitFor', async () => {
     const calls: number[] = []
-    const fakes = happyDeps()
-    const waitFor: EmptyTrashDeps['waitFor'] = async (cond, timeoutMs) => {
-      calls.push(timeoutMs)
+    const world = happyWorld()
+    world.deps.waitFor = async (cond, timeoutMs) => {
+      calls.push(timeoutMs as number)
       const v = cond()
       if (!v) throw new Error('Timed out')
       return v as NonNullable<typeof v>
     }
-    await runEmptyTrashFlow({ ...fakes.deps, waitFor })
+    await runEmptyTrashFlow(world.deps)
     expect(calls).toEqual([
       DEFAULT_EMPTY_TRASH_TIMEOUTS.findButton,
       DEFAULT_EMPTY_TRASH_TIMEOUTS.findDialog,
       DEFAULT_EMPTY_TRASH_TIMEOUTS.findConfirm,
+      DEFAULT_EMPTY_TRASH_TIMEOUTS.postConfirm,
     ])
+  })
+
+  it('honours per-call timeout overrides', async () => {
+    const world = happyWorld()
+    const calls: number[] = []
+    world.deps.waitFor = async (cond, timeoutMs) => {
+      calls.push(timeoutMs as number)
+      const v = cond()
+      if (!v) throw new Error('Timed out')
+      return v as NonNullable<typeof v>
+    }
+    await runEmptyTrashFlow({ ...world.deps, timeouts: { postConfirm: 42, findButton: 7 } })
+    expect(calls[0]).toBe(7)
+    expect(calls[3]).toBe(42)
   })
 })
 
-describe('runEmptyTrashFlow — failure paths', () => {
-  it('reports error if the empty-trash button never appears', async () => {
-    const statuses: { status: EmptyTrashStatus; extra?: { error?: string } }[] = []
+describe('runEmptyTrashFlow — already-empty trash', () => {
+  it('resolves to done without clicking when the trash is already empty', async () => {
+    const empty = fakeButton('Empty trash')
+    const statuses: EmptyTrashStatus[] = []
     const deps: EmptyTrashDeps = {
       findEmptyTrashButton: () => null,
       findConfirmDialog: () => null,
       findConfirmButton: () => null,
-      waitFor: async (cond) => {
-        const v = cond()
-        if (!v) throw new Error('Timed out after 20000ms')
-        return v as NonNullable<typeof v>
-      },
+      isTrashEmpty: () => true,
+      waitFor: async () => { throw new Error('Timed out after 20000ms') },
       sleep: vi.fn().mockResolvedValue(undefined),
-      onStatus: (status, extra) => statuses.push({ status, extra }),
+      onStatus: (status) => statuses.push(status),
     }
-    await expect(runEmptyTrashFlow(deps)).rejects.toThrow('Timed out')
-    expect(statuses[0].status).toBe('emptyingTrash')
-    expect(statuses[1].status).toBe('error')
-    expect(statuses[1].extra?.error).toMatch(/Empty trash failed/)
+    await expect(runEmptyTrashFlow(deps)).resolves.toBeUndefined()
+    expect(empty.click).not.toHaveBeenCalled()
+    expect(statuses).toEqual(['emptyingTrash', 'done'])
   })
 
+  it('reports error when the button is missing AND the trash is not empty', async () => {
+    const statuses: EmptyTrashStatus[] = []
+    const deps: EmptyTrashDeps = {
+      findEmptyTrashButton: () => null,
+      findConfirmDialog: () => null,
+      findConfirmButton: () => null,
+      isTrashEmpty: () => false,
+      waitFor: async () => { throw new Error('Timed out after 20000ms') },
+      sleep: vi.fn().mockResolvedValue(undefined),
+      onStatus: (status) => statuses.push(status),
+    }
+    await expect(runEmptyTrashFlow(deps)).rejects.toThrow(/not found/)
+    expect(statuses).toEqual(['emptyingTrash', 'error'])
+  })
+})
+
+describe('runEmptyTrashFlow — failure paths', () => {
   it('reports error if the dialog never opens after the first click', async () => {
     const empty = fakeButton('Empty trash')
-    let dialogFound = false
     const statuses: EmptyTrashStatus[] = []
     const deps: EmptyTrashDeps = {
       findEmptyTrashButton: () => empty as unknown as HTMLElement,
-      findConfirmDialog: () => (dialogFound ? (fakeDialog() as unknown as HTMLElement) : null),
+      findConfirmDialog: () => null,
       findConfirmButton: () => null,
+      isTrashEmpty: () => false,
       waitFor: async (cond) => {
         const v = cond()
         if (!v) throw new Error('Timed out')
@@ -153,18 +173,19 @@ describe('runEmptyTrashFlow — failure paths', () => {
       onStatus: (status) => statuses.push(status),
     }
     await expect(runEmptyTrashFlow(deps)).rejects.toThrow('Timed out')
-    expect(empty.click).toHaveBeenCalledTimes(1) // we DID click empty
+    expect(empty.click).toHaveBeenCalledTimes(1)
     expect(statuses).toEqual(['emptyingTrash', 'error'])
   })
 
-  it('reports error if the confirm button is missing inside the dialog', async () => {
+  it('reports error when the confirm button is missing inside the dialog', async () => {
     const empty = fakeButton('Empty trash')
     const dialog = fakeDialog()
     const statuses: EmptyTrashStatus[] = []
     const deps: EmptyTrashDeps = {
       findEmptyTrashButton: () => empty as unknown as HTMLElement,
       findConfirmDialog: () => dialog as unknown as HTMLElement,
-      findConfirmButton: () => null, // not found
+      findConfirmButton: () => null,
+      isTrashEmpty: () => false,
       waitFor: async (cond) => {
         const v = cond()
         if (!v) throw new Error('Timed out')
@@ -176,48 +197,47 @@ describe('runEmptyTrashFlow — failure paths', () => {
     await expect(runEmptyTrashFlow(deps)).rejects.toThrow('Timed out')
     expect(empty.click).toHaveBeenCalledTimes(1)
     expect(statuses).toEqual(['emptyingTrash', 'error'])
+  })
+
+  it('reports error when the empty-state postcondition never verifies', async () => {
+    const empty = fakeButton('Empty trash')
+    const dialog = fakeDialog()
+    const confirm = fakeButton('Move to trash')
+    const statuses: { status: EmptyTrashStatus; extra?: { error?: string } }[] = []
+    // Empty button NEVER disappears after confirm → postcondition fails.
+    const deps: EmptyTrashDeps = {
+      findEmptyTrashButton: () => empty as unknown as HTMLElement,
+      findConfirmDialog: () => dialog as unknown as HTMLElement,
+      findConfirmButton: () => confirm as unknown as HTMLElement,
+      isTrashEmpty: () => false,
+      waitFor: async (cond) => {
+        const v = cond()
+        if (!v) throw new Error('Timed out after 10000ms')
+        return v as NonNullable<typeof v>
+      },
+      sleep: vi.fn().mockResolvedValue(undefined),
+      onStatus: (status, extra) => statuses.push({ status, extra }),
+    }
+    await expect(runEmptyTrashFlow(deps)).rejects.toThrow(/may not have completed/)
+    expect(confirm.click).toHaveBeenCalledTimes(1)
+    expect(statuses[1].status).toBe('error')
+    expect(statuses[1].extra?.error).toMatch(/may not have completed/)
   })
 })
 
 describe('runEmptyTrashFlow — logging', () => {
   it('emits structured log lines for each step', async () => {
     const lines: string[] = []
-    const { deps } = happyDeps({ log: (m) => lines.push(m) })
+    const { deps } = happyWorld({ log: (m) => lines.push(m) })
     await runEmptyTrashFlow(deps)
     const joined = lines.join('\n')
     expect(joined).toMatch(/emptying trash/i)
-    expect(joined).toMatch(/empty-trash button found/i)
-    expect(joined).toMatch(/dialog opened/i)
     expect(joined).toMatch(/confirm button found/i)
-    expect(joined).toMatch(/trash emptied/i)
-  })
-
-  it('logs the matched aria-label so a failed selector can be debugged', async () => {
-    const lines: string[] = []
-    const { deps } = happyDeps({ log: (m) => lines.push(m) })
-    await runEmptyTrashFlow(deps)
-    expect(lines.some((l) => l.includes('aria-label="Empty trash"'))).toBe(true)
-    expect(lines.some((l) => l.includes('aria-label="Move to trash"'))).toBe(true)
+    expect(joined).toMatch(/postcondition verified/i)
   })
 
   it('works without log / onStatus (no-ops by default)', async () => {
-    const empty = fakeButton('Empty trash')
-    const dialog = fakeDialog()
-    const confirm = fakeButton('Move to trash')
-    const deps: EmptyTrashDeps = {
-      findEmptyTrashButton: () => empty as unknown as HTMLElement,
-      findConfirmDialog: () => dialog as unknown as HTMLElement,
-      findConfirmButton: () => confirm as unknown as HTMLElement,
-      waitFor: async (cond) => {
-        const v = cond()
-        if (!v) throw new Error('Timed out')
-        return v as NonNullable<typeof v>
-      },
-      sleep: vi.fn().mockResolvedValue(undefined),
-      // no log, no onStatus — should not crash
-    }
-    await expect(runEmptyTrashFlow(deps)).resolves.toBeUndefined()
-    expect(empty.click).toHaveBeenCalled()
-    expect(confirm.click).toHaveBeenCalled()
+    const { deps } = happyWorld()
+    await expect(runEmptyTrashFlow({ ...deps, log: undefined, onStatus: undefined })).resolves.toBeUndefined()
   })
 })

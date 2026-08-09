@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { sleep, waitUntil, formatElapsed, formatEta, retryWithBackoff } from '../src/core/utils'
+import { describe, it, expect } from 'vitest'
+import { sleep, waitUntil, formatElapsed, formatEta, describeButton } from '../src/core/utils'
 
 describe('sleep', () => {
   it('should resolve after the specified delay', async () => {
@@ -74,47 +74,23 @@ describe('formatEta', () => {
   })
 })
 
-describe('retryWithBackoff', () => {
-  beforeEach(() => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
+describe('describeButton', () => {
+  it('formats aria-label and text with a cap', () => {
+    const el = {
+      getAttribute: (k: string) => (k === 'aria-label' ? 'Move to trash' : null),
+      textContent: 'Move to trash',
+    }
+    expect(describeButton(el)).toBe('aria-label="Move to trash" text="Move to trash"')
   })
 
-  afterEach(() => {
-    vi.restoreAllMocks()
+  it('tolerates missing attribute/text accessors', () => {
+    expect(describeButton({})).toBe('aria-label="" text=""')
   })
 
-  it('should return result on first success', async () => {
-    const result = await retryWithBackoff(() => 'ok', { maxRetries: 3, baseDelay: 10 })
-    expect(result).toBe('ok')
-  })
-
-  it('should retry on failure and succeed', async () => {
-    let attempt = 0
-    const result = await retryWithBackoff(() => {
-      attempt++
-      if (attempt < 3) throw new Error('fail')
-      return 'success'
-    }, { maxRetries: 3, baseDelay: 10 })
-
-    expect(result).toBe('success')
-    expect(attempt).toBe(3)
-  })
-
-  it('should throw after max retries', async () => {
-    await expect(
-      retryWithBackoff(
-        () => { throw new Error('always fails') },
-        { maxRetries: 2, baseDelay: 10 },
-      )
-    ).rejects.toThrow('always fails')
-  })
-
-  it('should handle async functions', async () => {
-    const result = await retryWithBackoff(async () => {
-      await sleep(10)
-      return 42
-    }, { maxRetries: 1, baseDelay: 10 })
-
-    expect(result).toBe(42)
+  it('caps very long labels', () => {
+    const el = { getAttribute: () => 'x'.repeat(500), textContent: '' }
+    const out = describeButton(el)
+    expect(out.length).toBeLessThan(300)
+    expect(out).toContain('x'.repeat(60))
   })
 })

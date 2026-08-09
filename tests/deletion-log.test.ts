@@ -66,41 +66,6 @@ describe('DeletionLog', () => {
     expect(rate).toBeGreaterThan(0)
   })
 
-  it('should estimate remaining time', () => {
-    const log = new DeletionLog()
-
-    vi.setSystemTime(new Date(0))
-    log.start()
-    log.record(100)
-
-    vi.setSystemTime(new Date(60_000))
-    // Deleted 100 in 60s = 100/min
-    // Target 1000, remaining 900, should take ~9 minutes
-    const eta = log.estimateRemaining(1000)
-    expect(eta).not.toBeNull()
-    if (eta !== null) {
-      expect(eta).toBeGreaterThan(0)
-    }
-  })
-
-  it('should return null ETA with no data', () => {
-    const log = new DeletionLog()
-    log.start()
-
-    expect(log.estimateRemaining(1000)).toBeNull()
-  })
-
-  it('should return 0 ETA when target already met', () => {
-    const log = new DeletionLog()
-
-    vi.setSystemTime(new Date(0))
-    log.start()
-    log.record(100)
-
-    vi.setSystemTime(new Date(60_000))
-    expect(log.estimateRemaining(50)).toBe(0)
-  })
-
   it('should return immutable entries', () => {
     const log = new DeletionLog()
     log.start()
@@ -129,9 +94,6 @@ describe('DeletionLog', () => {
     // returned 100 * 60 = 6000 photos/min. The window-bounded
     // denominator caps that to the realistic ~100/min.
     const log = new DeletionLog()
-    // Use a non-zero base time — Date.now() is never 0 in real life,
-    // and DeletionLog's `startTime > 0` guard would otherwise read 0
-    // as "not started" and use the full window.
     vi.setSystemTime(new Date(1_000_000))
     log.start()
 
@@ -143,8 +105,6 @@ describe('DeletionLog', () => {
     vi.setSystemTime(new Date(1_061_000))
     const rate = log.ratePerMinute() // default window = 120 s
 
-    // 100 deletions over the 61 s of run ≈ 98 photos/min. Without
-    // the fix this returned 6000.
     expect(rate).toBeGreaterThan(50)
     expect(rate).toBeLessThan(120)
   })

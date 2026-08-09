@@ -1,176 +1,453 @@
-import { describe, it, expect, vi } from 'vitest'
-import { DeleteEngine, type Progress, type EngineStatus } from '../src/core/delete-engine'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { DeleteEngine, StopRequested } from '../src/core/delete-engine'
+import type { ClickTarget, EngineDom, PhotoTile, ScrollTarget } from '../src/core/dom-adapter'
+import type { RunStatus } from '../src/core/status'
+import { diagnostics } from '../src/core/diagnostics'
 
 /**
- * Engine state machine tests.
+ * Full-loop engine tests on a scripted DOM fake.
  *
- * Since DeleteEngine operates on DOM elements, we test the state machine
- * aspects (pause/resume/stop, event emission) rather than full DOM interaction.
- * The engine will throw when it can't find the DOM, which is expected.
+ * The whole point of the DOM-adapter refactor: the complete run loop
+ * (select → cap-flush → scroll → end-of-list → flush-last →
+ * stop/pause/error) is now testable without a browser. Every test below
+ * drives a deterministic fake that behaves like Google Photos within the
+ * rules we model (selection counter cap, lazy scroll, confirm dialog).
  */
 
-describe('DeleteEngine - State Machine', () => {
-  it('should initialize with idle state', () => {
-    const engine = new DeleteEngine()
-    expect(engine.isPaused).toBe(false)
-    expect(engine.isStopped).toBe(false)
-  })
+class FakeTile {
+  checked = false
+  constructor(readonly label: string) {}
+}
 
-  it('should accept partial config', () => {
-    const callback = vi.fn()
-    const engine = new DeleteEngine({ maxCount: 500, dryRun: true }, callback)
-    expect(engine).toBeDefined()
-  })
+interface FakeScrollState {
+  top: number
+  height: number
+  client: number
+}
 
-  it('should enter paused state on pause()', () => {
-    const engine = new DeleteEngine()
-    engine.pause()
-    expect(engine.isPaused).toBe(true)
-    expect(engine.isStopped).toBe(false)
-  })
+class FakeDom implements EngineDom {
+  pathname = '/'
+  tiles: FakeTile[] = []
+  cap = Number.MAX_SAFE_INTEGER
+  /** When true, the counter element is absent from the DOM. */
+  counterMissing = false
+  /** When set, overrides the counter text verbatim. */
+  counterOverride: string | null = null
+  /** Counter hook — scripted value; wins over everything when set. */
+  counterHook: ((checked: number) => number | null) | null = null
+  /** Scripted counter reads, consumed in order; falls back to computed. */
+  counterScript: (string | null)[] = []
+  dialogOpen = false
+  dialogHasConfirm = true
+  manualSleep = false
+  clicks: string[] = []
+  scrollState: FakeScrollState = { top: 0, height: 1200, client: 800 }
+  private sleepResolvers: (() => void)[] = []
 
-  it('should exit paused state on resume()', () => {
-    const engine = new DeleteEngine()
-    engine.pause()
-    expect(engine.isPaused).toBe(true)
-    engine.resume()
-    expect(engine.isPaused).toBe(false)
-  })
-
-  it('should enter stopped state on stop()', () => {
-    const engine = new DeleteEngine()
-    engine.stop()
-    expect(engine.isStopped).toBe(true)
-  })
-
-  it('stop() should also clear paused state', () => {
-    const engine = new DeleteEngine()
-    engine.pause()
-    expect(engine.isPaused).toBe(true)
-    engine.stop()
-    expect(engine.isPaused).toBe(false)
-    expect(engine.isStopped).toBe(true)
-  })
-
-  it('abort() should work as stop() alias', () => {
-    const engine = new DeleteEngine()
-    engine.abort()
-    expect(engine.isStopped).toBe(true)
-  })
-
-  it('pause() should be no-op when stopped', () => {
-    const engine = new DeleteEngine()
-    engine.stop()
-    engine.pause()
-    expect(engine.isPaused).toBe(false)
-  })
-
-  it('resume() should be no-op when not paused', () => {
-    const engine = new DeleteEngine()
-    engine.resume() // Should not throw
-    expect(engine.isPaused).toBe(false)
-  })
-})
-
-describe('DeleteEngine - Events', () => {
-  it('should emit paused event on pause()', () => {
-    const engine = new DeleteEngine()
-    const listener = vi.fn()
-
-    engine.on('paused', listener)
-    engine.pause()
-
-    expect(listener).toHaveBeenCalledTimes(1)
-  })
-
-  it('should emit resumed event on resume()', () => {
-    const engine = new DeleteEngine()
-    const listener = vi.fn()
-
-    engine.on('resumed', listener)
-    engine.pause()
-    engine.resume()
-
-    expect(listener).toHaveBeenCalledTimes(1)
-  })
-
-  it('should emit progress event with paused status on pause()', () => {
-    const statuses: EngineStatus[] = []
-    const callback = vi.fn((progress: Progress) => {
-      statuses.push(progress.status)
+  setTiles(labels: string[], checked = false): void {
+    this.tiles = labels.map((label) => {
+      const t = new FakeTile(label)
+      t.checked = checked
+      return t
     })
+  }
 
-    const engine = new DeleteEngine({}, callback)
-    engine.pause()
+  selectedCount(): number {
+    return this.tiles.filter((t) => t.checked).length
+  }
 
-    expect(statuses).toContain('paused')
+  private counterValue(): number {
+    return Math.min(this.selectedCount(), this.cap)
+  }
+
+  reads: (string | null)[] = []
+  counterText(): string | null {
+    let v: string | null
+    if (this.counterScript.length > 0) {
+      v = this.counterScript.shift()!
+    } else if (this.counterHook) {
+      const hv = this.counterHook(this.selectedCount())
+      v = hv === null ? null : String(hv)
+    } else if (this.counterMissing) {
+      v = null
+    } else if (this.counterOverride !== null) {
+      v = this.counterOverride
+    } else {
+      const c = this.counterValue()
+      v = c > 0 ? String(c) : '0'
+    }
+    this.reads.push(v)
+    return v
+  }
+
+  private wrap(t: FakeTile): PhotoTile {
+    return {
+      click: () => this.clickTile(t),
+      label: () => t.label,
+    }
+  }
+
+  uncheckedTiles(): PhotoTile[] {
+    return this.tiles.filter((t) => !t.checked).map((t) => this.wrap(t))
+  }
+
+  checkedTiles(): PhotoTile[] {
+    return this.tiles.filter((t) => t.checked).map((t) => this.wrap(t))
+  }
+
+  private deleteBtn: ClickTarget = {
+    click: () => {
+      this.dialogOpen = true
+      this.clicks.push('delete')
+    },
+  }
+  private confirmBtn: ClickTarget = {
+    click: () => {
+      this.clicks.push('confirm')
+      // Deletion REMOVES the checked photos from the gallery DOM.
+      this.tiles = this.tiles.filter((t) => !t.checked)
+      this.dialogOpen = false
+    },
+  }
+
+  findDeleteToolbarButton(): ClickTarget | null {
+    return this.selectedCount() > 0 ? this.deleteBtn : null
+  }
+
+  findConfirmDialog(): ClickTarget | null {
+    return this.dialogOpen ? { click: () => undefined } : null
+  }
+
+  findConfirmButton(_dialog: ClickTarget): ClickTarget | null {
+    return this.dialogOpen && this.dialogHasConfirm ? this.confirmBtn : null
+  }
+
+  findScrollTarget(): ScrollTarget | null {
+    if (this.scrollState.height > this.scrollState.client) {
+      const s = this.scrollState
+      return {
+        get scrollTop() { return s.top },
+        get scrollHeight() { return s.height },
+        get clientHeight() { return s.client },
+        scrollBy: () => {
+          if (s.top < s.height - s.client) s.top += s.client
+        },
+        scrollTo: (opts) => { s.top = opts.top },
+        set scrollTop(v: number) { s.top = v },
+      }
+    }
+    return null
+  }
+
+  click(target: ClickTarget): void {
+    target.click()
+  }
+
+  private clickTile(t: FakeTile): void {
+    t.checked = !t.checked
+    this.clicks.push(`tile:${t.label}`)
+  }
+
+  async sleep(_ms: number): Promise<void> {
+    if (!this.manualSleep) return
+    await new Promise<void>((resolve) => {
+      this.sleepResolvers.push(resolve)
+    })
+  }
+
+  releaseSleep(): void {
+    for (const r of this.sleepResolvers.splice(0)) r()
+  }
+}
+
+const FAST_CONFIG = {
+  maxCount: 500,
+  pollDelay: 1,
+  actionTimeout: 5000,
+  endOfListAttempts: 2,
+  scrollSettleMs: 1,
+  selectionSettleMs: 1,
+}
+
+const makeEngine = (
+  dom: FakeDom,
+  overrides: Record<string, unknown> = {},
+  filter?: { kind: 'all' } | { kind: 'type'; type: string },
+) => {
+  const onProgress = vi.fn()
+  const engine = new DeleteEngine({
+    dom: dom as unknown as EngineDom,
+    config: { ...FAST_CONFIG, ...overrides } as never,
+    filter: filter as never,
+    onProgress,
+  })
+  return { engine, onProgress }
+}
+
+const statusesOf = (onProgress: ReturnType<typeof vi.fn>): RunStatus[] =>
+  onProgress.mock.calls.map((c) => (c[0] as { status: RunStatus }).status)
+
+beforeEach(() => {
+  diagnostics.reset()
+})
+
+describe('DeleteEngine — single-batch delete', () => {
+  it('selects, deletes, and flushes a full batch to done', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c'])
+    const { engine, onProgress } = makeEngine(dom, { maxCount: 3 })
+
+    const result = await engine.run()
+
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(3)
+    expect(dom.clicks).toContain('delete')
+    expect(dom.clicks).toContain('confirm')
+    // All tiles were selected then removed.
+    expect(dom.tiles.every((t) => !t.checked)).toBe(true)
+    expect(statusesOf(onProgress)).toContain('deleting')
+    expect(statusesOf(onProgress)).toContain('done')
   })
 
-  it('should not emit paused when already paused', () => {
-    const engine = new DeleteEngine()
-    const listener = vi.fn()
+  it('does nothing and reports done when the gallery is empty', async () => {
+    const dom = new FakeDom()
+    dom.setTiles([])
+    const { engine } = makeEngine(dom)
 
-    engine.on('paused', listener)
-    engine.pause()
-    engine.pause() // Second call should be no-op
+    const result = await engine.run()
 
-    expect(listener).toHaveBeenCalledTimes(1)
-  })
-
-  it('should not emit resumed when not paused', () => {
-    const engine = new DeleteEngine()
-    const listener = vi.fn()
-
-    engine.on('resumed', listener)
-    engine.resume()
-
-    expect(listener).not.toHaveBeenCalled()
-  })
-
-  it('should allow unsubscribing from events', () => {
-    const engine = new DeleteEngine()
-    const listener = vi.fn()
-
-    const unsub = engine.on('paused', listener)
-    unsub()
-    engine.pause()
-
-    expect(listener).not.toHaveBeenCalled()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(0)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(0)
   })
 })
 
-describe('DeleteEngine - Misc', () => {
-  it('should expose deletion log', () => {
-    const engine = new DeleteEngine()
-    expect(engine.log).toBeDefined()
-    expect(engine.log.totalDeleted).toBe(0)
+describe('DeleteEngine — Google selection cap flush', () => {
+  it('flushes when the counter plateaus at the cap, then deletes the remainder', async () => {
+    const dom = new FakeDom()
+    dom.cap = 500
+    const labels = Array.from({ length: 600 }, (_, i) => `Photo - tile ${i}`)
+    dom.setTiles(labels)
+    const { engine } = makeEngine(dom, { maxCount: 500 })
+
+    const result = await engine.run()
+
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(600)
+    // Two delete batches: the 500-cap flush plus the 100 remainder.
+    const deletes = dom.clicks.filter((c) => c === 'delete')
+    expect(deletes).toHaveLength(2)
   })
+})
 
-  it('run() should set startedAt before any work', async () => {
+describe('DeleteEngine — end-of-list detection + final flush', () => {
+  it('flushes the last partial batch after no-progress detection', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a', 'Photo - b'])
+    const { engine } = makeEngine(dom, { maxCount: 500 })
+
+    const result = await engine.run()
+
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(2)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(1)
+  })
+})
+
+describe('DeleteEngine — abort-aware stop', () => {
+  it('stop() during a delete wait resolves to idle, never error', async () => {
+    const dom = new FakeDom()
+    dom.manualSleep = true
+    dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c'])
+    // Confirm button never appears → waitFor(confirm) holds on sleep.
+    dom.dialogHasConfirm = false
+    const { engine } = makeEngine(dom, { maxCount: 3, actionTimeout: 60_000 })
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const engine = new DeleteEngine({ timeout: 50, pollDelay: 10 })
 
-    // stop immediately so run() exits the loop fast
+    const runPromise = engine.run()
+    // Let the run reach the held sleep inside waitFor(confirm).
+    await new Promise((r) => setTimeout(r, 5))
     engine.stop()
-    // run() will fail on deleteSelected() because no DOM, but we can still
-    // test that startedAt was set. We wrap in try/catch for DOM errors.
-    try {
-      await engine.run()
-    } catch {
-      // Expected: document is not defined in Node
-    }
+    dom.releaseSleep()
 
-    expect(engine.log).toBeDefined()
+    const result = await runPromise
+
+    expect(result.status).toBe('idle')
+    expect(result.error).toBeUndefined()
+    // No 'error' event was emitted.
+    const errorEvents: unknown[] = []
+    engine.on('error', (e) => errorEvents.push(e))
+    expect(errorEvents).toHaveLength(0)
     errorSpy.mockRestore()
   })
 
-  it('should accept all config options', () => {
+  it('run() resets a previous stop so the engine can be started again', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a'])
+    const { engine } = makeEngine(dom)
+    engine.stop()
+
+    // `run()` clears the stop flag by design: a stop is run-scoped, and
+    // starting again after a stop must be possible.
+    const result = await engine.run()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(1)
+  })
+
+  it('StopRequested is exported and identifies user stops', () => {
+    const e = new StopRequested()
+    expect(e.name).toBe('StopRequested')
+    expect(e.message).toBe('stop requested')
+  })
+})
+
+describe('DeleteEngine — pause / resume', () => {
+  it('pauses mid-run, reports paused status, and resumes to done', async () => {
+    const dom = new FakeDom()
+    dom.manualSleep = true
+    dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c'])
+    const { engine, onProgress } = makeEngine(dom, { maxCount: 3 })
+
+    const runPromise = engine.run()
+    // Let the run reach the held sleep inside selectVisibleCheckboxes.
+    await new Promise((r) => setTimeout(r, 5))
+
+    engine.pause()
+    expect(engine.isPaused).toBe(true)
+    dom.releaseSleep()
+    // The loop reaches checkPause() and holds on the pause promise.
+    await new Promise((r) => setTimeout(r, 5))
+    expect(statusesOf(onProgress)).toContain('paused')
+
+    engine.resume()
+    expect(engine.isPaused).toBe(false)
+
+    // Pump manual sleeps until the run completes on its own.
+    const pump = setInterval(() => dom.releaseSleep(), 1)
+    try {
+      const result = await runPromise
+      expect(result.status).toBe('done')
+      expect(result.deleted).toBe(3)
+    } finally {
+      clearInterval(pump)
+    }
+  })
+})
+
+describe('DeleteEngine — checkbox flap & counter fallback', () => {
+  it('records a flap recovery when the counter regresses, and still completes', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c', 'Photo - d', 'Photo - e'])
+    // Script the reads: iteration 1 reads 0,5,5. Iteration 2 reads
+    // before=5 but current=4 (the stale-counter regression). Everything
+    // after falls back to the computed value.
+    dom.counterScript = ['0', '5', '5', '5', '5', '4']
+    const { engine } = makeEngine(dom, { maxCount: 500 })
+
+    const result = await engine.run()
+    expect(result.status).toBe('done')
+    // The flush re-reads the counter (computed value) and deletes what it
+    // sees; the important assertion is that the regression was recorded
+    // and the run completed instead of corrupting the selection.
+    expect(result.deleted).toBe(5)
+    expect(diagnostics.blob().engine?.flapRecoveries).toBeGreaterThanOrEqual(1)
+  })
+
+  it('falls back to the rendered checked-tile count when the counter element is missing', async () => {
+    const dom = new FakeDom()
+    dom.counterMissing = true
+    dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c'])
+    const { engine } = makeEngine(dom, { maxCount: 500 })
+
+    const result = await engine.run()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(3)
+    const snapshot = diagnostics.blob().engine
+    expect(snapshot?.counterFallbackUsed).toBe(true)
+  })
+})
+
+describe('DeleteEngine — type filter', () => {
+  it('selects and deletes only matching tiles', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Screenshot - shot', 'Video - clip', 'Photo - pic'])
+    const { engine } = makeEngine(dom, { maxCount: 500 }, { kind: 'type', type: 'screenshot' })
+
+    const result = await engine.run()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(1)
+    // Only the screenshot tile was clicked.
+    expect(dom.clicks).toContain('tile:Screenshot - shot')
+    expect(dom.clicks).not.toContain('tile:Video - clip')
+    expect(dom.clicks).not.toContain('tile:Photo - pic')
+  })
+})
+
+describe('DeleteEngine — dry-run scan', () => {
+  it('counts unique labels, never clicks, and reports a total', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c'])
+    const { engine, onProgress } = makeEngine(dom, { maxCount: 500, dryRun: true })
+
+    const result = await engine.run()
+
+    expect(result.status).toBe('done')
+    expect(result.total).toBe(3)
+    expect(result.deleted).toBe(3)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(0)
+    expect(dom.clicks.some((c) => c.startsWith('tile:'))).toBe(false)
+    expect(engine.getDryRunLabels()).toHaveLength(3)
+    expect(statusesOf(onProgress)).toContain('done')
+  })
+
+  it('dry-run with a type filter counts only matching labels', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Screenshot - shot', 'Video - clip', 'Photo - pic'])
+    const { engine } = makeEngine(dom, { maxCount: 500, dryRun: true }, { kind: 'type', type: 'screenshot' })
+
+    const result = await engine.run()
+    expect(result.status).toBe('done')
+    expect(result.total).toBe(1)
+  })
+
+  it('deduplicates identical labels (burst-mode undercount is expected)', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - burst', 'Photo - burst', 'Photo - burst'])
+    const { engine } = makeEngine(dom, { maxCount: 500, dryRun: true })
+
+    const result = await engine.run()
+    expect(result.total).toBe(1)
+  })
+})
+
+describe('DeleteEngine — error paths', () => {
+  it('reports error when the toolbar delete button never appears', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c'])
+    // No delete button ever appears even with a selection.
     const engine = new DeleteEngine({
-      maxCount: 123,
-      timeout: 5000,
-      pollDelay: 100,
-      dryRun: true,
+      dom: Object.assign(dom, {
+        findDeleteToolbarButton: () => null,
+      }) as unknown as EngineDom,
+      config: { ...FAST_CONFIG, maxCount: 3, actionTimeout: 30 } as never,
     })
-    expect(engine).toBeDefined()
+
+    const result = await engine.run()
+    expect(result.status).toBe('error')
+    expect(result.error).toMatch(/not found/)
+  })
+
+  it('emits an error event on failure', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a'])
+    const engine = new DeleteEngine({
+      dom: Object.assign(dom, { findDeleteToolbarButton: () => null }) as unknown as EngineDom,
+      config: { ...FAST_CONFIG, maxCount: 1, actionTimeout: 30 } as never,
+    })
+    const errorSpy = vi.fn()
+    engine.on('error', errorSpy)
+
+    await engine.run()
+    expect(errorSpy).toHaveBeenCalled()
   })
 })

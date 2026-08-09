@@ -6,9 +6,10 @@ describe('Config', () => {
     // 500 ≈ Google Photos selection cap. Picking the practical cap
     // as default avoids users entering 10000 and being silently capped.
     expect(DEFAULT_CONFIG.maxCount).toBe(500)
-    expect(DEFAULT_CONFIG.timeout).toBe(600_000)
     expect(DEFAULT_CONFIG.pollDelay).toBe(300)
     expect(DEFAULT_CONFIG.dryRun).toBe(false)
+    expect(DEFAULT_CONFIG.actionTimeout).toBe(15_000)
+    expect(DEFAULT_CONFIG.endOfListAttempts).toBe(3)
   })
 
   it('should allow partial overrides via spread', () => {
@@ -17,7 +18,6 @@ describe('Config', () => {
 
     expect(merged.maxCount).toBe(250)
     expect(merged.dryRun).toBe(true)
-    expect(merged.timeout).toBe(DEFAULT_CONFIG.timeout)
     expect(merged.pollDelay).toBe(DEFAULT_CONFIG.pollDelay)
   })
 
