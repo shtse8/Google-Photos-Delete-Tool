@@ -5,6 +5,17 @@
 # Google Photos Delete All Tool
 If you have ever wanted to delete your thousands of photos from the [Google Photos](https://photos.google.com/) but failed to find an easy way to do so, then this is the tool for you. This script goes through all your photos in Google Photos app on the desktop and deletes them. You can visually see the process while it happens!
 
+> **⚠️ Note (August 2026):** this original console-script repository has not been
+> updated since January 2025. Google Photos keeps changing its UI, so several bugs
+> reported in the issue tracker here (confirmation-button changes, first-run dialog,
+> deletion races) are not addressed in this code. An actively maintained continuation
+> exists:
+>
+> **[Google Photos Delete Tool v2](https://github.com/shtse8/Google-Photos-Delete-Tool)** —
+> Chrome extension, userscript, bookmarklet, or console paste, with resilient selectors,
+> localized UI, pause/resume, dry-run, and an empty-trash flow. Please report new issues
+> there. The original script below remains available for reference.
+
 # Getting Started
 Follow the step-by-step instructions below to run the tool.
 
