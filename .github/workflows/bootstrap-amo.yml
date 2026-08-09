@@ -1,0 +1,81 @@
+name: Bootstrap AMO Add-on (manual, once)
+
+# API-native AMO bootstrap — no browser. Creates the Firefox add-on and
+# submits the first listed version via AMO API v5 (upload → poll →
+# create → patch description → verify). Run ONCE after adding the
+# FIREFOX_JWT_ISSUER / FIREFOX_JWT_SECRET secrets; from then on the
+# store-retry loop submits every tag automatically.
+#
+#   gh workflow run "Bootstrap AMO Add-on (manual, once)" -f tag=v3.0.1
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag to submit as the first version (default: latest release tag)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store-publish
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: Create AMO add-on via API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build and verify
+        run: |
+          bun run build
+          bun run verify
+          bun run zip
+
+      - name: Self-check JWT signing
+        run: node scripts/amo-jwt.mjs --selfcheck
+
+      - name: Create add-on and submit first version
+        env:
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+        run: |
+          if [ -z "$FIREFOX_JWT_ISSUER" ] || [ -z "$FIREFOX_JWT_SECRET" ]; then
+            echo "::error::FIREFOX_JWT_ISSUER / FIREFOX_JWT_SECRET secrets missing — add them first (see docs/STORE_AUTOMATION.md)"
+            exit 1
+          fi
+          node scripts/amo-create.mjs --zip google-photos-delete-tool-firefox.zip
+
+      - name: Record live state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag }}"
+          [ -n "$TAG" ] || TAG="$(gh release view --json tagName -q .tagName)"
+          STATE_FILE=/tmp/store-state.json node scripts/store-state.mjs set amo "$TAG"
+          git fetch origin store-state:refs/remotes/origin/store-state --depth=1 || git fetch origin
+          if git rev-parse --verify origin/store-state >/dev/null 2>&1; then
+            git checkout --detach origin/store-state
+          else
+            git checkout --orphan store-state --quiet
+            git rm -rf . --quiet
+          fi
+          cp /tmp/store-state.json state.json
+          git add state.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: amo=$TAG" --quiet || true
+          git push origin HEAD:store-state
+          echo "::notice::AMO bootstrap complete; state recorded (amo=$TAG)"

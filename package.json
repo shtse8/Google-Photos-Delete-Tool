@@ -20,7 +20,13 @@
     "license:issue": "bun run scripts/license.ts issue",
     "license:verify": "bun run scripts/license.ts verify",
     "listing:check": "bun run scripts/listing.ts",
-    "listing:cws": "bun run scripts/listing.ts --cws-metadata"
+    "listing:cws": "bun run scripts/listing.ts --cws-metadata",
+    "amo:bootstrap": "node scripts/amo-create.mjs --zip google-photos-delete-tool-firefox.zip",
+    "amo:bootstrap:dry": "node scripts/amo-create.mjs --zip google-photos-delete-tool-firefox.zip --dry-run",
+    "gf:upload": "node scripts/greasy-fork-upload.mjs",
+    "cws:listing": "node scripts/cws-listing.mjs",
+    "cws:screenshots": "node scripts/cws-screenshots.mjs",
+    "edge:bootstrap": "node scripts/edge-bootstrap.mjs"
   },
   "devDependencies": {
     "@types/archiver": "6",
@@ -28,6 +34,7 @@
     "@types/node": "^26.2.0",
     "archiver": "^7.0.1",
     "eslint": "^9.19.0",
+    "playwright-core": "^1.62.1",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.22.0",
     "vite": "^6.1.0",

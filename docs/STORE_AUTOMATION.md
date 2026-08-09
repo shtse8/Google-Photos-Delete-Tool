@@ -43,6 +43,51 @@ store-retry.yml (every 6h) ──▶ store-publish.yml
 | Greasy Fork | **human, once** | no public API; script updates itself afterwards |
 | Content posts (HN/Reddit/dev.to/PH) | human (or explicit opt-in) | drafts in `storefront/posts/`; auto-posting from fresh accounts is a ban risk, not automation |
 
+## Agent-native execution model (three tiers)
+
+Everything the project can ever need is in one of three tiers. Tier 1 is
+the goal; Tier 2 is how the agent works where platforms have no API;
+Tier 3 is identity, which no agent should ever hold.
+
+| Tier | Mechanism | Who drives | Examples |
+|---|---|---|---|
+| **1. API-native** | REST API from CI; secrets in repo | agent, fully unattended | CWS publish, Edge publish, AMO create+publish, listing metadata |
+| **2. Browser handoff** | agent drives the USER's already-logged-in Chrome via CDP on 127.0.0.1 | agent operates, user holds identity | Greasy Fork upload, CWS dashboard fallback, real screenshots, Edge product creation |
+| **3. Human identity** | account creation / email+phone verification / CAPTCHA | human, once | AMO account, Microsoft developer account, CWS developer account, Greasy Fork account |
+
+Browser handoff is **not** robot automation: no passwords, cookies, or
+sessions ever leave the user's machine, and no CAPTCHA is ever bypassed.
+The user logs in once; the agent then does the work in that session.
+
+Start Chrome with a local-only debug port (quit Chrome first):
+- macOS: `open -a "Google Chrome" --args --remote-debugging-port=9222`
+- Linux: `google-chrome --remote-debugging-port=9222`
+- Windows: `chrome.exe --remote-debugging-port=9222`
+
+Then run the handoff scripts: `node scripts/greasy-fork-upload.mjs`,
+`node scripts/cws-listing.mjs`, `node scripts/cws-screenshots.mjs`,
+`node scripts/edge-bootstrap.mjs <open|upload-zip|fill-listing|submit>`.
+Every script fails loudly and prints the live page text on selector
+drift — the agent adapts, never fakes.
+
+## One-time bootstrap checklist (do once, then no human in the loop)
+
+### 1Password inventory — what to store, where it goes
+
+Store these in 1Password (never in chat). Each maps to a repo secret or
+a session:
+
+| 1Password item | Fields | Repo secret / use |
+|---|---|---|
+| AMO API credentials | issuer (API key) + secret | `FIREFOX_JWT_ISSUER` / `FIREFOX_JWT_SECRET` |
+| Edge Publish API | Client ID + API key + expiry | `EDGE_CLIENT_ID` / `EDGE_API_KEY` / `EDGE_PRODUCT_ID` |
+| CWS credentials | (already configured) | `CHROME_*` — no change |
+| Greasy Fork | nothing | user's browser session only (Tier 2) |
+| Google / Microsoft / Mozilla logins | passwords | NEVER — identity stays with the user |
+
+After adding AMO + Edge secrets, the store-retry loop and this checklist
+are the entire system; every remaining step below is Tier 1.
+
 ## One-time bootstrap checklist (do once, then no human in the loop)
 
 ### Chrome Web Store — done
@@ -62,6 +107,9 @@ until review clears — the retry loop publishes it automatically after.
 3. In Partner Center → **Publish API** → **Enable** (new experience) →
    **Create API credentials**. Copy the Client ID and the API key.
 4. Copy the **Product ID** (GUID from the extension overview URL).
+   Steps 2–4 can be driven by the agent through browser handoff
+   (`node scripts/edge-bootstrap.mjs open|upload-zip|fill-listing|submit`);
+   Partner Center has no product-creation API, so this is Tier 2 once.
 5. Add repo secrets:
    - `EDGE_CLIENT_ID` — the Client ID from step 3
    - `EDGE_API_KEY` — the API key from step 3 (note the expiry date)
@@ -75,29 +123,32 @@ base `https://api.addons.microsoftedge.microsoft.com/v1`; headers
 No API exists for creating a product or updating listing metadata —
 Partner Center only.
 
-### Firefox AMO (~30 min, once)
+### Firefox AMO (~10 min, once — API-native, no browser)
 
 1. Create an [AMO developer account](https://addons.mozilla.org/developers/)
-   and generate API credentials at
+   (Tier 3) and generate API credentials at
    `https://addons.mozilla.org/en-US/developers/addon/api/key/`
    (JWT issuer + secret).
-2. Create the add-on once in the AMO dev hub: upload
-   `google-photos-delete-tool-firefox.zip`, paste listing copy from
-   `storefront/listing.json` (`amo` section). The add-on GUID is fixed by
-   the manifest: `google-photos-delete-tool@shtse8.github.io`.
-3. Add repo secrets:
-   - `FIREFOX_JWT_ISSUER` — the API key (JWT issuer)
-   - `FIREFOX_JWT_SECRET` — the API secret
-4. Dispatch: `gh workflow run "Publish Stores (manual)" -f stores=amo -f tag=v3.0.1`
-   — from then on every tag is submitted via AMO API v5 automatically.
+2. Add repo secrets: `FIREFOX_JWT_ISSUER` + `FIREFOX_JWT_SECRET`.
+3. Dispatch **once**: `gh workflow run "Bootstrap AMO Add-on (manual, once)"`
+   — this creates the add-on and submits the first listed version through
+   AMO API v5 (upload → validation → create → description → verify),
+   using listing copy from `storefront/listing.json`. No browser, no dev
+   hub. Screenshots/icon are the only AMO listing fields the API cannot
+   set (Mozilla limitation) — add them once in the dev hub, or via
+   browser handoff.
+4. From then on every tag is submitted automatically by the retry loop.
 
 ### Greasy Fork (20 min, once — no API exists)
 
-Greasy Fork has no public API. Upload
-`google-photos-delete.user.js` once after creating an account. The script
-header carries `@version` + `@updateURL`/`@downloadURL` pointing at GitHub
-releases, so **Greasy Fork users auto-update on every release** — the one
-manual upload is the entire cost, forever.
+Greasy Fork has no public API. After the user creates an account and
+logs in once (Tier 3), the agent uploads the script through browser
+handoff: `node scripts/greasy-fork-upload.mjs` (form contract verified
+from Greasy Fork's own source: `/en/script_versions/new`, fields
+`code_upload` / `name` / `description`). The script header carries
+`@version` + `@updateURL`/`@downloadURL` pointing at GitHub releases, so
+**Greasy Fork users auto-update on every release** — this one upload is
+the entire lifetime cost.
 
 ### CWS listing text
 
@@ -110,11 +161,14 @@ gh workflow run "Update CWS Listing (manual)"
 Fails loudly while the item is in review — observed live: the API
 returns `ITEM_NOT_UPDATABLE` (upload path) or HTTP `304 Not Modified`
 (metadata path) until Google clears the review. Re-dispatch after review
-clears. Note: Google's metadata endpoints are the only API path and
-community tooling reports they may sunset after 2026-10-15; if Google
-rejects or sunsets the call, update the dashboard once from the same file
-— the file stays the source either way. Edge/AMO listing metadata is
-Partner-Center/AMO-dashboard only by design.
+clears. If Google rejects or sunsets the metadata endpoints (community
+tooling reports a 2026-10-15 sunset), the browser-handoff fallback pastes
+the same file into the dashboard: `node scripts/cws-listing.mjs --item-id <id>`.
+Screenshots: `node scripts/cws-screenshots.mjs` captures real 1280×800
+shots from the user's own Google Photos session (dry-run + filters are
+safe; running/empty-trash require `--allow-destructive` and the user
+watching). Edge/AMO listing metadata is Partner-Center/AMO-dashboard only
+by design.
 
 ## Runbook
 
