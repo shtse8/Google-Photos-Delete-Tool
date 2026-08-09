@@ -1,6 +1,6 @@
 {
   "name": "google-photos-delete-tool",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": true,
   "description": "Consent-gated bulk delete for Google Photos \u2014 Chrome/Firefox extension, userscript, and standalone script",
   "author": "Kyle Tse <shtse8@gmail.com>",

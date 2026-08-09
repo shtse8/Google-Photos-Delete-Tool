@@ -21,6 +21,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Assert tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(bun -e 'console.log(JSON.parse(require("fs").readFileSync("package.json","utf8")).version)')"
+          echo "tag=$TAG pkg=$PKG"
+          test "$TAG" = "$PKG" || { echo "::error::git tag v$PKG mismatch: release tag must match package.json version (tag=$TAG)"; exit 1; }
+
       - name: Type check
         run: bun run typecheck
 
