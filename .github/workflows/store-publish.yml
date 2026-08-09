@@ -65,6 +65,8 @@ jobs:
 
       - name: Resolve tag and pending stores
         id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           TAG="${{ inputs.tag }}"
