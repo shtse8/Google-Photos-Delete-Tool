@@ -42,7 +42,7 @@ export const formatEta = (ms: number): string => {
  * Cap label/text logs so a large tooltip or aria-label can't flood the
  * console. Single helper used by the engine and the empty-trash flow.
  */
-export const LABEL_LOG_CAP = 60;
+const LABEL_LOG_CAP = 60;
 
 /** One-line description of a button for diagnostic logs. */
 export function describeButton(el: unknown): string {
