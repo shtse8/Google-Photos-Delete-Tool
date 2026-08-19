@@ -1,8 +1,11 @@
 # 🗑️ Google Photos Delete Tool
 
-<p align="center">
-  <img src="https://mark.sylphx.com/api/v1/banner?type=constellation&theme=tokyonight&text=Google+Photos+Delete+Tool&desc=Consent-gated+bulk+delete+for+Google+Photos&height=200&animation=rise&credit=0" alt="Google-Photos-Delete-Tool — Sylphx Mark banner" width="100%" />
-</p>
+Consent-gated bulk delete for Google Photos: batch select, dry-run, and empty-trash.
+
+- Ordinary: https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb — published Chrome Web Store listing (item `jiahfbbfpacpolomdjlpdpiljllcdenb`, observed live version 3.0.1 with Add to Chrome). Store listing is the ordinary customer surface for this extension. A store `200` is not the product contract.
+- Preview: `none` — GitHub Pages is not enabled, and this product has no admitted preview, dogfood, or marketing website. Do not invent a URL.
+- Vision: [`docs/vision.md`](docs/vision.md)
+- Capabilities: [`docs/capabilities.md`](docs/capabilities.md)
 
 [![CI](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml)
 [![Release](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml)
@@ -27,7 +30,7 @@ empty.
 
 | Surface | How to get it | Notes |
 |---|---|---|
-| **Chrome / Firefox extension** | Chrome Web Store / Firefox Add-ons | Full popup UI, badge, i18n (9 languages), empty-trash flow |
+| **Chrome / Firefox extension** | [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb); Firefox Add-ons not published | Full popup UI, badge, i18n (9 languages), empty-trash flow. Firefox artifact exists in source; the AMO listing is unpublished (404). |
 | **Userscript** (Tampermonkey / Violentmonkey / Greasemonkey) | `google-photos-delete.user.js` from the latest release | Same engine, same floating panel, same safety model |
 
 The bookmarklet and DevTools-console distributions were **removed** in v3:
