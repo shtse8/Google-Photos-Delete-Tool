@@ -1,7 +1,9 @@
 # Google Photos Delete Tool vision
 
-This file is the canonical product destination. It is not a current milestone,
-release claim, or proof that Google Photos' live DOM still matches the tool.
+This file is the canonical product destination. Durable identities, fates,
+dependencies, and oracles live in [capabilities.md](capabilities.md):
+one colloquial name has one fate. It is not a current milestone, release
+claim, or proof that Google Photos' live DOM still matches the tool.
 
 ## What finished is
 
@@ -65,5 +67,6 @@ known seeded items, per-batch counter resets, exact Trash contents, the
 empty-state postcondition, stop/restart behavior, and a localized run. Docs, CI,
 a store listing, or a release artifact alone are not live-browser proof.
 
-The durable product responsibilities and dependency edges are in
-[capabilities.md](capabilities.md).
+The identity graph in [capabilities.md](capabilities.md) owns identity, fate,
+dependency edges, and done-when oracles. This destination does not assign a
+second fate to any name there.
