@@ -16,8 +16,15 @@ import { diagnostics } from './diagnostics'
 export type { SelectorDef }
 export { PACK_VERSION } from './selector-pack'
 
-export const SELECTOR_DEFS: Record<'counter' | 'checkbox' | 'checkboxChecked' | 'photoContainer', SelectorDef> =
-  PACK.selectors
+export const SELECTOR_DEFS: Record<
+  | 'counter'
+  | 'checkbox'
+  | 'checkboxChecked'
+  | 'photoContainer'
+  | 'scrollContainer'
+  | 'dialog',
+  SelectorDef
+> = PACK.selectors
 
 export const TOOLBAR_DELETE_CANDIDATES: readonly string[] = Object.freeze([...PACK.actionButtons.toolbarDelete])
 export const EMPTY_TRASH_CANDIDATES: readonly string[] = Object.freeze([...PACK.actionButtons.emptyTrash])
@@ -92,6 +99,67 @@ export function queryAll(def: SelectorDef, root: ParentNode = document): Element
 
   diagnostics.recordSelector(def.name, 'none')
   return []
+}
+
+/**
+ * Query all elements matching the def's primary or any fallback
+ * selector, deduplicated (union semantics). Unlike `queryAll`, a
+ * primary hit does not suppress fallback matches — dialog discovery
+ * must consider the whole pack-owned selector list. Records the
+ * observed match into diagnostics.
+ */
+export function queryAllUnion<T extends Element = Element>(
+  def: SelectorDef,
+  root: ParentNode = document,
+): T[] {
+  const selectors = [def.primary, ...def.fallbacks]
+  const seen = new Set<Element>()
+  const out: T[] = []
+  let firstMatch: string | null = null
+  for (const sel of selectors) {
+    for (const el of root.querySelectorAll<T>(sel)) {
+      if (seen.has(el)) continue
+      seen.add(el)
+      out.push(el)
+      if (firstMatch === null) firstMatch = sel
+    }
+  }
+  if (out.length > 0) {
+    diagnostics.recordSelector(
+      def.name,
+      firstMatch === def.primary ? 'primary' : 'fallback',
+      firstMatch === def.primary ? undefined : (firstMatch ?? undefined),
+    )
+    return out
+  }
+  diagnostics.recordSelector(def.name, 'none')
+  return []
+}
+
+/**
+ * Find the first element matching the def (primary first, then each
+ * fallback) that actually scrolls (`scrollHeight > clientHeight + 1`),
+ * so a non-scrollable ancestor matched by a class never shadows the
+ * real gallery scroller. Unknown DOM returns null. Records the observed
+ * match into diagnostics.
+ */
+export function queryScrollable(def: SelectorDef, root: ParentNode = document): HTMLElement | null {
+  const selectors = [def.primary, ...def.fallbacks]
+  for (let i = 0; i < selectors.length; i++) {
+    const sel = selectors[i]
+    for (const el of root.querySelectorAll<HTMLElement>(sel)) {
+      if (el.scrollHeight > el.clientHeight + 1) {
+        diagnostics.recordSelector(
+          def.name,
+          i === 0 ? 'primary' : 'fallback',
+          i === 0 ? undefined : sel,
+        )
+        return el
+      }
+    }
+  }
+  diagnostics.recordSelector(def.name, 'none')
+  return null
 }
 
 // ─── Text normalization & keyword matching ────────────────────────
@@ -170,7 +238,7 @@ function isVisible(el: Element): boolean {
 }
 
 function isInsideDialog(el: Element): boolean {
-  return !!el.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"]')
+  return !!el.closest([SELECTOR_DEFS.dialog.primary, ...SELECTOR_DEFS.dialog.fallbacks].join(', '))
 }
 
 /** Score a button: higher = more likely the destructive action. */
@@ -269,11 +337,9 @@ export function isTrashEmpty(): boolean {
  * visible one (highest z-index) when multiple are open.
  */
 export function findConfirmDialog(): HTMLElement | null {
-  const candidates = [
-    ...document.querySelectorAll<HTMLElement>(
-      '[role="dialog"], [role="alertdialog"], [aria-modal="true"]',
-    ),
-  ].filter(isVisible)
+  // Dialogs come from the versioned pack (union of primary + fallbacks)
+  // so a layout drift is a pack data patch, never code surgery.
+  const candidates = queryAllUnion<HTMLElement>(SELECTOR_DEFS.dialog).filter(isVisible)
   if (candidates.length === 0) return null
   if (candidates.length === 1) return candidates[0]
   candidates.sort((a, b) => {

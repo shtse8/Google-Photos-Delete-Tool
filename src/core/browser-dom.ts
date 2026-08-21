@@ -5,7 +5,7 @@
  * the only place where DOM APIs meet the engine. Everything else in
  * `core/` stays pure and unit-testable.
  */
-import { SELECTOR_DEFS, queryOne, queryAll, findDeleteToolbarButton, findConfirmDialog, findConfirmButton } from './selectors'
+import { SELECTOR_DEFS, queryOne, queryAll, queryScrollable, findDeleteToolbarButton, findConfirmDialog, findConfirmButton } from './selectors'
 import { sleep } from './utils'
 import type { ClickTarget, EngineDom, PhotoTile, ScrollTarget } from './dom-adapter'
 
@@ -37,8 +37,10 @@ function wrapScrollTarget(el: HTMLElement): ScrollTarget {
 }
 
 function findScrollTarget(): ScrollTarget | null {
-  const container = queryOne(SELECTOR_DEFS.photoContainer) as HTMLElement | null
-  if (container && container.scrollHeight > container.clientHeight + 1) {
+  // The gallery scroller is pack-owned (`scrollContainer` def): a DOM
+  // drift is a pack data patch. Unknown DOM returns null (fail closed).
+  const container = queryScrollable(SELECTOR_DEFS.scrollContainer)
+  if (container) {
     return wrapScrollTarget(container)
   }
   const docScroll = (typeof document !== 'undefined' && (document.scrollingElement || document.documentElement)) as HTMLElement | null

@@ -19,7 +19,15 @@ export const PACK_VERSION: number = packJson.version
 
 export interface SelectorPack {
   version: number
-  selectors: Record<'counter' | 'checkbox' | 'checkboxChecked' | 'photoContainer', SelectorDef>
+  selectors: Record<
+    | 'counter'
+    | 'checkbox'
+    | 'checkboxChecked'
+    | 'photoContainer'
+    | 'scrollContainer'
+    | 'dialog',
+    SelectorDef
+  >
   actionButtons: {
     toolbarDelete: string[]
     emptyTrash: string[]

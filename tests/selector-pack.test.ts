@@ -4,8 +4,8 @@ import { SELECTOR_DEFS, TRASH_EMPTY_SIGNALS } from '../src/core/selectors'
 
 describe('selector pack', () => {
   it('ships a versioned data pack', () => {
-    expect(PACK_VERSION).toBe(2)
-    expect(PACK.version).toBe(2)
+    expect(PACK_VERSION).toBe(3)
+    expect(PACK.version).toBe(3)
   })
 
   it('defines every core selector', () => {
@@ -13,6 +13,11 @@ describe('selector pack', () => {
     expect(SELECTOR_DEFS.checkbox.primary).toContain('aria-checked')
     expect(SELECTOR_DEFS.checkboxChecked.primary).toContain('aria-checked')
     expect(SELECTOR_DEFS.photoContainer.fallbacks.length).toBeGreaterThan(0)
+    expect(SELECTOR_DEFS.scrollContainer.primary).toBe('.yDSiEe.uGCjIb.zcLWac')
+    expect(SELECTOR_DEFS.scrollContainer.fallbacks.length).toBeGreaterThan(0)
+    expect(SELECTOR_DEFS.dialog.primary).toBe('[role="dialog"]')
+    expect(SELECTOR_DEFS.dialog.fallbacks).toContain('[role="alertdialog"]')
+    expect(SELECTOR_DEFS.dialog.fallbacks).toContain('[aria-modal="true"]')
   })
 
   it('keeps destructive keyword lists non-empty and distinct', () => {

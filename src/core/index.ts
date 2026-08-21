@@ -3,6 +3,8 @@ export {
   SELECTOR_DEFS,
   queryOne,
   queryAll,
+  queryAllUnion,
+  queryScrollable,
   type SelectorDef,
   DELETE_KEYWORDS,
   CANCEL_KEYWORDS,

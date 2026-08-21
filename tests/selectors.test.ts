@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import {
   normalizeText,
   containsAnyKeyword,
@@ -6,6 +6,10 @@ import {
   CANCEL_KEYWORDS,
   EMPTY_TRASH_PHRASES,
   findConfirmButton,
+  findConfirmDialog,
+  queryAllUnion,
+  queryScrollable,
+  SELECTOR_DEFS,
 } from '../src/core/selectors'
 
 describe('normalizeText', () => {
@@ -227,5 +231,90 @@ describe('findConfirmButton', () => {
   it('fails closed instead of guessing the last non-cancel button', () => {
     const dialog = dialogWithButtons(['Cancel', 'OK'])
     expect(findConfirmButton(dialog)).toBeNull()
+  })
+})
+
+// ─── Pack-owned scroll container & dialogs ─────────────────────────
+
+function fakeRoot(matches: Record<string, unknown[]>): ParentNode {
+  return {
+    querySelectorAll: (sel: string) => matches[sel] ?? [],
+  } as unknown as ParentNode
+}
+
+function elWith(overrides: Record<string, unknown> = {}): HTMLElement {
+  return {
+    getAttribute: () => null,
+    textContent: '',
+    ...overrides,
+  } as unknown as HTMLElement
+}
+
+describe('queryScrollable', () => {
+  it('returns the first scrollable element matching the pack scroll-container primary', () => {
+    const scroller = elWith({ scrollHeight: 800, clientHeight: 400 })
+    const root = fakeRoot({ '.yDSiEe.uGCjIb.zcLWac': [scroller] })
+    expect(queryScrollable(SELECTOR_DEFS.scrollContainer, root)).toBe(scroller)
+  })
+
+  it('skips a non-scrollable primary and uses a scrollable pack fallback', () => {
+    const nonScroller = elWith({ scrollHeight: 400, clientHeight: 400 })
+    const gridScroller = elWith({ scrollHeight: 1200, clientHeight: 600 })
+    const root = fakeRoot({
+      '.yDSiEe.uGCjIb.zcLWac': [nonScroller],
+      '[role="grid"]': [gridScroller],
+    })
+    expect(queryScrollable(SELECTOR_DEFS.scrollContainer, root)).toBe(gridScroller)
+  })
+
+  it('returns null when no pack candidate scrolls (unknown DOM fails closed)', () => {
+    expect(queryScrollable(SELECTOR_DEFS.scrollContainer, fakeRoot({}))).toBeNull()
+  })
+})
+
+describe('queryAllUnion', () => {
+  it('unions pack primary and fallback matches without duplicates', () => {
+    const roleDialog = elWith()
+    const alertDialog = elWith()
+    const ariaModal = elWith()
+    const root = fakeRoot({
+      '[role="dialog"]': [roleDialog],
+      '[role="alertdialog"]': [alertDialog, roleDialog],
+      '[aria-modal="true"]': [ariaModal],
+    })
+    expect(queryAllUnion<HTMLElement>(SELECTOR_DEFS.dialog, root)).toEqual([
+      roleDialog,
+      alertDialog,
+      ariaModal,
+    ])
+  })
+
+  it('returns an empty list when nothing matches (unknown DOM fails closed)', () => {
+    expect(queryAllUnion(SELECTOR_DEFS.dialog, fakeRoot({}))).toEqual([])
+  })
+})
+
+describe('findConfirmDialog', () => {
+  const g = globalThis as unknown as { document?: unknown }
+
+  afterEach(() => {
+    delete g.document
+  })
+
+  it('finds a dialog matched through the versioned pack primary', () => {
+    const dialog = elWith()
+    g.document = fakeRoot({ '[role="dialog"]': [dialog] })
+    expect(findConfirmDialog()).toBe(dialog)
+  })
+
+  it('finds a dialog matched through a pack fallback selector', () => {
+    const dialog = elWith()
+    g.document = fakeRoot({ '[aria-modal="true"]': [dialog] })
+    expect(findConfirmDialog()).toBe(dialog)
+  })
+
+  it('returns null when no pack dialog selector matches (unknown DOM fails closed)', () => {
+    g.document = fakeRoot({})
+    expect(findConfirmDialog()).toBeNull()
   })
 })

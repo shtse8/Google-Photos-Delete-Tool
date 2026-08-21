@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "_comment": "Versioned, data-driven Google Photos DOM pack. Primaries are empirical selectors validated against the live UI at release time (see docs/RELEASE_GATE.md); the live gate may promote ARIA/role selectors in a later pack without code changes. A drift fix is a data patch, never code surgery. Photo-type label keywords added in v2 (first-token matching).",
+  "version": 3,
+  "_comment": "Versioned, data-driven Google Photos DOM pack. Primaries are empirical selectors validated against the live UI at release time (see docs/RELEASE_GATE.md); the live gate may promote ARIA/role selectors in a later pack without code changes. A drift fix is a data patch, never code surgery. Photo-type label keywords added in v2 (first-token matching). v3 adds pack-owned scroll-container and dialog selectors so every Google Photos observation (media tiles, selection state, scroll container, dialogs, destructive candidates) is data-driven and fail-closed.",
   "selectors": {
     "counter": {
       "name": "Selected photo count",
@@ -34,6 +34,23 @@
         "[role=\"main\"]",
         "[role=\"list\"]",
         "[role=\"grid\"]"
+      ]
+    },
+    "scrollContainer": {
+      "name": "Gallery scroll container",
+      "primary": ".yDSiEe.uGCjIb.zcLWac",
+      "fallbacks": [
+        ".Mfixef",
+        "[role=\"grid\"]",
+        "[role=\"main\"]"
+      ]
+    },
+    "dialog": {
+      "name": "Confirmation dialog",
+      "primary": "[role=\"dialog\"]",
+      "fallbacks": [
+        "[role=\"alertdialog\"]",
+        "[aria-modal=\"true\"]"
       ]
     }
   },
