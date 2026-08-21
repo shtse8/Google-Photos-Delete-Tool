@@ -132,7 +132,9 @@ for (const dir of ['extension', 'extension-firefox']) {
 // ─── Selector pack integrity ────────────────────────────────────
 {
   const pack = JSON.parse(read('src/selector-packs/pack-v1.json'))
-  check(pack.version === 2, 'selector pack version == 2 (photoTypes present)')
+  const selectors = pack.selectors ?? {}
+  check(pack.version === 3, 'selector pack version == 3 (scroll container + dialogs)')
+  check(!!selectors.scrollContainer && !!selectors.dialog, 'pack identifies scroll container and dialogs')
   check(!!pack.photoTypes?.photo?.length && !!pack.photoTypes?.screenshot?.length, 'pack photoTypes keyword lists non-empty')
 }
 
