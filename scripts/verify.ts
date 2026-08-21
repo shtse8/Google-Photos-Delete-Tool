@@ -13,6 +13,7 @@
  *   - popup assets (html/css/icons) present
  */
 import { readFileSync, existsSync } from 'fs'
+import { SUPPORTED_MATCH_PATTERN } from '../src/core/surface'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'path'
 
@@ -47,7 +48,8 @@ console.log('verify: package version =', pkg.version)
   )
   check(!m.background?.scripts, 'chrome background has no scripts array')
   check(m.permissions?.length === 1 && m.permissions[0] === 'storage', 'chrome permissions == ["storage"]')
-  check(Array.isArray(m.host_permissions) && m.host_permissions.includes('https://photos.google.com/*'), 'chrome host_permissions cover photos.google.com')
+  check(Array.isArray(m.host_permissions) && m.host_permissions.includes(SUPPORTED_MATCH_PATTERN), 'chrome host_permissions cover photos.google.com')
+  check(Array.isArray(m.content_scripts?.[0]?.matches) && m.content_scripts[0].matches.includes(SUPPORTED_MATCH_PATTERN), 'chrome content_scripts match photos.google.com')
 }
 
 // ─── Firefox manifest ───────────────────────────────────────────
@@ -112,7 +114,7 @@ for (const dir of ['extension', 'extension-firefox']) {
 {
   const header = read('dist/userscript/google-photos-delete.user.js').split('\n').slice(0, 30).join('\n')
   check(header.includes(`// @version      ${pkg.version}`), 'userscript @version == package version')
-  check(header.includes('// @match        https://photos.google.com/*'), 'userscript @match covers photos.google.com')
+  check(header.includes(`// @match        ${SUPPORTED_MATCH_PATTERN}`), 'userscript @match covers photos.google.com')
   check(header.includes('// @grant        none'), 'userscript @grant none')
   check(!header.includes('bookmarklet'), 'userscript header has no bookmarklet residue')
 }

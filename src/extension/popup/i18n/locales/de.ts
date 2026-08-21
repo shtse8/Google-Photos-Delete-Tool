@@ -33,7 +33,7 @@ const de: Translations = {
     },
     dryRun: {
       label: "Testlauf",
-      hint: "Nur zählen, nicht löschen",
+      hint: "Diese Ansicht ohne Klick prüfen",
     },
     emptyTrash: {
       label: "Papierkorb leeren",
@@ -82,6 +82,20 @@ const de: Translations = {
     check: "Ich verstehe und befinde mich in der Google-Photos-Ansicht, die ich bereinigen möchte.",
     confirm: "Bestätigen und starten",
     cancel: "Abbrechen",
+  },
+  scope: {
+    actingOn: "Aktionsbereich: {view}",
+    library: "Bibliothek",
+    albums: "Alben",
+    album: "Album",
+    search: "Suche",
+    trash: "Papierkorb",
+    photo: "Foto",
+    memory: "Erinnerung",
+    share: "Geteilt",
+    places: "Orte",
+    collections: "Sammlungen",
+    other: "Diese Ansicht ({path})",
   },
 }
 

@@ -75,3 +75,34 @@ describe('consent storage key contract', () => {
     expect(new Set([popupKey, contentKey, runnerKey]).size).toBe(1)
   })
 })
+
+describe('GPDT-ENTER surface contract', () => {
+  it('popup admits tabs via isSupportedPhotosUrl, not a substring includes', () => {
+    const popupTs = read('src/extension/popup/popup.ts')
+    expect(popupTs).toContain('isSupportedPhotosUrl')
+    expect(popupTs).not.toMatch(/includes\(['"]photos\.google\.com['"]\)/)
+  })
+
+  it('userscript and standalone activate only through activateLocalSurface', () => {
+    const userscript = read('src/userscript/google-photos-delete.user.ts')
+    const standalone = read('src/standalone/inject.ts')
+    expect(userscript).toContain('activateLocalSurface')
+    expect(standalone).toContain('activateLocalSurface')
+  })
+
+  it('popup and panel offer a click-free dry-run control', () => {
+    const popupHtml = read('src/extension/popup/popup.html')
+    const panelTs = read('src/ui/panel/panel.ts')
+    expect(popupHtml).toMatch(/id="dry-run"/)
+    expect(panelTs).toMatch(/id="gpdt-dryrun"/)
+  })
+
+  it('popup names the current view as the action scope', () => {
+    const popupHtml = read('src/extension/popup/popup.html')
+    const popupTs = read('src/extension/popup/popup.ts')
+    expect(popupHtml).toMatch(/id="scope"/)
+    expect(popupTs).toContain('admitSurface')
+    expect(popupTs).toContain('scope.actingOn')
+  })
+})
+

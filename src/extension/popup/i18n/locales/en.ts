@@ -33,7 +33,7 @@ const en: Translations = {
     },
     dryRun: {
       label: "Dry run",
-      hint: "Count only, no deletion",
+      hint: "Preview this view without clicking",
     },
     emptyTrash: {
       label: "Empty trash",
@@ -82,6 +82,20 @@ const en: Translations = {
     check: "I understand, and I am on the Google Photos view I intend to clean.",
     confirm: "Confirm & Start",
     cancel: "Cancel",
+  },
+  scope: {
+    actingOn: "Action scope: {view}",
+    library: "Library",
+    albums: "Albums",
+    album: "Album",
+    search: "Search",
+    trash: "Trash",
+    photo: "Photo",
+    memory: "Memory",
+    share: "Shared",
+    places: "Places",
+    collections: "Collections",
+    other: "This view ({path})",
   },
 }
 

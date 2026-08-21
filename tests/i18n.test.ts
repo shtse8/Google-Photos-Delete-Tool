@@ -60,6 +60,8 @@ describe('LOCALES', () => {
       'settings.language.label', 'settings.language.trigger',
       'actions.start', 'actions.pause', 'actions.resume', 'actions.stop',
       'notes.navigateFirst',
+      'scope.actingOn', 'scope.library', 'scope.album', 'scope.trash',
+      'scope.other',
     ]
     for (const locale of LOCALES) {
       setLocale(locale.code)
@@ -184,6 +186,24 @@ describe('tHtml() — verbatim interpolation', () => {
   it('returns the key unchanged for missing translations', () => {
     expect(tHtml('does.not.exist', { x: '<b>1</b>' })).toBe('does.not.exist')
   })
+})
+
+describe('every locale carries the {view} placeholder for the action scope', () => {
+  for (const locale of LOCALES) {
+    it(`locale "${locale.code}" includes {view} in scope.actingOn`, () => {
+      setLocale(locale.code)
+      expect(t('scope.actingOn')).toContain('{view}')
+    })
+  }
+})
+
+describe('every locale carries the {path} placeholder for other views', () => {
+  for (const locale of LOCALES) {
+    it(`locale "${locale.code}" includes {path} in scope.other`, () => {
+      setLocale(locale.code)
+      expect(t('scope.other')).toContain('{path}')
+    })
+  }
 })
 
 describe('every locale carries the {url} placeholder for the note', () => {

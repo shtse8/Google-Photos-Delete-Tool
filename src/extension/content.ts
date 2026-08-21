@@ -25,6 +25,7 @@ import { diagnostics } from '../core/diagnostics'
 import { evaluatePendingEmptyTrash, TRASH_URL } from '../core/empty-trash-baton'
 import { runEmptyTrashFlow, type EmptyTrashStatus } from '../core/empty-trash'
 import type { RunStatus } from '../core/status'
+import { isSupportedPhotosUrl } from '../core/surface'
 import { createChromeBaton, runtimeSendMessage, storageGet, storageRemove, storageSet } from './api'
 
 const LOG = '[gpdt:content]'
@@ -50,6 +51,9 @@ interface StartOptions {
 }
 
 const start = async (opts: StartOptions): Promise<{ ok: boolean; error?: string }> => {
+  if (!isSupportedPhotosUrl(window.location.href)) {
+    return { ok: false, error: 'Not on photos.google.com.' }
+  }
   if (engine || runPromise || starting) {
     return { ok: false, error: 'A run is already in progress — stop it first.' }
   }
@@ -290,4 +294,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // ─── Bootstrap ──────────────────────────────────────────────────
 
 console.log(`${LOG} loaded on ${window.location.pathname}`)
-void maybeRunPendingEmptyTrash()
+if (isSupportedPhotosUrl(window.location.href)) {
+  void maybeRunPendingEmptyTrash()
+}

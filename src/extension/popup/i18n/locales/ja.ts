@@ -33,7 +33,7 @@ const ja: Translations = {
     },
     dryRun: {
       label: "テスト実行",
-      hint: "数えるだけで削除しない",
+      hint: "この画面をクリックせずに確認",
     },
     emptyTrash: {
       label: "ゴミ箱を空にする",
@@ -82,6 +82,20 @@ const ja: Translations = {
     check: "理解しました。削除対象の Google フォトの画面を表示しています。",
     confirm: "確認して開始",
     cancel: "キャンセル",
+  },
+  scope: {
+    actingOn: "操作対象: {view}",
+    library: "ライブラリ",
+    albums: "アルバム一覧",
+    album: "アルバム",
+    search: "検索",
+    trash: "ゴミ箱",
+    photo: "写真",
+    memory: "メモリー",
+    share: "共有",
+    places: "場所",
+    collections: "コレクション",
+    other: "この画面 ({path})",
   },
 }
 

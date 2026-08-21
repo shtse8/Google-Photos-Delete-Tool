@@ -61,6 +61,22 @@ export interface Translations {
   notes: {
     navigateFirst: string
   }
+  scope: {
+    /** "Action scope: {view}" */
+    actingOn: string
+    library: string
+    albums: string
+    album: string
+    search: string
+    trash: string
+    photo: string
+    memory: string
+    share: string
+    places: string
+    collections: string
+    /** "This view ({path})" */
+    other: string
+  }
 }
 
 /** Browser-language → locale-code mapping for first-run auto-detect. */

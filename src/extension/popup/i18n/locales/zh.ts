@@ -33,7 +33,7 @@ const zh: Translations = {
     },
     dryRun: {
       label: "试运行",
-      hint: "仅计数,不删除",
+      hint: "预览当前视图，不点击任何内容",
     },
     emptyTrash: {
       label: "清空回收站",
@@ -82,6 +82,20 @@ const zh: Translations = {
     check: "我理解，并且我正位于要清理的 Google 相册视图。",
     confirm: "确认并开始",
     cancel: "取消",
+  },
+  scope: {
+    actingOn: "操作范围：{view}",
+    library: "图库",
+    albums: "相册",
+    album: "相册",
+    search: "搜索",
+    trash: "回收站",
+    photo: "照片",
+    memory: "回忆",
+    share: "共享",
+    places: "地点",
+    collections: "合集",
+    other: "当前视图（{path}）",
   },
 }
 

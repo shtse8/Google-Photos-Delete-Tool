@@ -5,6 +5,7 @@
  * i18n'd surface with the same controls (parity by contract, not code).
  */
 import type { PageRunner, PanelRunOptions } from '../../core/page-runner'
+import { admitSurface, describePhotosView } from '../../core/surface'
 import { formatElapsed, formatEta } from '../../core/utils'
 import { ACTIVE_STATUSES } from '../../core/status'
 import type { Progress, RunStatus } from '../../core'
@@ -95,12 +96,13 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
         <button class="gpdt-ghost" id="gpdt-close" title="Close">✕</button>
       </span>
     </div>
+    <div class="gpdt-note" id="gpdt-scope"></div>
     <div class="gpdt-row">
       <label for="gpdt-max">Photos per batch</label>
       <input type="number" id="gpdt-max" value="500" min="1" max="2000" step="50" style="width:110px" />
     </div>
     <div class="gpdt-row">
-      <label for="gpdt-dryrun">Dry run (count only)</label>
+      <label for="gpdt-dryrun">Dry run (count this view, no clicks)</label>
       <input type="checkbox" id="gpdt-dryrun" style="accent-color:#3b82f6" />
     </div>
     <div class="gpdt-row">
@@ -182,6 +184,12 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const consentPermanent = $<HTMLElement>('gpdt-consent-permanent')
   const copyBtn = $<HTMLButtonElement>('gpdt-copy')
   const exportBtn = $<HTMLButtonElement>('gpdt-export')
+  const scopeEl = $<HTMLElement>('gpdt-scope')
+
+  const admission = admitSurface(window.location.href)
+  scopeEl.textContent = admission.ok
+    ? `Action scope: ${describePhotosView(admission.view)}`
+    : 'Open photos.google.com first.'
 
   let pro = false
   let pendingStart: PanelRunOptions | null = null
