@@ -109,6 +109,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
       <label for="gpdt-empty" title="Permanent — no recovery">Empty trash afterwards</label>
       <input type="checkbox" id="gpdt-empty" style="accent-color:#ef4444" />
     </div>
+    <div id="gpdt-empty-warning" class="gpdt-danger" style="display:none">"Empty trash afterwards" is PERMANENT with no recovery.</div>
     <div class="gpdt-row">
       <label for="gpdt-filter">Filter (Pro)</label>
       <select id="gpdt-filter" style="width:150px" disabled>
@@ -165,6 +166,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const maxInput = $<HTMLInputElement>('gpdt-max')
   const dryRunInput = $<HTMLInputElement>('gpdt-dryrun')
   const emptyInput = $<HTMLInputElement>('gpdt-empty')
+  const emptyWarning = $<HTMLElement>('gpdt-empty-warning')
   const filterSelect = $<HTMLSelectElement>('gpdt-filter')
   const licenseInput = $<HTMLInputElement>('gpdt-license')
   const licenseStatus = $<HTMLElement>('gpdt-license-status')
@@ -219,6 +221,13 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
 
   // ─── Consent gate ─────────────────────────────────────────────
 
+  // GPDT-CONSENT: the permanent-action warning is presented the moment
+  // the option is selected, before any run is admitted — independently
+  // of whether the general consent is already stored.
+  emptyInput.addEventListener('change', () => {
+    emptyWarning.style.display = emptyInput.checked ? 'block' : 'none'
+  })
+
   const readOptions = (): PanelRunOptions => {
     const parsed = parseInt(maxInput.value, 10)
     const kind = filterSelect.value
@@ -236,7 +245,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
 
   startBtn.addEventListener('click', () => {
     const opts = readOptions()
-    if (!opts.dryRun && !runner.consentAcknowledged()) {
+    if (!opts.dryRun && (!runner.consentAcknowledged() || (opts.emptyTrashAfter && !runner.emptyTrashAcknowledged()))) {
       pendingStart = opts
       consentPermanent.style.display = opts.emptyTrashAfter ? 'block' : 'none'
       consentCheck.checked = false
@@ -253,6 +262,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   $<HTMLButtonElement>('gpdt-consent-confirm').addEventListener('click', () => {
     if (!consentCheck.checked) return
     runner.acknowledgeConsent()
+    if (pendingStart?.emptyTrashAfter) runner.acknowledgeEmptyTrash()
     consentBox.style.display = 'none'
     if (pendingStart) {
       void runner.start(pendingStart).catch((err: unknown) => {
