@@ -380,7 +380,7 @@ describe('DeleteEngine — type filter', () => {
 })
 
 describe('DeleteEngine — dry-run scan', () => {
-  it('counts unique labels, never clicks, and reports a total', async () => {
+  it('counts unique labels as browser observations, never clicks, reports total', async () => {
     const dom = new FakeDom()
     dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c'])
     const { engine, onProgress } = makeEngine(dom, { maxCount: 500, dryRun: true })
@@ -388,15 +388,24 @@ describe('DeleteEngine — dry-run scan', () => {
     const result = await engine.run()
 
     expect(result.status).toBe('done')
+    // The deduplicated label count is an observation (total), not a deletion.
     expect(result.total).toBe(3)
-    expect(result.deleted).toBe(3)
+    expect(result.deleted).toBe(0)
     expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(0)
     expect(dom.clicks.some((c) => c.startsWith('tile:'))).toBe(false)
     expect(engine.getDryRunLabels()).toHaveLength(3)
     expect(statusesOf(onProgress)).toContain('done')
+    // Every live progress emission during the scan keeps deleted at 0 and
+    // carries the observed count as total — never the reverse.
+    for (const [snapshot] of onProgress.mock.calls) {
+      expect(snapshot.deleted).toBe(0)
+      if (snapshot.total !== undefined) {
+        expect(snapshot.total).toBeGreaterThanOrEqual(snapshot.deleted)
+      }
+    }
   })
 
-  it('dry-run with a type filter counts only matching labels', async () => {
+  it('dry-run with a type filter counts only matching labels as observations', async () => {
     const dom = new FakeDom()
     dom.setTiles(['Screenshot - shot', 'Video - clip', 'Photo - pic'])
     const { engine } = makeEngine(dom, { maxCount: 500, dryRun: true }, { kind: 'type', type: 'screenshot' })
@@ -404,6 +413,7 @@ describe('DeleteEngine — dry-run scan', () => {
     const result = await engine.run()
     expect(result.status).toBe('done')
     expect(result.total).toBe(1)
+    expect(result.deleted).toBe(0)
   })
 
   it('deduplicates identical labels (burst-mode undercount is expected)', async () => {
@@ -413,6 +423,30 @@ describe('DeleteEngine — dry-run scan', () => {
 
     const result = await engine.run()
     expect(result.total).toBe(1)
+    expect(result.deleted).toBe(0)
+  })
+
+  it('stopping a dry-run resolves to idle, never deletes, and keeps the observation', async () => {
+    const dom = new FakeDom()
+    dom.manualSleep = true
+    dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c'])
+    const { engine } = makeEngine(dom, { maxCount: 500, dryRun: true })
+
+    const runPromise = engine.run()
+    await new Promise((r) => setTimeout(r, 5))
+    engine.stop()
+    dom.releaseSleep()
+
+    const result = await runPromise
+
+    // A stopped dry-run is idle (never error), mutated nothing, and its
+    // observed count is reported as total — it cannot become a delete.
+    expect(result.status).toBe('idle')
+    expect(result.error).toBeUndefined()
+    expect(result.deleted).toBe(0)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(0)
+    expect(dom.clicks.some((c) => c.startsWith('tile:'))).toBe(false)
+    expect(engine.getDryRunLabels().length).toBeLessThanOrEqual(3)
   })
 })
 
