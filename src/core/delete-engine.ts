@@ -152,6 +152,36 @@ export class DeleteEngine {
   async run(): Promise<Progress> {
     this.stopped = false
     this.paused = false
+
+    // Fail closed on a non-positive / non-finite batch limit. The batch
+    // contract is a *positive* limit (`config.ts`: "Must be > 0"), and a
+    // maxCount <= 0 would make every iteration satisfy
+    // `currentCount >= maxCount` and flush a no-op "batch" forever — a
+    // busy loop that never reaches scroll settle or end-of-list
+    // detection. An invalid limit is a configuration error, never a
+    // destructive run.
+    if (!Number.isFinite(this.config.maxCount) || this.config.maxCount < 1) {
+      this.progress = {
+        deleted: 0,
+        selected: 0,
+        status: 'error',
+        startedAt: Date.now(),
+        error:
+          `Invalid batch limit: maxCount must be a positive integer ` +
+          `(got ${String(this.config.maxCount)}).`,
+      }
+      this.emitProgress()
+      diagnostics.setEngine({
+        status: 'error',
+        error: this.progress.error,
+        deleted: 0,
+        selected: 0,
+        counterFallbackUsed: false,
+        flapRecoveries: 0,
+      })
+      return this.progress
+    }
+
     this.progress = {
       deleted: 0,
       selected: 0,
