@@ -35,6 +35,12 @@ const STORAGE_KEYS = {
   emptyTrashAfter: 'gpdt_emptyAfter',
   /** Consent acknowledgment for destructive runs (v3). */
   consent: 'gpdt_consent_v3',
+  /**
+   * Permanent empty-trash acknowledgement (v3). Required — in addition
+   * to the general consent — before a real run that selects the
+   * permanent "Empty trash afterwards" option is admitted.
+   */
+  emptyTrashAck: 'gpdt_emptyTrashAck_v3',
 } as const
 
 // ─── Engine lifecycle ───────────────────────────────────────────
@@ -73,6 +79,21 @@ const start = async (opts: StartOptions): Promise<{ ok: boolean; error?: string 
       } catch (err) {
         console.warn(`${LOG} consent read failed:`, err)
         return { ok: false, error: 'Could not read consent state.' }
+      }
+
+      if (emptyTrashAfter) {
+        try {
+          const data = await storageGet([STORAGE_KEYS.emptyTrashAck])
+          if (!data[STORAGE_KEYS.emptyTrashAck]) {
+            return {
+              ok: false,
+              error: 'Permanent empty-trash consent required — confirm the permanent-action warning in the popup first.',
+            }
+          }
+        } catch (err) {
+          console.warn(`${LOG} empty-trash consent read failed:`, err)
+          return { ok: false, error: 'Could not read permanent empty-trash consent state.' }
+        }
       }
     }
 

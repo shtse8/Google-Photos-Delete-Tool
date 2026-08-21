@@ -31,6 +31,7 @@ const LOG = '[gpdt:popup]'
 const maxCountInput   = document.getElementById('max-count')      as HTMLInputElement
 const dryRunInput     = document.getElementById('dry-run')        as HTMLInputElement
 const emptyTrashInput = document.getElementById('empty-trash')    as HTMLInputElement
+const emptyTrashWarning = document.getElementById('empty-trash-warning') as HTMLElement
 const filterSelect    = document.getElementById('filter')         as HTMLSelectElement
 const licenseInput    = document.getElementById('license-token')  as HTMLInputElement
 const licenseBtn      = document.getElementById('license-btn')    as HTMLButtonElement
@@ -96,6 +97,7 @@ let currentView: PhotosView | null = null
 let surfaceReady = false
 
 const CONSENT_KEY = 'gpdt_consent_v3'
+const EMPTY_TRASH_ACK_KEY = 'gpdt_emptyTrashAck_v3'
 const PRO_TOKEN_KEY = 'proToken'
 
 // ─── Locale init ────────────────────────────────────────────────
@@ -267,7 +269,10 @@ dryRunInput.addEventListener('change', () => {
   saveSettings()
   refreshDryRunDependentFields()
 })
-emptyTrashInput.addEventListener('change', saveSettings)
+emptyTrashInput.addEventListener('change', () => {
+  saveSettings()
+  refreshEmptyTrashWarning()
+})
 filterSelect.addEventListener('change', saveSettings)
 
 // ─── Pro license ────────────────────────────────────────────────
@@ -445,6 +450,15 @@ const stopElapsedTimer = (): void => {
 
 // ─── Consent gate ───────────────────────────────────────────────
 
+/**
+ * The permanent-action warning for "Empty trash afterwards" is shown
+ * the moment the option is selected, before any run is admitted —
+ * independently of whether the general consent is already stored.
+ */
+const refreshEmptyTrashWarning = (): void => {
+  emptyTrashWarning.classList.toggle('hidden', !emptyTrashInput.checked)
+}
+
 async function consentAcknowledged(): Promise<boolean> {
   try {
     const data = await storageGet([CONSENT_KEY])
@@ -462,15 +476,38 @@ async function acknowledgeConsent(): Promise<void> {
   }
 }
 
+/** Permanent empty-trash acknowledgement (parallel to the general consent). */
+async function emptyTrashAcknowledged(): Promise<boolean> {
+  try {
+    const data = await storageGet([EMPTY_TRASH_ACK_KEY])
+    return data[EMPTY_TRASH_ACK_KEY] === true
+  } catch {
+    return false
+  }
+}
+
+async function acknowledgeEmptyTrash(): Promise<void> {
+  try {
+    await storageSet({ [EMPTY_TRASH_ACK_KEY]: true })
+  } catch (err) {
+    console.warn(`${LOG} empty-trash consent persist failed:`, err)
+  }
+}
+
 let pendingStart: { maxCount: number; dryRun: boolean; emptyTrashAfter: boolean; filter: PhotoFilter } | null = null
 
-consentConfirm.addEventListener('click', () => {
+consentConfirm.addEventListener('click', async () => {
   if (!consentCheck.checked) return
-  void acknowledgeConsent()
+  // Await the storage writes: the content-script gate reads these keys
+  // again when it admits the run, so starting before the writes land
+  // would spuriously refuse the run.
+  await acknowledgeConsent()
+  if (pendingStart?.emptyTrashAfter) await acknowledgeEmptyTrash()
   consentBox.classList.add('hidden')
-  if (pendingStart) {
-    void doStart(pendingStart)
-    pendingStart = null
+  const start = pendingStart
+  pendingStart = null
+  if (start) {
+    void doStart(start)
   }
 })
 
@@ -499,7 +536,7 @@ startBtn.addEventListener('click', async () => {
     saveSettings()
     hideError()
 
-    if (!opts.dryRun && !(await consentAcknowledged())) {
+    if (!opts.dryRun && (!(await consentAcknowledged()) || (opts.emptyTrashAfter && !(await emptyTrashAcknowledged())))) {
       pendingStart = opts
       consentPermanent.classList.toggle('hidden', !opts.emptyTrashAfter)
       consentCheck.checked = false
@@ -737,6 +774,7 @@ void (async () => {
     filterSelect.value = data.filter
   }
   refreshDryRunDependentFields()
+  refreshEmptyTrashWarning()
   void refreshProState()
   void refreshSurfaceAdmission()
   void queryInitialStatus()

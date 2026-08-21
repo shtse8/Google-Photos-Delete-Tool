@@ -106,3 +106,65 @@ describe('GPDT-ENTER surface contract', () => {
   })
 })
 
+describe('permanent empty-trash acknowledgement contract', () => {
+  it('popup, content, and page-runner use the same empty-trash acknowledgement key', () => {
+    const popupTs = read('src/extension/popup/popup.ts')
+    const contentTs = read('src/extension/content.ts')
+    const runnerTs = read('src/core/page-runner.ts')
+    const popupKey = popupTs.match(/EMPTY_TRASH_ACK_KEY = '([^']+)'/)?.[1]
+    const contentKey = contentTs.match(/emptyTrashAck: '([^']+)'/)?.[1]
+    const runnerKey = runnerTs.match(/EMPTY_TRASH_ACK_KEY = '([^']+)'/)?.[1]
+    expect(popupKey).toBeTruthy()
+    expect(contentKey).toBeTruthy()
+    expect(runnerKey).toBeTruthy()
+    expect(new Set([popupKey, contentKey, runnerKey]).size).toBe(1)
+  })
+
+  it('content refuses a permanent empty-trash run without the acknowledgement', () => {
+    const contentTs = read('src/extension/content.ts')
+    // The ack gate lives on the non-dry path and is read through the
+    // same storage wrapper as the general consent.
+    expect(contentTs).toContain('STORAGE_KEYS.emptyTrashAck')
+    expect(contentTs).toContain('if (emptyTrashAfter)')
+    expect(contentTs).toContain("error: 'Permanent empty-trash consent required")
+    expect(contentTs).toContain("error: 'Could not read permanent empty-trash consent state.'")
+  })
+
+  it('page-runner refuses a permanent empty-trash run without the acknowledgement', () => {
+    const runnerTs = read('src/core/page-runner.ts')
+    expect(runnerTs).toContain('opts.emptyTrashAfter && !this.emptyTrashAcknowledged()')
+    expect(runnerTs).toContain('export class PermanentActionRequiredError')
+    expect(runnerTs).toContain('acknowledgeEmptyTrash(): void')
+  })
+})
+
+describe('permanent empty-trash warning is visible on selection', () => {
+  it('popup shows the permanent-action warning the moment Empty trash is selected', () => {
+    const popupTs = read('src/extension/popup/popup.ts')
+    const popupHtml = read('src/extension/popup/popup.html')
+    expect(popupHtml).toMatch(/id="empty-trash-warning"/)
+    expect(popupHtml).toMatch(/data-i18n="consent\.permanentNote"/)
+    expect(popupTs).toContain("const emptyTrashWarning = document.getElementById('empty-trash-warning')")
+    expect(popupTs).toContain("emptyTrashInput.addEventListener('change'")
+    expect(popupTs).toContain("emptyTrashWarning.classList.toggle('hidden', !emptyTrashInput.checked)")
+  })
+
+  it('panel shows the permanent-action warning the moment Empty trash is selected', () => {
+    const panelTs = read('src/ui/panel/panel.ts')
+    expect(panelTs).toMatch(/id="gpdt-empty-warning"/)
+    expect(panelTs).toContain("const emptyWarning = $<HTMLElement>('gpdt-empty-warning')")
+    expect(panelTs).toContain("emptyInput.addEventListener('change'")
+    expect(panelTs).toContain("emptyWarning.style.display = emptyInput.checked ? 'block' : 'none'")
+  })
+
+  it('popup and panel gate a permanent empty-trash run on the acknowledgement, not only on consent', () => {
+    const popupTs = read('src/extension/popup/popup.ts')
+    const panelTs = read('src/ui/panel/panel.ts')
+    expect(popupTs).toContain('opts.emptyTrashAfter && !(await emptyTrashAcknowledged())')
+    expect(panelTs).toContain('opts.emptyTrashAfter && !runner.emptyTrashAcknowledged()')
+    // Both surfaces record the acknowledgement at the same confirm
+    // moment where the permanent warning is visible.
+    expect(popupTs).toContain("if (pendingStart?.emptyTrashAfter) await acknowledgeEmptyTrash()")
+    expect(panelTs).toContain("if (pendingStart?.emptyTrashAfter) runner.acknowledgeEmptyTrash()")
+  })
+})

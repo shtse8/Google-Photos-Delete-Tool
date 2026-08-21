@@ -38,12 +38,20 @@ export interface DryRunSummary {
 }
 
 const CONSENT_KEY = 'gpdt_consent_v3'
+const EMPTY_TRASH_ACK_KEY = 'gpdt_emptyTrashAck_v3'
 const LICENSE_KEY = 'gpdt_pro_token_v3'
 
 export class ConsentRequiredError extends Error {
   constructor() {
     super('consent required before a destructive run')
     this.name = 'ConsentRequiredError'
+  }
+}
+
+export class PermanentActionRequiredError extends Error {
+  constructor() {
+    super('permanent empty-trash acknowledgement required before an empty-trash run')
+    this.name = 'PermanentActionRequiredError'
   }
 }
 
@@ -106,6 +114,29 @@ export class PageRunner {
     }
   }
 
+  /**
+   * Permanent empty-trash acknowledgement — the second, explicit
+   * acknowledgement recorded when the user confirms the permanent-action
+   * warning while the "Empty trash afterwards" option is selected.
+   * Required (alongside the general consent) for any non-dry run that
+   * chains into the permanent empty-trash flow.
+   */
+  emptyTrashAcknowledged(): boolean {
+    try {
+      return window.localStorage.getItem(EMPTY_TRASH_ACK_KEY) === '1'
+    } catch {
+      return false
+    }
+  }
+
+  acknowledgeEmptyTrash(): void {
+    try {
+      window.localStorage.setItem(EMPTY_TRASH_ACK_KEY, '1')
+    } catch {
+      /* storage unavailable — acknowledgement re-asked next time */
+    }
+  }
+
   // ─── Pro license ──────────────────────────────────────────────
 
   getLicenseToken(): string | null {
@@ -146,7 +177,10 @@ export class PageRunner {
 
   async start(opts: PanelRunOptions): Promise<void> {
     if (this.running) return
-    if (!opts.dryRun && !this.consentAcknowledged()) throw new ConsentRequiredError()
+    if (!opts.dryRun) {
+      if (!this.consentAcknowledged()) throw new ConsentRequiredError()
+      if (opts.emptyTrashAfter && !this.emptyTrashAcknowledged()) throw new PermanentActionRequiredError()
+    }
     this.running = true
     this.summary = null
     this.progress = null
