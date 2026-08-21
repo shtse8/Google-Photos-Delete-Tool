@@ -65,3 +65,17 @@ export {
   type EmptyTrashBaton,
   type PendingEval,
 } from './empty-trash-baton'
+
+export {
+  SUPPORTED_HOST,
+  SUPPORTED_ORIGIN,
+  SUPPORTED_MATCH_PATTERN,
+  isSupportedPhotosUrl,
+  identifyPhotosView,
+  admitSurface,
+  activateLocalSurface,
+  describePhotosView,
+  type PhotosView,
+  type PhotosViewKind,
+  type SurfaceAdmission,
+} from './surface'

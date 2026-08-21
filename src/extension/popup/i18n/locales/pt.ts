@@ -33,7 +33,7 @@ const pt: Translations = {
     },
     dryRun: {
       label: "Simulação",
-      hint: "Apenas contar, sem excluir",
+      hint: "Pré-visualiza esta vista sem clicar",
     },
     emptyTrash: {
       label: "Esvaziar lixeira",
@@ -82,6 +82,20 @@ const pt: Translations = {
     check: "Entendo e estou na visualização do Google Photos que pretendo limpar.",
     confirm: "Confirmar e iniciar",
     cancel: "Cancelar",
+  },
+  scope: {
+    actingOn: "Âmbito da ação: {view}",
+    library: "Biblioteca",
+    albums: "Álbuns",
+    album: "Álbum",
+    search: "Pesquisa",
+    trash: "Lixeira",
+    photo: "Foto",
+    memory: "Memória",
+    share: "Partilhado",
+    places: "Locais",
+    collections: "Coleções",
+    other: "Esta vista ({path})",
   },
 }
 

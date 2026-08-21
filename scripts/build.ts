@@ -11,6 +11,7 @@
  * not support service_worker) and adds browser_specific_settings.
  */
 import { build } from 'vite'
+import { SUPPORTED_MATCH_PATTERN } from '../src/core/surface'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'path'
 import {
@@ -193,7 +194,7 @@ const userscriptHeader = `// ==UserScript==
 // @version      ${pkg.version}
 // @description  Bulk delete photos on photos.google.com with batch select, dry-run, and empty-trash (consent-gated)
 // @author       Kyle Tse
-// @match        https://photos.google.com/*
+// @match        ${SUPPORTED_MATCH_PATTERN}
 // @grant        none
 // @homepage     https://github.com/shtse8/Google-Photos-Delete-Tool
 // @supportURL   https://github.com/shtse8/Google-Photos-Delete-Tool/issues

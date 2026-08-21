@@ -33,7 +33,7 @@ const es: Translations = {
     },
     dryRun: {
       label: "Modo prueba",
-      hint: "Solo contar, sin eliminar",
+      hint: "Previsualiza esta vista sin hacer clic",
     },
     emptyTrash: {
       label: "Vaciar papelera",
@@ -82,6 +82,20 @@ const es: Translations = {
     check: "Entiendo y estoy en la vista de Google Photos que quiero limpiar.",
     confirm: "Confirmar e iniciar",
     cancel: "Cancelar",
+  },
+  scope: {
+    actingOn: "Ámbito de acción: {view}",
+    library: "Biblioteca",
+    albums: "Álbumes",
+    album: "Álbum",
+    search: "Búsqueda",
+    trash: "Papelera",
+    photo: "Foto",
+    memory: "Recuerdo",
+    share: "Compartido",
+    places: "Lugares",
+    collections: "Colecciones",
+    other: "Esta vista ({path})",
   },
 }
 

@@ -3,6 +3,11 @@ import { formatElapsed } from '../../core/utils'
 import { buildDiagnosticIssueUrl, type DiagnosticBlob } from '../../core/diagnostics'
 import { verifyLicense } from '../../core/license'
 import { TRASH_URL } from '../../core/empty-trash-baton'
+import {
+  admitSurface,
+  isSupportedPhotosUrl,
+  type PhotosView,
+} from '../../core/surface'
 import { storageGet, storageSet, tabsCreate, tabsQuery, tabsSendMessage } from '../api'
 import type { PhotoFilter, PhotoType } from '../../core/photo-filter'
 import { ACTIVE_STATUSES, TERMINAL_STATUSES, type RunStatus } from '../../core/status'
@@ -41,6 +46,8 @@ const resumeBtn       = document.getElementById('resume-btn')     as HTMLButtonE
 const stopBtn         = document.getElementById('stop-btn')       as HTMLButtonElement
 const statusDot       = document.getElementById('status-dot')     as HTMLElement
 const statusText      = document.getElementById('status-text')    as HTMLElement
+const scopeEl         = document.getElementById('scope')          as HTMLElement
+const scopeLabel      = document.getElementById('scope-label')    as HTMLElement
 const errorBar        = document.getElementById('error')          as HTMLElement
 const errorText       = document.getElementById('error-text')     as HTMLElement
 const progressFill    = document.getElementById('progress-fill')  as HTMLElement
@@ -85,6 +92,8 @@ let startedAt = 0
 let elapsedTimer: ReturnType<typeof setInterval> | null = null
 let proActive = false
 let lastReport: { total: number; labels: string[] } | null = null
+let currentView: PhotosView | null = null
+let surfaceReady = false
 
 const CONSENT_KEY = 'gpdt_consent_v3'
 const PRO_TOKEN_KEY = 'proToken'
@@ -143,6 +152,7 @@ function applyLocale(code: LocaleCode): void {
   renderLangMenu()
   refreshStatusLabel()
   renderNote()
+  renderScope()
   licenseInput.placeholder = t('settings.license.placeholder')
   storageSet({ locale: code }).catch(err =>
     console.warn(`${LOG} could not persist locale:`, err),
@@ -308,7 +318,7 @@ licenseBtn.addEventListener('click', async () => {
 
 const sendToContent = async (message: Record<string, unknown>): Promise<unknown> => {
   const [tab] = await tabsQuery({ active: true, currentWindow: true })
-  if (!tab?.id || !tab.url?.includes('photos.google.com')) {
+  if (!tab?.id || !isSupportedPhotosUrl(tab.url)) {
     showNote('notes.navigateFirst')
     return null
   }
@@ -375,6 +385,49 @@ const showNote = (key: string): void => {
   noteEl.classList.remove('hidden')
 }
 const hideNote = (): void => { noteEl.classList.add('hidden') }
+
+function viewLabel(view: PhotosView): string {
+  if (view.kind === 'other') return t('scope.other', { path: view.path })
+  const kind = t(`scope.${view.kind}`)
+  return view.target ? `${kind} · ${view.target}` : kind
+}
+
+function renderScope(): void {
+  if (!currentView) {
+    scopeEl.classList.add('hidden')
+    scopeLabel.textContent = ''
+    return
+  }
+  scopeLabel.textContent = t('scope.actingOn', { view: viewLabel(currentView) })
+  scopeEl.classList.remove('hidden')
+}
+
+async function refreshSurfaceAdmission(): Promise<void> {
+  try {
+    const [tab] = await tabsQuery({ active: true, currentWindow: true })
+    const admission = admitSurface(tab?.url)
+    if (!admission.ok) {
+      surfaceReady = false
+      currentView = null
+      startBtn.disabled = true
+      renderScope()
+      showNote('notes.navigateFirst')
+      return
+    }
+    surfaceReady = true
+    currentView = admission.view
+    if (uiState === 'idle') startBtn.disabled = false
+    renderScope()
+    hideNote()
+  } catch (err) {
+    console.warn(`${LOG} surface admission failed:`, err)
+    surfaceReady = false
+    currentView = null
+    startBtn.disabled = true
+    renderScope()
+    showNote('notes.navigateFirst')
+  }
+}
 const showError = (msg: string): void => { errorText.textContent = msg; errorBar.classList.remove('hidden') }
 const hideError = (): void => { errorBar.classList.add('hidden') }
 
@@ -434,7 +487,7 @@ const readFilter = (): PhotoFilter => {
 }
 
 startBtn.addEventListener('click', async () => {
-  if (uiState !== 'idle') return
+  if (uiState !== 'idle' || !surfaceReady) return
   startBtn.disabled = true
   try {
     const opts = {
@@ -456,7 +509,7 @@ startBtn.addEventListener('click', async () => {
 
     await doStart(opts)
   } finally {
-    startBtn.disabled = false
+    startBtn.disabled = !surfaceReady || uiState !== 'idle'
   }
 })
 
@@ -685,5 +738,6 @@ void (async () => {
   }
   refreshDryRunDependentFields()
   void refreshProState()
+  void refreshSurfaceAdmission()
   void queryInitialStatus()
 })()

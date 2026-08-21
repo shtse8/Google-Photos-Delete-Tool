@@ -33,7 +33,7 @@ const fr: Translations = {
     },
     dryRun: {
       label: "Mode test",
-      hint: "Compter sans rien supprimer",
+      hint: "Aperçu de cette vue, sans clic",
     },
     emptyTrash: {
       label: "Vider la corbeille",
@@ -82,6 +82,20 @@ const fr: Translations = {
     check: "Je comprends, et je suis sur la vue Google Photos que je souhaite nettoyer.",
     confirm: "Confirmer et démarrer",
     cancel: "Annuler",
+  },
+  scope: {
+    actingOn: "Portée de l’action : {view}",
+    library: "Bibliothèque",
+    albums: "Albums",
+    album: "Album",
+    search: "Recherche",
+    trash: "Corbeille",
+    photo: "Photo",
+    memory: "Souvenir",
+    share: "Partagé",
+    places: "Lieux",
+    collections: "Collections",
+    other: "Cette vue ({path})",
   },
 }
 

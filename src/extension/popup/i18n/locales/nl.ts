@@ -33,7 +33,7 @@ const nl: Translations = {
     },
     dryRun: {
       label: "Proefrit",
-      hint: "Alleen tellen, niet verwijderen",
+      hint: "Bekijk deze weergave zonder te klikken",
     },
     emptyTrash: {
       label: "Prullenbak legen",
@@ -82,6 +82,20 @@ const nl: Translations = {
     check: "Ik begrijp het en bevind me in de Google Photos-weergave die ik wil opschonen.",
     confirm: "Bevestigen en starten",
     cancel: "Annuleren",
+  },
+  scope: {
+    actingOn: "Actiebereik: {view}",
+    library: "Bibliotheek",
+    albums: "Albums",
+    album: "Album",
+    search: "Zoeken",
+    trash: "Prullenbak",
+    photo: "Foto",
+    memory: "Herinnering",
+    share: "Gedeeld",
+    places: "Plaatsen",
+    collections: "Collecties",
+    other: "Deze weergave ({path})",
   },
 }
 
