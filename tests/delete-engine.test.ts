@@ -450,6 +450,51 @@ describe('DeleteEngine — dry-run scan', () => {
   })
 })
 
+describe('DeleteEngine — positive batch limit (fail closed)', () => {
+  it.each([0, -1])('rejects maxCount=%i without selecting, clicking, or looping', async (maxCount) => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a', 'Photo - b', 'Photo - c'])
+    const { engine } = makeEngine(dom, { maxCount })
+
+    const result = await engine.run()
+
+    // The run resolves (no busy loop) with a config error, not a delete.
+    expect(result.status).toBe('error')
+    expect(result.error).toMatch(/maxCount must be a positive integer/)
+    expect(result.deleted).toBe(0)
+    expect(dom.clicks.filter((c) => c === 'delete')).toHaveLength(0)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(0)
+    expect(dom.clicks.some((c) => c.startsWith('tile:'))).toBe(false)
+    expect(dom.tiles.every((t) => !t.checked)).toBe(true)
+  })
+
+  it('rejects a non-finite maxCount (NaN) as a config error', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a'])
+    const { engine } = makeEngine(dom, { maxCount: NaN })
+
+    const result = await engine.run()
+
+    expect(result.status).toBe('error')
+    expect(result.error).toMatch(/maxCount must be a positive integer/)
+    expect(result.deleted).toBe(0)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(0)
+  })
+
+  it('rejects a non-positive maxCount even before a dry-run scan', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a', 'Photo - b'])
+    const { engine } = makeEngine(dom, { maxCount: 0, dryRun: true })
+
+    const result = await engine.run()
+
+    expect(result.status).toBe('error')
+    expect(result.error).toMatch(/maxCount must be a positive integer/)
+    expect(result.total).toBeUndefined()
+    expect(dom.clicks.some((c) => c.startsWith('tile:'))).toBe(false)
+  })
+})
+
 describe('DeleteEngine — error paths', () => {
   it('reports error when the toolbar delete button never appears', async () => {
     const dom = new FakeDom()
