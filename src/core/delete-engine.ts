@@ -17,12 +17,18 @@ export class StopRequested extends Error {
 }
 
 export interface Progress {
+  /** Photos actually moved to Trash. Always 0 for a dry-run scan — a preview never mutates. */
   deleted: number
   selected: number
   status: RunStatus
   startedAt: number
   error?: string
-  /** Gallery total; set when known (dry-run scan). */
+  /**
+   * Distinct matching labels observed by a dry-run scan. This is a
+   * deduplicated *browser observation* (Set of aria-labels seen in the
+   * DOM), never a deletion count, and it is set only by the dry-run
+   * path. `deleted` stays 0 while `total` carries the observation.
+   */
   total?: number
 }
 
@@ -49,7 +55,10 @@ export interface EngineOptions {
  *   4. Detect end-of-gallery: when neither selection nor scroll moved
  *      anything N times in a row (`endOfListAttempts`), break the loop.
  *
- * Dry-run takes a separate path (runDryRunScan) — see that method.
+ * Dry-run takes a separate path (runDryRunScan) — see that method. It
+ * scrolls and counts observed matching labels, reports the deduplicated
+ * count as progress.total (a browser observation), and never reports it
+ * as progress.deleted — a preview mutates nothing.
  *
  * Stop is abort-aware: every wait yields to `stop()`, and a stopped run
  * resolves with status 'idle', NEVER 'error'. The `finally` block flushes
@@ -76,8 +85,9 @@ export class DeleteEngine {
   readonly log = new DeletionLog()
 
   /**
-   * Labels harvested by the last dry-run scan (for Pro CSV export).
-   * Empty for real-delete runs and before any dry-run completes.
+   * Labels observed by the last dry-run scan (deduplicated browser
+   * observations, for Pro CSV export). Empty for real-delete runs and
+   * before any dry-run completes.
    */
   getDryRunLabels(): readonly string[] {
     return this.dryRunLabelsArr
@@ -294,6 +304,11 @@ export class DeleteEngine {
    * each visible photo's stable identifier (aria-label of its labelled
    * ancestor) into a Set. Final tally = Set size. Never clicks anything.
    *
+   * The tally is a browser observation: progress.deleted stays 0 for the
+   * whole scan and the deduplicated Set size is surfaced as
+   * progress.total. Stop resolves to 'idle' and the scan never calls a
+   * destructive path, so a stopped dry-run can never become a delete.
+   *
    * Two coverage measures keep us from missing photos that briefly
    * appear in the DOM during a scroll and disappear before we look:
    *   1. We harvest IDs continuously while waiting for each scroll
@@ -326,8 +341,10 @@ export class DeleteEngine {
     }
 
     // Initial harvest at the top before we touch the scroll target.
+    // The deduplicated Set size is a browser observation → progress.total.
+    // progress.deleted stays 0: nothing has been (or will be) deleted.
     this.harvestVisibleIds(seen, (warned) => { missingIdWarned = warned })
-    this.progress.deleted = seen.size
+    this.progress.total = seen.size
     this.emitProgress()
 
     try {
@@ -343,7 +360,7 @@ export class DeleteEngine {
         const gained = seen.size - before
         const heightGrew = target ? target.scrollHeight > heightBefore : false
 
-        this.progress.deleted = seen.size
+        this.progress.total = seen.size
         if (gained > 0) this.log.record(gained)
         this.emitProgress()
 
@@ -402,7 +419,8 @@ export class DeleteEngine {
       if (this.progress.status !== 'error') {
         this.progress.status = this.stopped ? 'idle' : 'done'
       }
-      this.progress.deleted = seen.size
+      // Report the observation, never a deletion count.
+      this.progress.deleted = 0
       this.progress.total = seen.size
       this.dryRunLabelsArr = [...seen]
       this.emitProgress()
@@ -442,7 +460,7 @@ export class DeleteEngine {
     }
     if (seen.size > beforeSize) {
       console.log(`${LOG} [dry-run] final settle picked up ${seen.size - beforeSize} more`)
-      this.progress.deleted = seen.size
+      this.progress.total = seen.size
       this.emitProgress()
     }
   }
