@@ -1,4 +1,6 @@
 {
+  "packageManager": "bun@1.4.0",
+  "engines": { "bun": ">=1.4.0" },
   "name": "google-photos-delete-tool",
   "version": "3.0.1",
   "private": true,
@@ -21,12 +23,12 @@
     "license:verify": "bun run scripts/license.ts verify",
     "listing:check": "bun run scripts/listing.ts",
     "listing:cws": "bun run scripts/listing.ts --cws-metadata",
-    "amo:bootstrap": "node scripts/amo-create.mjs --zip google-photos-delete-tool-firefox.zip",
-    "amo:bootstrap:dry": "node scripts/amo-create.mjs --zip google-photos-delete-tool-firefox.zip --dry-run",
-    "gf:upload": "node scripts/greasy-fork-upload.mjs",
-    "cws:listing": "node scripts/cws-listing.mjs",
-    "cws:screenshots": "node scripts/cws-screenshots.mjs",
-    "edge:bootstrap": "node scripts/edge-bootstrap.mjs"
+    "amo:bootstrap": "bun scripts/amo-create.mjs --zip google-photos-delete-tool-firefox.zip",
+    "amo:bootstrap:dry": "bun scripts/amo-create.mjs --zip google-photos-delete-tool-firefox.zip --dry-run",
+    "gf:upload": "bun scripts/greasy-fork-upload.mjs",
+    "cws:listing": "bun scripts/cws-listing.mjs",
+    "cws:screenshots": "bun scripts/cws-screenshots.mjs",
+    "edge:bootstrap": "bun scripts/edge-bootstrap.mjs"
   },
   "devDependencies": {
     "@types/archiver": "6",
