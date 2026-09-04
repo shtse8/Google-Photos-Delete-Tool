@@ -88,27 +88,48 @@ of current truth only. This is a personal product under the `shtse8`
 organisation; its real boundary is store listings and browser scripts, not
 company delivery vocabulary.
 
-- **Public probe.** The published store listing is the cheapest falsifiable
-  customer-visible proof at this product's boundary: the Chrome Web Store
-  listing
+- **Public probe.** The cheapest falsifiable customer-visible proof at this
+  product's boundary is the published Chrome Web Store listing
   `https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb`
-  (plus the Edge Add-ons, Firefox AMO, and Greasy Fork listings) shows the
-  version a customer can actually install, and the `store-state` branch
-  (`state.json`) records what is live per store — advanced only after the
-  platform API confirms a publish. A green CI run or a GitHub Release asset
-  alone is not proof a store version is live, and per `RELEASE_GATE.md` only
-  a real disposable-account run against Google Photos proves the release.
+  (item `jiahfbbfpacpolomdjlpdpiljllcdenb`). Attested 2026-09-04: HTTP 200,
+  listing Version `3.0.1`, Add to Chrome present; `store-state` records
+  `cws: "v3.0.1"`; Chrome update XML for that id returns `noupdate`;
+  shields.io `chrome-web-store/v` reports `v3.0.1`. A store `200` is not
+  the product contract. Per `RELEASE_GATE.md`, only a real disposable-account
+  run against Google Photos proves a live-product claim.
+
+  Dest-retracted locators (unpublished; not customer doors):
+  - Firefox AMO dest slug
+    `https://addons.mozilla.org/en-US/firefox/addon/google-photos-delete-tool/`
+    — HTTP 404, AMO API v5 `{"detail":"Not found."}`, search `shtse8`
+    count 0. `store-state` `amo: null`. store-retry skips AMO:
+    `FIREFOX_JWT_ISSUER` / `FIREFOX_JWT_SECRET` not configured.
+  - Microsoft Edge Add-ons — `store-state` `edge: null`;
+    `getproductdetailsbycrxid/jiahfbbfpacpolomdjlpdpiljllcdenb` HTTP 404.
+    store-retry skips Edge: `EDGE_CLIENT_ID` / `EDGE_API_KEY` /
+    `EDGE_PRODUCT_ID` not configured.
+  - Greasy Fork dest slug
+    `https://greasyfork.org/en/scripts/google-photos-delete-tool`
+    — HTTP 404 (`404 - Page Not Found`). Userscript locator is the GitHub
+    release asset
+    `https://github.com/shtse8/Google-Photos-Delete-Tool/releases/download/v3.0.1/google-photos-delete.user.js`.
+
+  The `store-state` branch (`state.json`) records what is live per store —
+  advanced only after the platform API confirms a publish. A green CI run or
+  a GitHub Release asset alone is not proof a store version is live.
 - **Owned manifest/migration writers.** Store pipelines are the release
   writers: `release.yml` on `v*` tags builds, verifies artifacts, and creates
   the GitHub Release (the source-of-truth assets); `store-retry.yml` (6-hour
   cron) drives `store-publish.yml`, which uploads and publishes the package
-  to Chrome Web Store, Edge Add-ons, and Firefox AMO via each store's API;
-  `update-cws-listing.yml` pushes CWS listing metadata from
+  to Chrome Web Store via its API. Edge Add-ons and Firefox AMO jobs in the
+  same workflow currently skip (`EDGE_*` / `FIREFOX_JWT_*` secrets not
+  configured) and are not dest locators until a publish is recorded in
+  `store-state`; `update-cws-listing.yml` pushes CWS listing metadata from
   `storefront/listing.json`; `bootstrap-amo.yml` is a one-time AMO add-on
-  creation; Greasy Fork (userscript) is human-once, and the script updates
-  itself afterwards. Store dashboards are consumers of
-  `storefront/listing.json`, never a second source. Migration writer: none —
-  there is no database and no migration.
+  creation that has not produced a live listing; Greasy Fork (userscript) is
+  unpublished (dest slug 404) and is not a customer locator. Store dashboards
+  are consumers of `storefront/listing.json`, never a second source.
+  Migration writer: none — there is no database and no migration.
 - **Consumed receipts.** GitHub Actions run receipts and GitHub Release
   assets; store-platform publish confirmations (CWS, Edge, AMO) recorded in
   the `store-state` branch; store review queues (`ITEM_NOT_UPDATABLE` on
