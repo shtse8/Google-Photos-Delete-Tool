@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Google Photos Delete Tool",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Consent-gated bulk delete for Google Photos: batch select, dry-run, and empty-trash.",
   "permissions": [
     "storage"
