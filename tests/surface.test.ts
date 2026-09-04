@@ -142,4 +142,12 @@ describe('GPDT-ENTER constants stay the single host writer', () => {
     expect(manifest.host_permissions).toEqual([SUPPORTED_MATCH_PATTERN])
     expect(manifest.content_scripts[0]?.matches).toEqual([SUPPORTED_MATCH_PATTERN])
   })
+
+  it('source manifest version equals package version', () => {
+    const manifest = JSON.parse(read('src/extension/manifest.json')) as {
+      version: string
+    }
+    const pkg = JSON.parse(read('package.json')) as { version: string }
+    expect(manifest.version).toBe(pkg.version)
+  })
 })

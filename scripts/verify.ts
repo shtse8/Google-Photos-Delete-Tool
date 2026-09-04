@@ -3,7 +3,7 @@
  *
  * Checks that the built artifacts are structurally correct and
  * self-consistent before they can be zipped / released:
- *   - manifest version == package version (both variants)
+ *   - source and built manifest version == package version (both variants)
  *   - Firefox manifest shape (background.scripts, no service_worker)
  *   - userscript metadata header matches the package version
  *   - IIFE self-containment (no import/import()/export statements)
@@ -36,6 +36,11 @@ function read(path: string): string {
 }
 
 console.log('verify: package version =', pkg.version)
+
+{
+  const m = JSON.parse(read('src/extension/manifest.json'))
+  check(m.version === pkg.version, `source chrome manifest version == ${pkg.version}`)
+}
 
 // ─── Chrome manifest ────────────────────────────────────────────
 {
