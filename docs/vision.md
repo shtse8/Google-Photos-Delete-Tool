@@ -47,9 +47,12 @@ The customer contract is:
 
 - The product acts only on `photos.google.com`. It is not a Google Photos API
   client, downloader, multi-site automation service, or unattended scheduler.
-- Supported customer surfaces are the Chrome/Firefox extension and the
-  userscript. The standalone build is a development artifact, not a third
-  supported product surface.
+- Supported runtime surfaces are the Chromium/Firefox MV3 extension and the
+  userscript. Customer-installable locators are the Chrome Web Store listing
+  and the GitHub release userscript. Firefox AMO, Microsoft Edge Add-ons, and
+  Greasy Fork listings are unpublished and are not dest locators. The
+  standalone build is a development artifact, not a third supported product
+  surface.
 - The deletion engine, dry run, and optional empty-trash flow are the core
   product. Local Pro licensing may unlock analysis and filters, but it must not
   weaken the destructive-action contract.
