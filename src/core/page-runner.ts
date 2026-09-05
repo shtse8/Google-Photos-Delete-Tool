@@ -10,9 +10,9 @@ import { DeleteEngine, type Progress } from './delete-engine'
 import { browserDom } from './browser-dom'
 import type { EngineDom } from './dom-adapter'
 import { createLocalStorageBaton, evaluatePendingEmptyTrash, TRASH_URL, type EmptyTrashBaton } from './empty-trash-baton'
-import { runEmptyTrashFlow, type EmptyTrashStatus } from './empty-trash'
+import { runEmptyTrashFlow, type EmptyTrashDeps, type EmptyTrashStatus } from './empty-trash'
 import { findConfirmButton, findConfirmDialog, findEmptyTrashButton, isTrashEmpty } from './selectors'
-import { sleep, waitUntil } from './utils'
+import { sleep } from './utils'
 import { buildDiagnosticIssueUrl, diagnostics } from './diagnostics'
 import { verifyLicense } from './license'
 import { classifyLabel, type PhotoFilter, type PhotoType } from './photo-filter'
@@ -27,8 +27,10 @@ import {
   throwForDestructiveRefusal,
   writeLocalAcknowledgement,
 } from './consent'
+import { RunInProgressError, StopRequested, waitUntilAbortable } from './run-occupancy'
 
 export { ConsentRequiredError, PermanentActionRequiredError } from './consent'
+export { RunInProgressError }
 
 export interface PanelRunOptions {
   maxCount: number
@@ -51,18 +53,33 @@ export interface DryRunSummary {
 
 const LICENSE_KEY = 'gpdt_pro_token_v3'
 
+type EmptyTrashHost = (deps: Pick<EmptyTrashDeps, 'waitFor' | 'sleep' | 'log' | 'onStatus'>) => Promise<void>
+
 export class PageRunner {
   private engine: DeleteEngine | null = null
   private running = false
+  private emptyTrashStopped = false
   private progress: Progress | null = null
   private statusListeners = new Set<(s: RunnerStatus) => void>()
   private summary: DryRunSummary | null = null
   private readonly dom: EngineDom
   private readonly baton: EmptyTrashBaton
+  private readonly runEmptyTrash: EmptyTrashHost
 
-  constructor(opts: { dom?: EngineDom; baton?: EmptyTrashBaton } = {}) {
+  constructor(opts: {
+    dom?: EngineDom
+    baton?: EmptyTrashBaton
+    runEmptyTrash?: EmptyTrashHost
+  } = {}) {
     this.dom = opts.dom ?? browserDom
     this.baton = opts.baton ?? createLocalStorageBaton()
+    this.runEmptyTrash = opts.runEmptyTrash ?? ((deps) => runEmptyTrashFlow({
+      findEmptyTrashButton,
+      findConfirmDialog,
+      findConfirmButton,
+      isTrashEmpty,
+      ...deps,
+    }))
   }
 
   // ─── Status broadcast ─────────────────────────────────────────
@@ -158,7 +175,7 @@ export class PageRunner {
   // ─── Run lifecycle ────────────────────────────────────────────
 
   async start(opts: PanelRunOptions): Promise<void> {
-    if (!admitConcurrentStart(this.running).ok) return
+    if (!admitConcurrentStart(this.running).ok) throw new RunInProgressError()
     const admission = admitDestructiveRun({
       dryRun: opts.dryRun,
       emptyTrashAfter: opts.emptyTrashAfter,
@@ -225,6 +242,7 @@ export class PageRunner {
 
   stop(): void {
     this.engine?.stop()
+    this.emptyTrashStopped = true
   }
 
   getSummary(): DryRunSummary | null {
@@ -252,31 +270,56 @@ export class PageRunner {
    * fresh AND on /trash (see evaluatePendingEmptyTrash).
    */
   async maybeRunPendingEmptyTrash(): Promise<void> {
+    if (this.running) return
+
     const pending = await this.baton.readPending()
     await this.baton.clearPending()
     const evalResult = evaluatePendingEmptyTrash(pending, Date.now(), this.dom.pathname)
     if (!evalResult.shouldRun) return
 
+    if (this.emptyTrashStopped) {
+      this.emptyTrashStopped = false
+      return
+    }
+
+    // Re-check after baton I/O: a start may have occupied the slot
+    // while we were reading. Do not start empty-trash, and do not
+    // clear the live start's occupancy in finally.
+    if (this.running) return
+    this.running = true
     this.setProgress({ deleted: 0, selected: 0, status: 'emptyingTrash', startedAt: Date.now() })
-    await runEmptyTrashFlow({
-      findEmptyTrashButton,
-      findConfirmDialog,
-      findConfirmButton,
-      isTrashEmpty,
-      waitFor: (cond, timeoutMs) => waitUntil(cond, timeoutMs, 400),
-      sleep,
-      log: (msg) => console.log(`[gpdt:runner] ${msg}`),
-      onStatus: (status: EmptyTrashStatus, extra?: { error?: string }) => {
+    try {
+      await this.runEmptyTrash({
+        waitFor: (cond, timeoutMs) =>
+          waitUntilAbortable(cond, timeoutMs, 400, () => this.emptyTrashStopped),
+        sleep,
+        log: (msg) => console.log(`[gpdt:runner] ${msg}`),
+        onStatus: (status: EmptyTrashStatus, extra?: { error?: string }) => {
+          this.setProgress({
+            deleted: 0,
+            selected: 0,
+            status: status as RunStatus,
+            startedAt: Date.now(),
+            error: extra?.error,
+          })
+        },
+      })
+    } catch (err) {
+      if (err instanceof StopRequested) {
         this.setProgress({
           deleted: 0,
           selected: 0,
-          status: status as RunStatus,
+          status: 'idle',
           startedAt: Date.now(),
-          error: extra?.error,
         })
-      },
-    }).catch(() => { /* already reported via onStatus */ })
-    this.emit()
+        return
+      }
+      /* already reported via onStatus */
+    } finally {
+      this.running = false
+      this.emptyTrashStopped = false
+      this.emit()
+    }
   }
 
   // ─── Diagnostics / issue reports ──────────────────────────────

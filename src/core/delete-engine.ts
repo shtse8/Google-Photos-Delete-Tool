@@ -5,16 +5,11 @@ import { shouldSelectTile, type PhotoFilter } from './photo-filter'
 import { diagnostics } from './diagnostics'
 import type { RunStatus } from './status'
 import { describeButton } from './utils'
+import { StopRequested } from './run-occupancy'
+
+export { StopRequested }
 
 const LOG = '[gpdt]'
-
-/** Thrown internally when the user requests a stop mid-wait. */
-export class StopRequested extends Error {
-  constructor() {
-    super('stop requested')
-    this.name = 'StopRequested'
-  }
-}
 
 export interface Progress {
   /** Photos actually moved to Trash. Always 0 for a dry-run scan — a preview never mutates. */
@@ -208,8 +203,7 @@ export class DeleteEngine {
 
     try {
       while (!this.stopped) {
-        await this.checkPause()
-        if (this.stopped) break
+        await this.awaitControl()
 
         // Phase 1: select what's visible (up to the effective batch cap).
         const beforeCount = this.getCount()
@@ -259,7 +253,7 @@ export class DeleteEngine {
             break
           }
           // Brief pause before retrying — the page might just be slow.
-          await this.dom.sleep(this.config.pollDelay)
+          await this.sleepControlled(this.config.pollDelay)
         } else {
           if (consecutiveNoProgress > 0) {
             console.log(
@@ -362,25 +356,25 @@ export class DeleteEngine {
     this.progress.status = 'scrolling'
     this.emitProgress()
 
-    // Start from the top — running a dry-run from mid-gallery would
-    // skip everything above the viewport otherwise.
-    const target = this.dom.findScrollTarget()
-    if (target) {
-      target.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-      await this.dom.sleep(this.config.scrollSettleMs)
-    }
-
-    // Initial harvest at the top before we touch the scroll target.
-    // The deduplicated Set size is a browser observation → progress.total.
-    // progress.deleted stays 0: nothing has been (or will be) deleted.
-    this.harvestVisibleIds(seen, (warned) => { missingIdWarned = warned })
-    this.progress.total = seen.size
-    this.emitProgress()
-
     try {
+      // Start from the top — running a dry-run from mid-gallery would
+      // skip everything above the viewport otherwise. The settle wait
+      // is inside the try so a user stop still resolves idle.
+      const target = this.dom.findScrollTarget()
+      if (target) {
+        target.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+        await this.sleepControlled(this.config.scrollSettleMs)
+      }
+
+      // Initial harvest at the top before we touch the scroll target.
+      // The deduplicated Set size is a browser observation → progress.total.
+      // progress.deleted stays 0: nothing has been (or will be) deleted.
+      this.harvestVisibleIds(seen, (warned) => { missingIdWarned = warned })
+      this.progress.total = seen.size
+      this.emitProgress()
+
       while (!this.stopped) {
-        await this.checkPause()
-        if (this.stopped) break
+        await this.awaitControl()
 
         const before = seen.size
         const heightBefore = target?.scrollHeight ?? 0
@@ -415,7 +409,7 @@ export class DeleteEngine {
             console.log(`${LOG} [dry-run] end of gallery — final count: ${seen.size}`)
             break
           }
-          await this.dom.sleep(this.config.pollDelay)
+          await this.sleepControlled(this.config.pollDelay)
         } else if (scrolled && gained === 0 && !heightGrew) {
           // Scrolled past content but found nothing new and the page
           // isn't lazy-loading more. After two such windows, done.
@@ -483,9 +477,12 @@ export class DeleteEngine {
   private async finalDryRunSettle(seen: Set<string>, onWarn: (missing: boolean) => void): Promise<void> {
     const beforeSize = seen.size
     const pollMs = Math.min(this.config.pollDelay, 200)
-    const settleDeadline = Date.now() + 2000
-    while (Date.now() < settleDeadline && !this.stopped) {
+    let remaining = 2000
+    while (remaining > 0) {
+      await this.awaitControl()
       await this.dom.sleep(pollMs)
+      await this.awaitControl()
+      remaining -= pollMs
       this.harvestVisibleIds(seen, onWarn)
     }
     if (seen.size > beforeSize) {
@@ -536,12 +533,17 @@ export class DeleteEngine {
     target.scrollBy({ top: step, left: 0, behavior: 'auto' })
 
     // Poll for the duration of scrollSettleMs, harvesting at every poll.
+    // Pause does not burn the settle budget — it holds the scan.
     const pollMs = Math.min(this.config.pollDelay, 200)
-    const start = Date.now()
-    while (Date.now() - start < this.config.scrollSettleMs) {
+    let remaining = this.config.scrollSettleMs
+    while (remaining > 0) {
+      await this.awaitControl()
       await this.dom.sleep(pollMs)
+      await this.awaitControl()
+      remaining -= pollMs
       this.harvestVisibleIds(seen, onWarn)
     }
+    await this.awaitControl()
     this.harvestVisibleIds(seen, onWarn)
 
     const scrolled = target.scrollTop > beforeTop || target.scrollHeight > beforeHeight
@@ -556,11 +558,23 @@ export class DeleteEngine {
 
   // ─── Private helpers ───────────────────────────────────────────
 
-  /** Wait while paused (resolves on resume or stop). */
-  private async checkPause(): Promise<void> {
+  /**
+   * Yield to pause/stop. Stop throws {@link StopRequested} so the run
+   * resolves idle; pause holds until resume continues this same engine.
+   */
+  private async awaitControl(): Promise<void> {
+    if (this.stopped) throw new StopRequested()
     if (this.pausePromise) {
       await this.pausePromise
     }
+    if (this.stopped) throw new StopRequested()
+  }
+
+  /** Sleep that still yields to pause/stop before and after. */
+  private async sleepControlled(ms: number): Promise<void> {
+    await this.awaitControl()
+    await this.dom.sleep(ms)
+    await this.awaitControl()
   }
 
   private emitProgress(): void {
@@ -611,10 +625,12 @@ export class DeleteEngine {
   private async selectVisibleCheckboxes(maxToSelect: number): Promise<number> {
     if (maxToSelect <= 0) return 0
 
-    const deadline = Date.now() + this.config.selectionSettleMs
+    // Budget is wave-settle time, not wall-clock: pause must not eat it.
+    let settleRemaining = this.config.selectionSettleMs
     let clicked = 0
 
-    while (Date.now() < deadline && clicked < maxToSelect) {
+    while (settleRemaining > 0 && clicked < maxToSelect) {
+      await this.awaitControl()
       const remaining = maxToSelect - clicked
       const candidates = this.dom.uncheckedTiles()
         .filter(tile => shouldSelectTile(tile.label(), this.filter))
@@ -626,10 +642,14 @@ export class DeleteEngine {
       clicked += candidates.length
       if (clicked >= maxToSelect) break
       await this.dom.sleep(50)
+      await this.awaitControl()
+      settleRemaining -= 50
     }
 
     // Final settle so the counter reflects the last wave.
+    await this.awaitControl()
     await this.dom.sleep(50)
+    await this.awaitControl()
     console.log(
       `${LOG} selected ${clicked} new item(s) ` +
       `(counter: ${this.getCount()}, filter: ${JSON.stringify(this.filter)})`,
@@ -654,13 +674,19 @@ export class DeleteEngine {
       checkboxes: this.dom.uncheckedTiles().length,
     })
 
+    await this.awaitControl()
+
     const before = measure()
     const step = Math.max(200, target.clientHeight || 800)
     target.scrollBy({ top: step, left: 0, behavior: 'auto' })
 
-    const start = Date.now()
-    while (Date.now() - start < this.config.scrollSettleMs) {
-      await this.dom.sleep(Math.min(this.config.pollDelay, 200))
+    let settleRemaining = this.config.scrollSettleMs
+    while (settleRemaining > 0) {
+      await this.awaitControl()
+      const slice = Math.min(this.config.pollDelay, 200)
+      await this.dom.sleep(slice)
+      await this.awaitControl()
+      settleRemaining -= slice
       const after = measure()
       const movedScroll = after.top > before.top
       const grewHeight = after.height > before.height
@@ -770,18 +796,17 @@ export class DeleteEngine {
     timeoutMs: number,
     what: string,
   ): Promise<NonNullable<T>> {
-    const start = Date.now()
+    let remaining = timeoutMs
     while (true) {
-      if (this.stopped) throw new StopRequested()
+      await this.awaitControl()
       const result = condition()
       if (result) return result as NonNullable<T>
-      if (Date.now() - start >= timeoutMs) {
+      if (remaining <= 0) {
         throw new Error(`Timed out after ${timeoutMs}ms: ${what}`)
       }
-      if (this.paused) {
-        await this.pausePromise
-      }
       await this.dom.sleep(this.config.pollDelay)
+      await this.awaitControl()
+      remaining -= this.config.pollDelay
     }
   }
 }

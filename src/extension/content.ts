@@ -20,7 +20,7 @@ import { DEFAULT_CONFIG, DeleteEngine, type Progress } from '../core'
 import type { PhotoFilter } from '../core/photo-filter'
 import { browserDom } from '../core/browser-dom'
 import { findConfirmButton, findConfirmDialog, findEmptyTrashButton, isTrashEmpty } from '../core/selectors'
-import { sleep, waitUntil } from '../core/utils'
+import { sleep } from '../core/utils'
 import { diagnostics } from '../core/diagnostics'
 import { evaluatePendingEmptyTrash, TRASH_URL } from '../core/empty-trash-baton'
 import { runEmptyTrashFlow, type EmptyTrashStatus } from '../core/empty-trash'
@@ -36,6 +36,11 @@ import {
   shouldNavigateToEmptyTrash,
   type Acknowledgement,
 } from '../core/consent'
+import {
+  isRunOccupied,
+  StopRequested,
+  waitUntilAbortable,
+} from '../core/run-occupancy'
 import { createChromeBaton, runtimeSendMessage, storageGet, storageRemove, storageSet } from './api'
 
 const LOG = '[gpdt:content]'
@@ -62,6 +67,8 @@ async function readChromeAcknowledgement(key: string): Promise<Acknowledgement> 
 let engine: DeleteEngine | null = null
 let runPromise: Promise<void> | null = null
 let starting = false
+let emptying = false
+let emptyTrashStopped = false
 
 interface StartOptions {
   maxCount?: number
@@ -74,7 +81,7 @@ const start = async (opts: StartOptions): Promise<{ ok: boolean; error?: string 
   if (!isSupportedPhotosUrl(window.location.href)) {
     return { ok: false, error: 'Not on photos.google.com.' }
   }
-  if (!admitConcurrentStart(engine !== null || runPromise !== null || starting).ok) {
+  if (!admitConcurrentStart(isRunOccupied({ engine, runPromise, starting, emptying })).ok) {
     return { ok: false, error: RUN_IN_PROGRESS_ERROR }
   }
   starting = true
@@ -146,9 +153,11 @@ const stop = (): void => {
   // Keep `engine` non-null until the run promise settles so a new Start
   // cannot race the tail of a stopped run. The engine resolves 'idle'.
   engine?.stop()
+  emptyTrashStopped = true
 }
 
-const isRunning = (): boolean => engine !== null && !engine.isStopped
+const isRunning = (): boolean =>
+  emptying || (engine !== null && !engine.isStopped)
 
 // ─── Empty-trash chain (after a clean real run) ─────────────────
 
@@ -209,20 +218,35 @@ async function maybeRunPendingEmptyTrash(): Promise<void> {
   await baton.clearPending()
   const evalResult = evaluatePendingEmptyTrash(pending, Date.now(), window.location.pathname)
   if (!evalResult.shouldRun) return
+  if (emptyTrashStopped) return
+  if (isRunOccupied({ engine, runPromise, starting, emptying })) return
 
+  emptying = true
   sendStatus('emptyingTrash')
-  await runEmptyTrashFlow({
-    findEmptyTrashButton,
-    findConfirmDialog,
-    findConfirmButton,
-    isTrashEmpty,
-    waitFor: (cond, timeoutMs) => waitUntil(cond, timeoutMs, 400),
-    sleep,
-    log: (msg) => console.log(`${LOG} ${msg}`),
-    onStatus: (status: EmptyTrashStatus, extra?: { error?: string }) => {
-      sendStatus(status, extra)
-    },
-  }).catch(() => { /* already reported via onStatus */ })
+  try {
+    await runEmptyTrashFlow({
+      findEmptyTrashButton,
+      findConfirmDialog,
+      findConfirmButton,
+      isTrashEmpty,
+      waitFor: (cond, timeoutMs) =>
+        waitUntilAbortable(cond, timeoutMs, 400, () => emptyTrashStopped),
+      sleep,
+      log: (msg) => console.log(`${LOG} ${msg}`),
+      onStatus: (status: EmptyTrashStatus, extra?: { error?: string }) => {
+        sendStatus(status, extra)
+      },
+    })
+  } catch (err) {
+    if (err instanceof StopRequested) {
+      sendStatus('idle')
+      return
+    }
+    /* already reported via onStatus */
+  } finally {
+    emptying = false
+    emptyTrashStopped = false
+  }
 }
 
 // ─── Progress reporting ─────────────────────────────────────────

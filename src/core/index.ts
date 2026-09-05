@@ -30,6 +30,12 @@ export {
   type Progress,
   type EngineOptions,
 } from './delete-engine'
+export {
+  RunInProgressError,
+  RUN_IN_PROGRESS_MESSAGE,
+  isRunOccupied,
+  waitUntilAbortable,
+} from './run-occupancy'
 export { sleep, waitUntil, formatElapsed, formatEta, describeButton } from './utils'
 export { DeletionLog, type DeletionEntry } from './deletion-log'
 export type { EngineDom, ClickTarget, ScrollTarget, PhotoTile } from './dom-adapter'
