@@ -60,18 +60,23 @@ flowchart TD
 
 ## Repository evidence
 
+- `GPDT-ENTER`: [surface.ts](../src/core/surface.ts) and
+  [surface.test.ts](../tests/surface.test.ts)
 - `GPDT-OBSERVE`: [selector-pack.ts](../src/core/selector-pack.ts),
   [selectors.ts](../src/core/selectors.ts), and
   [selectors.test.ts](../tests/selectors.test.ts)
 - `GPDT-PREVIEW`, `GPDT-BATCH`, `GPDT-BATCH-VERIFY`, and `GPDT-CONTROL`:
   [delete-engine.ts](../src/core/delete-engine.ts),
-  [config.ts](../src/core/config.ts), and
-  [delete-engine.test.ts](../tests/delete-engine.test.ts)
-- `GPDT-CONSENT`: [page-runner.ts](../src/core/page-runner.ts),
-  [content.ts](../src/extension/content.ts), and
-  [ui-wiring.test.ts](../tests/ui-wiring.test.ts)
-- `GPDT-TRASH-HANDOFF`: [empty-trash-baton.ts](../src/core/empty-trash-baton.ts)
-  and [empty-trash-baton.test.ts](../tests/empty-trash-baton.test.ts)
+  [config.ts](../src/core/config.ts),
+  [delete-engine.test.ts](../tests/delete-engine.test.ts), and
+  [page-runner.test.ts](../tests/page-runner.test.ts)
+- `GPDT-CONSENT`: [consent.ts](../src/core/consent.ts),
+  [consent.test.ts](../tests/consent.test.ts),
+  [page-runner.ts](../src/core/page-runner.ts), and
+  [content.ts](../src/extension/content.ts)
+- `GPDT-TRASH-HANDOFF`: [empty-trash-baton.ts](../src/core/empty-trash-baton.ts),
+  [empty-trash-baton.test.ts](../tests/empty-trash-baton.test.ts), and
+  [consent.ts](../src/core/consent.ts)
 - `GPDT-EMPTY-VERIFY`: [empty-trash.ts](../src/core/empty-trash.ts) and
   [empty-trash.test.ts](../tests/empty-trash.test.ts)
 - `GPDT-EVIDENCE`: [RELEASE_GATE.md](RELEASE_GATE.md)

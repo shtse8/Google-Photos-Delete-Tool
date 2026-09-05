@@ -5,6 +5,7 @@
  * i18n'd surface with the same controls (parity by contract, not code).
  */
 import type { PageRunner, PanelRunOptions } from '../../core/page-runner'
+import { admitDestructiveRun } from '../../core/consent'
 import { admitSurface, describePhotosView } from '../../core/surface'
 import { formatElapsed, formatEta } from '../../core/utils'
 import { ACTIVE_STATUSES } from '../../core/status'
@@ -245,7 +246,13 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
 
   startBtn.addEventListener('click', () => {
     const opts = readOptions()
-    if (!opts.dryRun && (!runner.consentAcknowledged() || (opts.emptyTrashAfter && !runner.emptyTrashAcknowledged()))) {
+    const admission = admitDestructiveRun({
+      dryRun: opts.dryRun,
+      emptyTrashAfter: opts.emptyTrashAfter,
+      consent: { readable: true, acknowledged: runner.consentAcknowledged() },
+      emptyTrashAck: { readable: true, acknowledged: runner.emptyTrashAcknowledged() },
+    })
+    if (!admission.ok) {
       pendingStart = opts
       consentPermanent.style.display = opts.emptyTrashAfter ? 'block' : 'none'
       consentCheck.checked = false

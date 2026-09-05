@@ -101,11 +101,16 @@ class FakeDom implements EngineDom {
       this.clicks.push('delete')
     },
   }
+  /** When false, confirm is clicked but the selected-count never returns to 0. */
+  confirmClearsSelection = true
+
   private confirmBtn: ClickTarget = {
     click: () => {
       this.clicks.push('confirm')
-      // Deletion REMOVES the checked photos from the gallery DOM.
-      this.tiles = this.tiles.filter((t) => !t.checked)
+      if (this.confirmClearsSelection) {
+        // Deletion REMOVES the checked photos from the gallery DOM.
+        this.tiles = this.tiles.filter((t) => !t.checked)
+      }
       this.dialogOpen = false
     },
   }
@@ -492,6 +497,23 @@ describe('DeleteEngine — positive batch limit (fail closed)', () => {
     expect(result.error).toMatch(/maxCount must be a positive integer/)
     expect(result.total).toBeUndefined()
     expect(dom.clicks.some((c) => c.startsWith('tile:'))).toBe(false)
+  })
+})
+
+describe('DeleteEngine — batch verify (selected-count reset)', () => {
+  it('does not increment deleted when selected-count never returns to 0 after confirm', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - a'])
+    dom.confirmClearsSelection = false
+    const { engine } = makeEngine(dom, { maxCount: 1, actionTimeout: 30, pollDelay: 1 })
+
+    const result = await engine.run()
+
+    expect(result.status).toBe('error')
+    expect(result.deleted).toBe(0)
+    expect(result.error).toMatch(/never returned to 0/)
+    expect(dom.clicks).toContain('confirm')
+    expect(dom.tiles).toHaveLength(1)
   })
 })
 

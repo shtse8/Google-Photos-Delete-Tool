@@ -8,6 +8,12 @@ import {
   isSupportedPhotosUrl,
   type PhotosView,
 } from '../../core/surface'
+import {
+  CONSENT_KEY,
+  EMPTY_TRASH_ACK_KEY,
+  admitDestructiveRun,
+  type Acknowledgement,
+} from '../../core/consent'
 import { storageGet, storageSet, tabsCreate, tabsQuery, tabsSendMessage } from '../api'
 import type { PhotoFilter, PhotoType } from '../../core/photo-filter'
 import { ACTIVE_STATUSES, TERMINAL_STATUSES, type RunStatus } from '../../core/status'
@@ -96,8 +102,6 @@ let lastReport: { total: number; labels: string[] } | null = null
 let currentView: PhotosView | null = null
 let surfaceReady = false
 
-const CONSENT_KEY = 'gpdt_consent_v3'
-const EMPTY_TRASH_ACK_KEY = 'gpdt_emptyTrashAck_v3'
 const PRO_TOKEN_KEY = 'proToken'
 
 // ─── Locale init ────────────────────────────────────────────────
@@ -459,12 +463,12 @@ const refreshEmptyTrashWarning = (): void => {
   emptyTrashWarning.classList.toggle('hidden', !emptyTrashInput.checked)
 }
 
-async function consentAcknowledged(): Promise<boolean> {
+async function readPopupAcknowledgement(key: string): Promise<Acknowledgement> {
   try {
-    const data = await storageGet([CONSENT_KEY])
-    return data[CONSENT_KEY] === true
+    const data = await storageGet([key])
+    return { readable: true, acknowledged: data[key] === true }
   } catch {
-    return false
+    return { readable: false, acknowledged: false }
   }
 }
 
@@ -473,16 +477,6 @@ async function acknowledgeConsent(): Promise<void> {
     await storageSet({ [CONSENT_KEY]: true })
   } catch (err) {
     console.warn(`${LOG} consent persist failed:`, err)
-  }
-}
-
-/** Permanent empty-trash acknowledgement (parallel to the general consent). */
-async function emptyTrashAcknowledged(): Promise<boolean> {
-  try {
-    const data = await storageGet([EMPTY_TRASH_ACK_KEY])
-    return data[EMPTY_TRASH_ACK_KEY] === true
-  } catch {
-    return false
   }
 }
 
@@ -536,7 +530,13 @@ startBtn.addEventListener('click', async () => {
     saveSettings()
     hideError()
 
-    if (!opts.dryRun && (!(await consentAcknowledged()) || (opts.emptyTrashAfter && !(await emptyTrashAcknowledged())))) {
+    const admission = admitDestructiveRun({
+      dryRun: opts.dryRun,
+      emptyTrashAfter: opts.emptyTrashAfter,
+      consent: await readPopupAcknowledgement(CONSENT_KEY),
+      emptyTrashAck: await readPopupAcknowledgement(EMPTY_TRASH_ACK_KEY),
+    })
+    if (!admission.ok) {
       pendingStart = opts
       consentPermanent.classList.toggle('hidden', !opts.emptyTrashAfter)
       consentCheck.checked = false
