@@ -64,6 +64,7 @@ export async function waitUntilAbortable<T>(
       throw new Error(`Timed out after ${timeout}ms`)
     }
     await sleepFn(pollDelay)
+    if (isStopped()) throw new StopRequested()
     remaining -= pollDelay
   }
 }

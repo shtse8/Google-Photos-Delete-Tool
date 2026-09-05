@@ -450,3 +450,54 @@ describe('PageRunner — empty-trash occupancy and stop (GPDT-CONTROL)', () => {
     expect(statuses).not.toContain('error')
   })
 })
+
+describe('PageRunner — empty-trash admission cannot race a live start (GPDT-CONTROL)', () => {
+  it('does not start empty-trash if a start occupied the slot during baton I/O, and does not release the live start', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.pathname = '/trash'
+    dom.setTiles(['Photo - a'])
+    let releaseBaton: () => void = () => undefined
+    const batonHold = new Promise<void>((r) => { releaseBaton = r })
+    const baton = fakeBaton()
+    void baton.writePending()
+    const origRead = baton.readPending.bind(baton)
+    baton.readPending = async () => {
+      await batonHold
+      return origRead()
+    }
+    let emptyStarts = 0
+    const runner = new PageRunner({
+      dom: dom as unknown as EngineDom,
+      baton,
+      runEmptyTrash: async () => { emptyStarts += 1 },
+    })
+    runner.acknowledgeConsent()
+    let releaseSleep: () => void = () => undefined
+    dom.sleepGate = new Promise<void>((r) => { releaseSleep = r })
+
+    const emptying = runner.maybeRunPendingEmptyTrash()
+    const first = runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
+    const startWait = Date.now()
+    while (!runner.getStatus().running) {
+      if (Date.now() - startWait > 1000) throw new Error('start never occupied the slot')
+      await new Promise((r) => setTimeout(r, 5))
+    }
+
+    releaseBaton()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(emptyStarts).toBe(0)
+    expect(runner.getStatus().running).toBe(true)
+
+    await expect(
+      runner.start({ maxCount: 500, dryRun: true, emptyTrashAfter: false, filter: { kind: 'all' } }),
+    ).rejects.toBeInstanceOf(RunInProgressError)
+
+    releaseSleep()
+    await first
+    await emptying
+    expect(emptyStarts).toBe(0)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(1)
+    expect(runner.getStatus().running).toBe(false)
+  })
+})

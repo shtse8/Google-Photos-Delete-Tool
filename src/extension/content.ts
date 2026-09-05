@@ -219,6 +219,7 @@ async function maybeRunPendingEmptyTrash(): Promise<void> {
   const evalResult = evaluatePendingEmptyTrash(pending, Date.now(), window.location.pathname)
   if (!evalResult.shouldRun) return
   if (emptyTrashStopped) return
+  if (isRunOccupied({ engine, runPromise, starting, emptying })) return
 
   emptying = true
   sendStatus('emptyingTrash')

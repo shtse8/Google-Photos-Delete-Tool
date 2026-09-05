@@ -167,6 +167,10 @@ class FakeDom implements EngineDom {
   releaseSleep(): void {
     for (const r of this.sleepResolvers.splice(0)) r()
   }
+
+  hasPendingSleep(): boolean {
+    return this.sleepResolvers.length > 0
+  }
 }
 
 const FAST_CONFIG = {
@@ -461,6 +465,61 @@ describe('DeleteEngine — pause holds a dry-run scan (GPDT-CONTROL)', () => {
     const totalAtPause = lastTotal()
     dom.releaseSleep()
     await new Promise((r) => setTimeout(r, 20))
+    expect(lastTotal()).toBe(totalAtPause)
+    expect(lastTotal()).toBe(2)
+
+    engine.resume()
+    const pump = setInterval(() => dom.releaseSleep(), 1)
+    try {
+      const result = await runPromise
+      expect(result.status).toBe('done')
+      expect(result.deleted).toBe(0)
+      expect(result.total).toBe(3)
+      expect(engine.getDryRunLabels()).toContain('Photo - c')
+    } finally {
+      clearInterval(pump)
+    }
+  })
+
+  it('does not harvest newly appeared labels during a scroll-settle poll while paused', async () => {
+    const dom = new FakeDom()
+    dom.manualSleep = true
+    // height > client so findScrollTarget exists and scrollAndHarvest polls.
+    dom.scrollState = { top: 0, height: 1200, client: 800 }
+    dom.setTiles(['Photo - a', 'Photo - b'])
+    const { engine, onProgress } = makeEngine(dom, {
+      maxCount: 500,
+      dryRun: true,
+      pollDelay: 200,
+      scrollSettleMs: 1,
+    })
+    const lastTotal = () => {
+      const calls = onProgress.mock.calls
+      const last = calls[calls.length - 1]?.[0] as { total?: number } | undefined
+      return last?.total ?? 0
+    }
+    const waitFor = async (pred: () => boolean, what: string): Promise<void> => {
+      const start = Date.now()
+      while (!pred()) {
+        if (Date.now() - start > 1000) throw new Error(what)
+        await new Promise((r) => setTimeout(r, 5))
+      }
+    }
+
+    const runPromise = engine.run()
+    await waitFor(() => dom.hasPendingSleep(), 'initial settle sleep never queued')
+    dom.releaseSleep()
+    await waitFor(() => lastTotal() === 2, 'initial harvest never emitted')
+    await waitFor(() => dom.hasPendingSleep(), 'scroll-settle poll sleep never queued')
+
+    engine.pause()
+    expect(engine.isPaused).toBe(true)
+    dom.appendTiles(['Photo - c'])
+    const totalAtPause = lastTotal()
+    dom.releaseSleep()
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(engine.isPaused).toBe(true)
     expect(lastTotal()).toBe(totalAtPause)
     expect(lastTotal()).toBe(2)
 

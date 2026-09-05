@@ -481,6 +481,7 @@ export class DeleteEngine {
     while (remaining > 0) {
       await this.awaitControl()
       await this.dom.sleep(pollMs)
+      await this.awaitControl()
       remaining -= pollMs
       this.harvestVisibleIds(seen, onWarn)
     }
@@ -538,9 +539,11 @@ export class DeleteEngine {
     while (remaining > 0) {
       await this.awaitControl()
       await this.dom.sleep(pollMs)
+      await this.awaitControl()
       remaining -= pollMs
       this.harvestVisibleIds(seen, onWarn)
     }
+    await this.awaitControl()
     this.harvestVisibleIds(seen, onWarn)
 
     const scrolled = target.scrollTop > beforeTop || target.scrollHeight > beforeHeight
@@ -639,6 +642,7 @@ export class DeleteEngine {
       clicked += candidates.length
       if (clicked >= maxToSelect) break
       await this.dom.sleep(50)
+      await this.awaitControl()
       settleRemaining -= 50
     }
 
@@ -681,6 +685,7 @@ export class DeleteEngine {
       await this.awaitControl()
       const slice = Math.min(this.config.pollDelay, 200)
       await this.dom.sleep(slice)
+      await this.awaitControl()
       settleRemaining -= slice
       const after = measure()
       const movedScroll = after.top > before.top
@@ -800,6 +805,7 @@ export class DeleteEngine {
         throw new Error(`Timed out after ${timeoutMs}ms: ${what}`)
       }
       await this.dom.sleep(this.config.pollDelay)
+      await this.awaitControl()
       remaining -= this.config.pollDelay
     }
   }

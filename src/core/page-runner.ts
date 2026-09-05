@@ -282,6 +282,10 @@ export class PageRunner {
       return
     }
 
+    // Re-check after baton I/O: a start may have occupied the slot
+    // while we were reading. Do not start empty-trash, and do not
+    // clear the live start's occupancy in finally.
+    if (this.running) return
     this.running = true
     this.setProgress({ deleted: 0, selected: 0, status: 'emptyingTrash', startedAt: Date.now() })
     try {
