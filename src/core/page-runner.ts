@@ -17,6 +17,18 @@ import { buildDiagnosticIssueUrl, diagnostics } from './diagnostics'
 import { verifyLicense } from './license'
 import { classifyLabel, type PhotoFilter, type PhotoType } from './photo-filter'
 import type { RunStatus } from './status'
+import {
+  CONSENT_KEY,
+  EMPTY_TRASH_ACK_KEY,
+  admitConcurrentStart,
+  admitDestructiveRun,
+  readLocalAcknowledgement,
+  shouldNavigateToEmptyTrash,
+  throwForDestructiveRefusal,
+  writeLocalAcknowledgement,
+} from './consent'
+
+export { ConsentRequiredError, PermanentActionRequiredError } from './consent'
 
 export interface PanelRunOptions {
   maxCount: number
@@ -37,23 +49,7 @@ export interface DryRunSummary {
   counts: Record<PhotoType, number>
 }
 
-const CONSENT_KEY = 'gpdt_consent_v3'
-const EMPTY_TRASH_ACK_KEY = 'gpdt_emptyTrashAck_v3'
 const LICENSE_KEY = 'gpdt_pro_token_v3'
-
-export class ConsentRequiredError extends Error {
-  constructor() {
-    super('consent required before a destructive run')
-    this.name = 'ConsentRequiredError'
-  }
-}
-
-export class PermanentActionRequiredError extends Error {
-  constructor() {
-    super('permanent empty-trash acknowledgement required before an empty-trash run')
-    this.name = 'PermanentActionRequiredError'
-  }
-}
 
 export class PageRunner {
   private engine: DeleteEngine | null = null
@@ -99,19 +95,12 @@ export class PageRunner {
   // ─── Consent ──────────────────────────────────────────────────
 
   consentAcknowledged(): boolean {
-    try {
-      return window.localStorage.getItem(CONSENT_KEY) === '1'
-    } catch {
-      return false
-    }
+    const ack = readLocalAcknowledgement(CONSENT_KEY)
+    return ack.readable && ack.acknowledged
   }
 
   acknowledgeConsent(): void {
-    try {
-      window.localStorage.setItem(CONSENT_KEY, '1')
-    } catch {
-      /* storage unavailable — consent re-asked next time */
-    }
+    writeLocalAcknowledgement(CONSENT_KEY)
   }
 
   /**
@@ -122,19 +111,12 @@ export class PageRunner {
    * chains into the permanent empty-trash flow.
    */
   emptyTrashAcknowledged(): boolean {
-    try {
-      return window.localStorage.getItem(EMPTY_TRASH_ACK_KEY) === '1'
-    } catch {
-      return false
-    }
+    const ack = readLocalAcknowledgement(EMPTY_TRASH_ACK_KEY)
+    return ack.readable && ack.acknowledged
   }
 
   acknowledgeEmptyTrash(): void {
-    try {
-      window.localStorage.setItem(EMPTY_TRASH_ACK_KEY, '1')
-    } catch {
-      /* storage unavailable — acknowledgement re-asked next time */
-    }
+    writeLocalAcknowledgement(EMPTY_TRASH_ACK_KEY)
   }
 
   // ─── Pro license ──────────────────────────────────────────────
@@ -176,11 +158,14 @@ export class PageRunner {
   // ─── Run lifecycle ────────────────────────────────────────────
 
   async start(opts: PanelRunOptions): Promise<void> {
-    if (this.running) return
-    if (!opts.dryRun) {
-      if (!this.consentAcknowledged()) throw new ConsentRequiredError()
-      if (opts.emptyTrashAfter && !this.emptyTrashAcknowledged()) throw new PermanentActionRequiredError()
-    }
+    if (!admitConcurrentStart(this.running).ok) return
+    const admission = admitDestructiveRun({
+      dryRun: opts.dryRun,
+      emptyTrashAfter: opts.emptyTrashAfter,
+      consent: readLocalAcknowledgement(CONSENT_KEY),
+      emptyTrashAck: readLocalAcknowledgement(EMPTY_TRASH_ACK_KEY),
+    })
+    if (!admission.ok) throwForDestructiveRefusal(admission.reason)
     this.running = true
     this.summary = null
     this.progress = null
@@ -204,13 +189,13 @@ export class PageRunner {
       }
 
       // Empty-trash chain: only after a clean, real run that deleted ≥1.
-      if (
-        !opts.dryRun &&
-        opts.emptyTrashAfter &&
-        !engine.isStopped &&
-        result.status === 'done' &&
-        result.deleted > 0
-      ) {
+      if (shouldNavigateToEmptyTrash({
+        dryRun: opts.dryRun,
+        emptyTrashAfter: opts.emptyTrashAfter,
+        stopped: engine.isStopped,
+        status: result.status,
+        deleted: result.deleted,
+      })) {
         const ok = await this.baton.writePending()
         if (ok) {
           this.setProgress({

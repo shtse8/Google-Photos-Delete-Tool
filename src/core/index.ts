@@ -81,3 +81,23 @@ export {
   type PhotosViewKind,
   type SurfaceAdmission,
 } from './surface'
+
+export {
+  CONSENT_KEY,
+  EMPTY_TRASH_ACK_KEY,
+  LOCAL_ACK_VALUE,
+  EXTENSION_ADMISSION_ERROR,
+  RUN_IN_PROGRESS_ERROR,
+  admitDestructiveRun,
+  shouldNavigateToEmptyTrash,
+  admitConcurrentStart,
+  readLocalAcknowledgement,
+  writeLocalAcknowledgement,
+  throwForDestructiveRefusal,
+  ConsentRequiredError,
+  PermanentActionRequiredError,
+  type Acknowledgement,
+  type DestructiveAdmission,
+  type DestructiveRefuseReason,
+  type OccupancyAdmission,
+} from './consent'

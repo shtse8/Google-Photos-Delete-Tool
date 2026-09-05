@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { PageRunner, ConsentRequiredError } from '../src/core/page-runner'
+import { PageRunner, ConsentRequiredError, PermanentActionRequiredError } from '../src/core/page-runner'
 import type { EngineDom, ClickTarget, PhotoTile, ScrollTarget } from '../src/core/dom-adapter'
-import type { EmptyTrashBaton } from '../src/core/empty-trash-baton'
+import { TRASH_URL, type EmptyTrashBaton } from '../src/core/empty-trash-baton'
+import { CONSENT_KEY, EMPTY_TRASH_ACK_KEY } from '../src/core/consent'
 import { diagnostics } from '../src/core/diagnostics'
 
 /**
@@ -15,9 +16,16 @@ class RunnerFakeDom implements EngineDom {
   tiles: { label: string; checked: boolean }[] = []
   cap = Number.MAX_SAFE_INTEGER
   clicks: string[] = []
+  holdSleep = false
+  private sleepResolvers: Array<() => void> = []
 
   setTiles(labels: string[]): void {
     this.tiles = labels.map((label) => ({ label, checked: false }))
+  }
+
+  releaseSleep(): void {
+    this.holdSleep = false
+    for (const resolve of this.sleepResolvers.splice(0)) resolve()
   }
 
   counterText(): string | null {
@@ -36,30 +44,53 @@ class RunnerFakeDom implements EngineDom {
   findConfirmButton(): ClickTarget | null { return this.confirmBtn }
   findScrollTarget(): ScrollTarget | null { return null }
   click(target: ClickTarget): void { target.click() }
-  async sleep(): Promise<void> { return undefined }
+  async sleep(): Promise<void> {
+    if (!this.holdSleep) return
+    await new Promise<void>((resolve) => { this.sleepResolvers.push(resolve) })
+  }
 }
 
-const fakeBaton = (): EmptyTrashBaton & { pending: { at: number } | null } => {
-  const state: { pending: { at: number } | null } = { pending: null }
+const fakeBaton = (): EmptyTrashBaton & {
+  pending: { at: number } | null
+  writes: number
+  writeOk: boolean
+} => {
+  const state: { pending: { at: number } | null; writes: number; writeOk: boolean } = {
+    pending: null,
+    writes: 0,
+    writeOk: true,
+  }
   return {
-    pending: state.pending,
+    get pending() { return state.pending },
+    get writes() { return state.writes },
+    get writeOk() { return state.writeOk },
+    set writeOk(v: boolean) { state.writeOk = v },
     async readPending() { return state.pending },
-    async writePending(at = Date.now()) { state.pending = { at }; return true },
+    async writePending(at = Date.now()) {
+      state.writes += 1
+      if (!state.writeOk) return false
+      state.pending = { at }
+      return true
+    },
     async clearPending() { state.pending = null },
   }
 }
 
-const stubWindow = () => {
+const stubWindow = (opts: { throwOnGet?: (key: string) => boolean } = {}) => {
   const store = new Map<string, string>()
+  const location = { href: 'https://photos.google.com/' }
   vi.stubGlobal('window', {
     localStorage: {
-      getItem: (k: string) => store.get(k) ?? null,
+      getItem: (k: string) => {
+        if (opts.throwOnGet?.(k)) throw new Error('storage unreadable')
+        return store.get(k) ?? null
+      },
       setItem: (k: string, v: string) => { store.set(k, v) },
       removeItem: (k: string) => { store.delete(k) },
     },
-    location: { href: 'https://photos.google.com/' },
+    location,
   } as unknown as Window & typeof globalThis)
-  return store
+  return { store, location }
 }
 
 const stubNavigator = () => {
@@ -84,6 +115,43 @@ describe('PageRunner — consent gate', () => {
     expect(runner.getStatus().running).toBe(false)
   })
 
+  it('refuses a destructive run when consent storage is unreadable', async () => {
+    stubWindow({ throwOnGet: (key) => key === CONSENT_KEY })
+    const runner = new PageRunner({ dom: new RunnerFakeDom() as unknown as EngineDom, baton: fakeBaton() })
+    await expect(runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } }))
+      .rejects.toBeInstanceOf(ConsentRequiredError)
+    expect(runner.getStatus().running).toBe(false)
+  })
+
+  it('refuses an empty-trash run without the permanent acknowledgement', async () => {
+    stubWindow()
+    const runner = new PageRunner({ dom: new RunnerFakeDom() as unknown as EngineDom, baton: fakeBaton() })
+    runner.acknowledgeConsent()
+    await expect(runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: true, filter: { kind: 'all' } }))
+      .rejects.toBeInstanceOf(PermanentActionRequiredError)
+    expect(runner.getStatus().running).toBe(false)
+  })
+
+  it('refuses an empty-trash run when the permanent acknowledgement is unreadable', async () => {
+    stubWindow({ throwOnGet: (key) => key === EMPTY_TRASH_ACK_KEY })
+    const runner = new PageRunner({ dom: new RunnerFakeDom() as unknown as EngineDom, baton: fakeBaton() })
+    runner.acknowledgeConsent()
+    await expect(runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: true, filter: { kind: 'all' } }))
+      .rejects.toBeInstanceOf(PermanentActionRequiredError)
+    expect(runner.getStatus().running).toBe(false)
+  })
+
+  it('admits a dry-run without consent and never clicks', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(['Photo - a'])
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    await runner.start({ maxCount: 500, dryRun: true, emptyTrashAfter: true, filter: { kind: 'all' } })
+    expect(runner.getStatus().running).toBe(false)
+    expect(dom.clicks).toHaveLength(0)
+    expect(runner.getSummary()?.total).toBe(1)
+  })
+
   it('runs after consent is acknowledged', async () => {
     stubWindow()
     const dom = new RunnerFakeDom()
@@ -95,6 +163,110 @@ describe('PageRunner — consent gate', () => {
     await runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
     expect(runner.getStatus().running).toBe(false)
     expect(dom.clicks).toContain('confirm')
+  })
+})
+
+describe('PageRunner — occupancy', () => {
+  it('does not start a second engine while the first run is settling', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.holdSleep = true
+    dom.setTiles(['Photo - a', 'Photo - b'])
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    runner.acknowledgeConsent()
+
+    const first = runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
+    expect(runner.getStatus().running).toBe(true)
+    const second = runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
+    await expect(second).resolves.toBeUndefined()
+    expect(runner.getStatus().running).toBe(true)
+
+    dom.releaseSleep()
+    await first
+    expect(runner.getStatus().running).toBe(false)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(1)
+  })
+})
+
+describe('PageRunner — empty-trash chain', () => {
+  it('navigates only after a clean real run that deleted at least one item', async () => {
+    const { location } = stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(['Photo - a'])
+    const baton = fakeBaton()
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton })
+    runner.acknowledgeConsent()
+    runner.acknowledgeEmptyTrash()
+
+    await runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: true, filter: { kind: 'all' } })
+
+    expect(baton.writes).toBe(1)
+    expect(baton.pending).not.toBeNull()
+    expect(location.href).toBe(TRASH_URL)
+  })
+
+  it('does not navigate after a dry-run', async () => {
+    const { location } = stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(['Photo - a'])
+    const baton = fakeBaton()
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton })
+
+    await runner.start({ maxCount: 500, dryRun: true, emptyTrashAfter: true, filter: { kind: 'all' } })
+
+    expect(baton.writes).toBe(0)
+    expect(location.href).toBe('https://photos.google.com/')
+  })
+
+  it('does not navigate when a real run deleted nothing', async () => {
+    const { location } = stubWindow()
+    const dom = new RunnerFakeDom()
+    const baton = fakeBaton()
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton })
+    runner.acknowledgeConsent()
+    runner.acknowledgeEmptyTrash()
+
+    await runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: true, filter: { kind: 'all' } })
+
+    expect(baton.writes).toBe(0)
+    expect(location.href).toBe('https://photos.google.com/')
+  })
+
+  it('does not navigate when the run is stopped', async () => {
+    const { location } = stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.holdSleep = true
+    dom.setTiles(['Photo - a'])
+    const baton = fakeBaton()
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton })
+    runner.acknowledgeConsent()
+    runner.acknowledgeEmptyTrash()
+
+    const started = runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: true, filter: { kind: 'all' } })
+    expect(runner.getStatus().running).toBe(true)
+    runner.stop()
+    dom.releaseSleep()
+    await started
+
+    expect(baton.writes).toBe(0)
+    expect(location.href).toBe('https://photos.google.com/')
+  })
+
+  it('does not navigate when the baton cannot be persisted', async () => {
+    const { location } = stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(['Photo - a'])
+    const baton = fakeBaton()
+    baton.writeOk = false
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton })
+    runner.acknowledgeConsent()
+    runner.acknowledgeEmptyTrash()
+
+    await runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: true, filter: { kind: 'all' } })
+
+    expect(baton.writes).toBe(1)
+    expect(baton.pending).toBeNull()
+    expect(location.href).toBe('https://photos.google.com/')
   })
 })
 

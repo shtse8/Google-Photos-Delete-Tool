@@ -26,6 +26,16 @@ import { evaluatePendingEmptyTrash, TRASH_URL } from '../core/empty-trash-baton'
 import { runEmptyTrashFlow, type EmptyTrashStatus } from '../core/empty-trash'
 import type { RunStatus } from '../core/status'
 import { isSupportedPhotosUrl } from '../core/surface'
+import {
+  CONSENT_KEY,
+  EMPTY_TRASH_ACK_KEY,
+  EXTENSION_ADMISSION_ERROR,
+  RUN_IN_PROGRESS_ERROR,
+  admitConcurrentStart,
+  admitDestructiveRun,
+  shouldNavigateToEmptyTrash,
+  type Acknowledgement,
+} from '../core/consent'
 import { createChromeBaton, runtimeSendMessage, storageGet, storageRemove, storageSet } from './api'
 
 const LOG = '[gpdt:content]'
@@ -33,15 +43,19 @@ const LOG = '[gpdt:content]'
 const STORAGE_KEYS = {
   /** Set by the popup; observed once when the engine finishes. */
   emptyTrashAfter: 'gpdt_emptyAfter',
-  /** Consent acknowledgment for destructive runs (v3). */
-  consent: 'gpdt_consent_v3',
-  /**
-   * Permanent empty-trash acknowledgement (v3). Required — in addition
-   * to the general consent — before a real run that selects the
-   * permanent "Empty trash afterwards" option is admitted.
-   */
-  emptyTrashAck: 'gpdt_emptyTrashAck_v3',
+  consent: CONSENT_KEY,
+  emptyTrashAck: EMPTY_TRASH_ACK_KEY,
 } as const
+
+async function readChromeAcknowledgement(key: string): Promise<Acknowledgement> {
+  try {
+    const data = await storageGet([key])
+    return { readable: true, acknowledged: Boolean(data[key]) }
+  } catch (err) {
+    console.warn(`${LOG} acknowledgement read failed (${key}):`, err)
+    return { readable: false, acknowledged: false }
+  }
+}
 
 // ─── Engine lifecycle ───────────────────────────────────────────
 
@@ -60,8 +74,8 @@ const start = async (opts: StartOptions): Promise<{ ok: boolean; error?: string 
   if (!isSupportedPhotosUrl(window.location.href)) {
     return { ok: false, error: 'Not on photos.google.com.' }
   }
-  if (engine || runPromise || starting) {
-    return { ok: false, error: 'A run is already in progress — stop it first.' }
+  if (!admitConcurrentStart(engine !== null || runPromise !== null || starting).ok) {
+    return { ok: false, error: RUN_IN_PROGRESS_ERROR }
   }
   starting = true
   try {
@@ -70,31 +84,17 @@ const start = async (opts: StartOptions): Promise<{ ok: boolean; error?: string 
     const emptyTrashAfter = opts.emptyTrashAfter ?? false
     const filter = opts.filter ?? { kind: 'all' as const }
 
+    let consent: Acknowledgement = { readable: true, acknowledged: false }
+    let emptyTrashAck: Acknowledgement = { readable: true, acknowledged: false }
     if (!dryRun) {
-      try {
-        const data = await storageGet([STORAGE_KEYS.consent])
-        if (!data[STORAGE_KEYS.consent]) {
-          return { ok: false, error: 'Consent required — confirm the safety notice in the popup first.' }
-        }
-      } catch (err) {
-        console.warn(`${LOG} consent read failed:`, err)
-        return { ok: false, error: 'Could not read consent state.' }
-      }
-
+      consent = await readChromeAcknowledgement(STORAGE_KEYS.consent)
       if (emptyTrashAfter) {
-        try {
-          const data = await storageGet([STORAGE_KEYS.emptyTrashAck])
-          if (!data[STORAGE_KEYS.emptyTrashAck]) {
-            return {
-              ok: false,
-              error: 'Permanent empty-trash consent required — confirm the permanent-action warning in the popup first.',
-            }
-          }
-        } catch (err) {
-          console.warn(`${LOG} empty-trash consent read failed:`, err)
-          return { ok: false, error: 'Could not read permanent empty-trash consent state.' }
-        }
+        emptyTrashAck = await readChromeAcknowledgement(STORAGE_KEYS.emptyTrashAck)
       }
+    }
+    const admission = admitDestructiveRun({ dryRun, emptyTrashAfter, consent, emptyTrashAck })
+    if (!admission.ok) {
+      return { ok: false, error: EXTENSION_ADMISSION_ERROR[admission.reason] }
     }
 
     try {
@@ -159,13 +159,6 @@ async function maybeChainEmptyTrash(
   dryRun: boolean,
   result: Progress,
 ): Promise<void> {
-  if (local.isStopped || dryRun) return
-  if (result.status !== 'done' || result.deleted <= 0) {
-    console.warn(`${LOG} skipping empty-trash navigation — status=${result.status}, deleted=${result.deleted}`)
-    await clearEmptyAfter()
-    return
-  }
-
   let wantEmpty = false
   try {
     const data = await storageGet([STORAGE_KEYS.emptyTrashAfter])
@@ -174,7 +167,18 @@ async function maybeChainEmptyTrash(
     console.warn(`${LOG} storage read failed; skipping empty-trash navigation:`, err)
   }
   await clearEmptyAfter()
-  if (!wantEmpty) return
+  if (!shouldNavigateToEmptyTrash({
+    dryRun,
+    emptyTrashAfter: wantEmpty,
+    stopped: local.isStopped,
+    status: result.status,
+    deleted: result.deleted,
+  })) {
+    if (wantEmpty) {
+      console.warn(`${LOG} skipping empty-trash navigation — status=${result.status}, deleted=${result.deleted}`)
+    }
+    return
+  }
 
   console.log(`${LOG} engine done — emptyTrashAfter set, navigating to /trash`)
   const ok = await baton.writePending()
