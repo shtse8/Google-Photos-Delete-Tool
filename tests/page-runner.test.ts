@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { PageRunner, ConsentRequiredError, PermanentActionRequiredError } from '../src/core/page-runner'
+import { PageRunner, ConsentRequiredError, PermanentActionRequiredError, RunInProgressError } from '../src/core/page-runner'
+import { runEmptyTrashFlow } from '../src/core/empty-trash'
 import type { EngineDom, ClickTarget, PhotoTile, ScrollTarget } from '../src/core/dom-adapter'
 import { TRASH_URL, type EmptyTrashBaton } from '../src/core/empty-trash-baton'
 import { CONSENT_KEY, EMPTY_TRASH_ACK_KEY } from '../src/core/consent'
@@ -18,6 +19,7 @@ class RunnerFakeDom implements EngineDom {
   clicks: string[] = []
   holdSleep = false
   private sleepResolvers: Array<() => void> = []
+  sleepGate: Promise<void> | null = null
 
   setTiles(labels: string[]): void {
     this.tiles = labels.map((label) => ({ label, checked: false }))
@@ -45,6 +47,7 @@ class RunnerFakeDom implements EngineDom {
   findScrollTarget(): ScrollTarget | null { return null }
   click(target: ClickTarget): void { target.click() }
   async sleep(): Promise<void> {
+    if (this.sleepGate) await this.sleepGate
     if (!this.holdSleep) return
     await new Promise<void>((resolve) => { this.sleepResolvers.push(resolve) })
   }
@@ -178,7 +181,7 @@ describe('PageRunner — occupancy', () => {
     const first = runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
     expect(runner.getStatus().running).toBe(true)
     const second = runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
-    await expect(second).resolves.toBeUndefined()
+    await expect(second).rejects.toBeInstanceOf(RunInProgressError)
     expect(runner.getStatus().running).toBe(true)
 
     dom.releaseSleep()
@@ -333,5 +336,117 @@ describe('PageRunner — issue report URL', () => {
     const decoded = decodeURIComponent(url).replace(/\+/g, ' ')
     expect(decoded).toContain('[drift] Tool stopped working correctly')
     expect(decoded).toContain('Diagnostic data')
+  })
+})
+
+describe('PageRunner — second start refused while a run occupies the slot (GPDT-CONTROL)', () => {
+  it('throws RunInProgressError on a second start while the first run is settling and does not confirm twice', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(['Photo - a'])
+    let release: () => void = () => undefined
+    dom.sleepGate = new Promise<void>((r) => { release = r })
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    runner.acknowledgeConsent()
+
+    const first = runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
+    const startWait = Date.now()
+    while (!runner.getStatus().running) {
+      if (Date.now() - startWait > 1000) throw new Error('first start never occupied the slot')
+      await new Promise((r) => setTimeout(r, 5))
+    }
+
+    await expect(
+      runner.start({ maxCount: 500, dryRun: true, emptyTrashAfter: false, filter: { kind: 'all' } }),
+    ).rejects.toBeInstanceOf(RunInProgressError)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(0)
+
+    release()
+    await first
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(1)
+    expect(runner.getStatus().running).toBe(false)
+  })
+})
+
+describe('PageRunner — empty-trash occupancy and stop (GPDT-CONTROL)', () => {
+  const pendingBaton = () => {
+    const baton = fakeBaton()
+    void baton.writePending()
+    return baton
+  }
+
+  it('refuses a second start while empty-trash occupies the run slot', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.pathname = '/trash'
+    let release: () => void = () => undefined
+    const hang = new Promise<void>((r) => { release = r })
+    let emptyStarts = 0
+    const runner = new PageRunner({
+      dom: dom as unknown as EngineDom,
+      baton: pendingBaton(),
+      runEmptyTrash: async ({ onStatus }) => {
+        emptyStarts += 1
+        onStatus?.('emptyingTrash')
+        await hang
+        onStatus?.('done')
+      },
+    })
+
+    const emptying = runner.maybeRunPendingEmptyTrash()
+    const startWait = Date.now()
+    while (!runner.getStatus().running) {
+      if (Date.now() - startWait > 1000) throw new Error('empty-trash never occupied the slot')
+      await new Promise((r) => setTimeout(r, 5))
+    }
+    expect(runner.getStatus().progress?.status).toBe('emptyingTrash')
+
+    await expect(
+      runner.start({ maxCount: 500, dryRun: true, emptyTrashAfter: false, filter: { kind: 'all' } }),
+    ).rejects.toBeInstanceOf(RunInProgressError)
+    expect(emptyStarts).toBe(1)
+
+    release()
+    await emptying
+    expect(emptyStarts).toBe(1)
+    expect(runner.getStatus().running).toBe(false)
+  })
+
+  it('stop during an empty-trash wait resolves to idle, never done or error, and does not click confirm', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.pathname = '/trash'
+    const statuses: string[] = []
+    const runner = new PageRunner({
+      dom: dom as unknown as EngineDom,
+      baton: pendingBaton(),
+      runEmptyTrash: (deps) => runEmptyTrashFlow({
+        findEmptyTrashButton: () => null,
+        findConfirmDialog: () => null,
+        findConfirmButton: () => null,
+        isTrashEmpty: () => false,
+        ...deps,
+      }),
+    })
+    const unsub = runner.onUpdate((s) => {
+      if (s.progress) statuses.push(s.progress.status)
+    })
+
+    const emptying = runner.maybeRunPendingEmptyTrash()
+    const startWait = Date.now()
+    while (!runner.getStatus().running) {
+      if (Date.now() - startWait > 1000) throw new Error('empty-trash never occupied the slot')
+      await new Promise((r) => setTimeout(r, 5))
+    }
+
+    runner.stop()
+    await emptying
+    unsub()
+
+    expect(runner.getStatus().running).toBe(false)
+    expect(runner.getStatus().progress?.status).toBe('idle')
+    expect(runner.getStatus().progress?.error).toBeUndefined()
+    expect(statuses).not.toContain('done')
+    expect(statuses).not.toContain('error')
   })
 })

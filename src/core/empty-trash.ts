@@ -9,6 +9,7 @@
  * A "done" without proof is never emitted for a permanent action.
  */
 import { describeButton } from './utils'
+import { StopRequested } from './run-occupancy'
 /**
  * Status the flow reports as it progresses.
  */
@@ -73,7 +74,8 @@ export async function runEmptyTrashFlow(deps: EmptyTrashDeps): Promise<void> {
     let btn: HTMLElement
     try {
       btn = await deps.waitFor(deps.findEmptyTrashButton, t.findButton)
-    } catch {
+    } catch (err) {
+      if (err instanceof StopRequested) throw err
       // The trash may already be empty — resolve to done instead of error.
       if (deps.isTrashEmpty()) {
         log('trash already empty')
@@ -103,7 +105,8 @@ export async function runEmptyTrashFlow(deps: EmptyTrashDeps): Promise<void> {
         () => (!deps.findEmptyTrashButton() && !deps.findConfirmDialog()) || deps.isTrashEmpty(),
         t.postConfirm,
       )
-    } catch {
+    } catch (err) {
+      if (err instanceof StopRequested) throw err
       throw new Error(
         'Empty trash may not have completed: the toolbar still shows an empty action. ' +
         'Please verify /trash manually before assuming photos are gone.',
@@ -113,6 +116,7 @@ export async function runEmptyTrashFlow(deps: EmptyTrashDeps): Promise<void> {
     onStatus('done')
     log('trash emptied (postcondition verified)')
   } catch (err) {
+    if (err instanceof StopRequested) throw err
     const msg = err instanceof Error ? err.message : String(err)
     log(`empty-trash failed: ${msg}`)
     onStatus('error', { error: `Empty trash failed: ${msg}` })

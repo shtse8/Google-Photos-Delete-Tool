@@ -5,6 +5,7 @@ import {
   type EmptyTrashDeps,
   type EmptyTrashStatus,
 } from '../src/core/empty-trash'
+import { StopRequested } from '../src/core/run-occupancy'
 
 /**
  * The flow's job is orchestration: find → click → find dialog → find
@@ -239,5 +240,53 @@ describe('runEmptyTrashFlow — logging', () => {
   it('works without log / onStatus (no-ops by default)', async () => {
     const { deps } = happyWorld()
     await expect(runEmptyTrashFlow({ ...deps, log: undefined, onStatus: undefined })).resolves.toBeUndefined()
+  })
+})
+
+describe('runEmptyTrashFlow — user stop (GPDT-CONTROL)', () => {
+  it('rethrows StopRequested without reporting error or clicking', async () => {
+    const empty = fakeButton('Empty trash')
+    const statuses: EmptyTrashStatus[] = []
+    const deps: EmptyTrashDeps = {
+      findEmptyTrashButton: () => empty as unknown as HTMLElement,
+      findConfirmDialog: () => null,
+      findConfirmButton: () => null,
+      isTrashEmpty: () => false,
+      waitFor: async () => { throw new StopRequested() },
+      sleep: vi.fn().mockResolvedValue(undefined),
+      onStatus: (status) => statuses.push(status),
+    }
+    await expect(runEmptyTrashFlow(deps)).rejects.toBeInstanceOf(StopRequested)
+    expect(empty.click).not.toHaveBeenCalled()
+    expect(statuses).toEqual(['emptyingTrash'])
+  })
+
+  it('stop after confirm does not report done or error', async () => {
+    const empty = fakeButton('Empty trash')
+    const dialog = fakeDialog()
+    const confirm = fakeButton('Move to trash')
+    const statuses: EmptyTrashStatus[] = []
+    let step = 0
+    const deps: EmptyTrashDeps = {
+      findEmptyTrashButton: () => empty as unknown as HTMLElement,
+      findConfirmDialog: () => dialog as unknown as HTMLElement,
+      findConfirmButton: () => confirm as unknown as HTMLElement,
+      isTrashEmpty: () => false,
+      waitFor: async (cond) => {
+        step += 1
+        if (step <= 3) {
+          const v = cond()
+          if (!v) throw new Error('Timed out')
+          return v as NonNullable<typeof v>
+        }
+        throw new StopRequested()
+      },
+      sleep: vi.fn().mockResolvedValue(undefined),
+      onStatus: (status) => statuses.push(status),
+    }
+    await expect(runEmptyTrashFlow(deps)).rejects.toBeInstanceOf(StopRequested)
+    expect(empty.click).toHaveBeenCalledTimes(1)
+    expect(confirm.click).toHaveBeenCalledTimes(1)
+    expect(statuses).toEqual(['emptyingTrash'])
   })
 })

@@ -52,6 +52,10 @@ class FakeDom implements EngineDom {
     })
   }
 
+  appendTiles(labels: string[]): void {
+    for (const label of labels) this.tiles.push(new FakeTile(label))
+  }
+
   selectedCount(): number {
     return this.tiles.filter((t) => t.checked).length
   }
@@ -316,7 +320,7 @@ describe('DeleteEngine — pause / resume', () => {
     engine.pause()
     expect(engine.isPaused).toBe(true)
     dom.releaseSleep()
-    // The loop reaches checkPause() and holds on the pause promise.
+    // The loop reaches awaitControl() and holds on the pause promise.
     await new Promise((r) => setTimeout(r, 5))
     expect(statusesOf(onProgress)).toContain('paused')
 
@@ -334,6 +338,146 @@ describe('DeleteEngine — pause / resume', () => {
     }
   })
 })
+
+
+describe('DeleteEngine — pause holds selection progress (GPDT-CONTROL)', () => {
+  const tileClicks = (dom: FakeDom) => dom.clicks.filter((c) => c.startsWith('tile:'))
+
+  it('pause during a selection wave does not click newly appeared tiles; resume continues the same engine to done', async () => {
+    const dom = new FakeDom()
+    dom.manualSleep = true
+    // No scroll target: this test is about selection waves, not scroll.
+    dom.scrollState = { top: 0, height: 100, client: 800 }
+    dom.setTiles(['Photo - a', 'Photo - b'])
+    const { engine } = makeEngine(dom, {
+      maxCount: 10,
+      selectionSettleMs: 60_000,
+      scrollSettleMs: 60_000,
+      actionTimeout: 60_000,
+    })
+
+    const runPromise = engine.run()
+    await new Promise((r) => setTimeout(r, 10))
+    expect(tileClicks(dom)).toEqual(['tile:Photo - a', 'tile:Photo - b'])
+
+    engine.pause()
+    expect(engine.isPaused).toBe(true)
+    dom.appendTiles(['Photo - c', 'Photo - d'])
+    const clicksAtPause = tileClicks(dom).length
+    dom.releaseSleep()
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(engine.isPaused).toBe(true)
+    expect(tileClicks(dom)).toHaveLength(clicksAtPause)
+    expect(dom.clicks).not.toContain('tile:Photo - c')
+    expect(dom.clicks).not.toContain('tile:Photo - d')
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(0)
+
+    engine.resume()
+    expect(engine.isPaused).toBe(false)
+    const pump = setInterval(() => dom.releaseSleep(), 1)
+    try {
+      const result = await runPromise
+      expect(result.status).toBe('done')
+      expect(result.deleted).toBe(4)
+      expect(dom.clicks).toContain('tile:Photo - c')
+      expect(dom.clicks).toContain('tile:Photo - d')
+    } finally {
+      clearInterval(pump)
+    }
+  })
+
+  it('pause during a delete wait does not burn the action timeout', async () => {
+    const dom = new FakeDom()
+    dom.manualSleep = true
+    dom.scrollState = { top: 0, height: 100, client: 800 }
+    dom.setTiles(['Photo - a'])
+    // Confirm never appears — waitFor(confirm) holds.
+    dom.dialogHasConfirm = false
+    const { engine } = makeEngine(dom, { maxCount: 1, actionTimeout: 40, pollDelay: 10 })
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const runPromise = engine.run()
+    const advance = setInterval(() => {
+      if (!engine.isPaused && !engine.isStopped) dom.releaseSleep()
+    }, 1)
+    const startWait = Date.now()
+    while (!dom.clicks.includes('delete')) {
+      if (Date.now() - startWait > 1000) {
+        clearInterval(advance)
+        throw new Error('never reached delete click')
+      }
+      await new Promise((r) => setTimeout(r, 5))
+    }
+    clearInterval(advance)
+
+    engine.pause()
+    expect(engine.isPaused).toBe(true)
+    dom.releaseSleep()
+    await new Promise((r) => setTimeout(r, 10))
+    // Wall-clock longer than actionTimeout; pause must hold, not error.
+    await new Promise((r) => setTimeout(r, 80))
+    expect(engine.isPaused).toBe(true)
+
+    let settled: { status: string; error?: string } | null = null
+    void runPromise.then((r) => { settled = r })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(settled).toBeNull()
+
+    engine.stop()
+    dom.releaseSleep()
+    const result = await runPromise
+    expect(result.status).toBe('idle')
+    expect(result.error).toBeUndefined()
+    errorSpy.mockRestore()
+  })
+})
+
+describe('DeleteEngine — pause holds a dry-run scan (GPDT-CONTROL)', () => {
+  it('does not harvest newly appeared labels while paused; resume continues the same scan', async () => {
+    const dom = new FakeDom()
+    dom.manualSleep = true
+    dom.scrollState = { top: 0, height: 100, client: 800 }
+    dom.setTiles(['Photo - a', 'Photo - b'])
+    const { engine, onProgress } = makeEngine(dom, {
+      maxCount: 500,
+      dryRun: true,
+      pollDelay: 200,
+      scrollSettleMs: 60_000,
+      selectionSettleMs: 60_000,
+    })
+    const lastTotal = () => {
+      const calls = onProgress.mock.calls
+      const last = calls[calls.length - 1]?.[0] as { total?: number } | undefined
+      return last?.total ?? 0
+    }
+
+    const runPromise = engine.run()
+    await new Promise((r) => setTimeout(r, 10))
+    expect(lastTotal()).toBe(2)
+    engine.pause()
+    expect(engine.isPaused).toBe(true)
+    dom.appendTiles(['Photo - c'])
+    const totalAtPause = lastTotal()
+    dom.releaseSleep()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(lastTotal()).toBe(totalAtPause)
+    expect(lastTotal()).toBe(2)
+
+    engine.resume()
+    const pump = setInterval(() => dom.releaseSleep(), 1)
+    try {
+      const result = await runPromise
+      expect(result.status).toBe('done')
+      expect(result.deleted).toBe(0)
+      expect(result.total).toBe(3)
+      expect(engine.getDryRunLabels()).toContain('Photo - c')
+    } finally {
+      clearInterval(pump)
+    }
+  })
+})
+
 
 describe('DeleteEngine — checkbox flap & counter fallback', () => {
   it('records a flap recovery when the counter regresses, and still completes', async () => {
