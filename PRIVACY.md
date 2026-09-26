@@ -1,11 +1,11 @@
 # Privacy Policy — Google Photos Delete Tool
 
-**Last updated:** 2026-08-09
+**Last updated:** 2026-09-26
 
 ## Overview
 
 Google Photos Delete Tool is a browser extension and userscript that helps
-you bulk-delete photos from Google Photos. Your privacy is the product's
+you find duplicate photos and bulk-delete photos in Google Photos. Your privacy is the product's
 core promise: this tool **collects, stores, and transmits nothing**.
 
 ## Data Collection
@@ -28,6 +28,18 @@ clicking "Move to trash", and confirming dialogs. In dry-run mode it reads
 the `aria-label` timestamp on each visible tile to count photos — again
 entirely in your browser.
 
+### Find duplicates
+
+When you click **Scan this view**, the tool reads each tile's address and
+thumbnail link from the Google Photos page, then downloads small (64 px)
+thumbnails **only from Google's own image servers**
+(`*.googleusercontent.com` / `*.usercontent.google.com`, the same servers
+the page already loads them from). Each thumbnail is reduced in memory to a
+64-bit fingerprint (a perceptual hash) and the pixels are discarded. The
+fingerprints and groups live only in the open tab and are gone when you
+close the review or the tab. They are never saved and never sent to us or
+anyone else. The tool contacts no other server.
+
 On your request, the tool stores **locally**:
 
 - Your preferences (batch size, dry-run, empty-trash, filter) in
@@ -44,6 +56,8 @@ None of this is transmitted anywhere.
   flag locally.
 - **Host access to `https://photos.google.com/*`** — required to interact
   with the Google Photos interface. The tool only runs on this domain.
+  Find duplicates fetches thumbnails from Google's image servers with the
+  page's own access rules; it needs no extra permission.
 
 The former `activeTab` permission was removed in v3.0.0; the content
 script is declared directly for the single supported domain.

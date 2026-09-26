@@ -19,6 +19,7 @@ flowchart TD
   GPDT_ENTER["GPDT-ENTER"]
   GPDT_OBSERVE["GPDT-OBSERVE"]
   GPDT_PREVIEW["GPDT-PREVIEW"]
+  GPDT_DEDUP["GPDT-DEDUP"]
   GPDT_CONSENT["GPDT-CONSENT"]
   GPDT_BATCH["GPDT-BATCH"]
   GPDT_BATCH_VERIFY["GPDT-BATCH-VERIFY"]
@@ -29,6 +30,9 @@ flowchart TD
   GPDT_ENTER --> GPDT_OBSERVE
   GPDT_ENTER --> GPDT_CONSENT
   GPDT_OBSERVE --> GPDT_PREVIEW
+  GPDT_OBSERVE --> GPDT_DEDUP
+  GPDT_DEDUP --> GPDT_BATCH
+  GPDT_DEDUP --> GPDT_EVIDENCE
   GPDT_OBSERVE --> GPDT_BATCH
   GPDT_CONSENT --> GPDT_BATCH
   GPDT_BATCH --> GPDT_BATCH_VERIFY
@@ -50,13 +54,14 @@ flowchart TD
 | GPDT-ENTER | Enter a supported, locally controlled surface | live | — | The extension or userscript activates only for `photos.google.com`, identifies the chosen current view as the action scope, and offers a click-free dry-run before destructive work. |
 | GPDT-OBSERVE | Interpret the current Google Photos DOM fail closed | live | GPDT-ENTER | A versioned pack identifies media tiles, selection state, scroll container, dialogs, and destructive candidates; action candidates require a pack-owned exact action selector or positive accessible text, unknown DOM returns no candidate, and bounded diagnostics retain the pack and observed match evidence. |
 | GPDT-PREVIEW | Preview the current-view scope without mutation | live | GPDT-OBSERVE | The dry-run path scrolls and counts observed matching labels without invoking any click, clearly treats deduplicated label counts as browser observations, and can be stopped without becoming a destructive run. |
+| GPDT-DEDUP | Find look-alike media in the chosen view and hand only approved ids to the batch flow | live | GPDT-OBSERVE | The scan scrolls without clicking, reads tile ids and Google-hosted thumbnails through the pack (missing either skips the tile), hashes locally with bounded concurrency, groups by perceptual-hash similarity with an adjustable threshold (parity with the photo-dedup golden vectors), stays responsive and cancellable at tens of thousands of items, never lets a group lose its last kept item, and hands the approved ids to GPDT-BATCH as an id filter that selects only tiles whose id is listed. |
 | GPDT-CONSENT | Admit explicit destructive intent | live | GPDT-ENTER | Every non-dry run is refused when the shared local consent acknowledgement is absent or unreadable, and choosing the permanent empty-trash option makes that consequence visible before admission. |
-| GPDT-BATCH | Move matching media to Trash through bounded actions | live | GPDT-OBSERVE, GPDT-CONSENT | The engine selects only currently unchecked matching tiles up to the configured positive batch limit, bounds selection settling, scroll settling, end-of-list detection, and action/dialog waits, and clicks delete and confirm only after positive identification. |
+| GPDT-BATCH | Move matching media to Trash through bounded actions | live | GPDT-OBSERVE, GPDT-CONSENT, GPDT-DEDUP | The engine selects only currently unchecked matching tiles up to the configured positive batch limit, bounds selection settling, scroll settling, end-of-list detection, and action/dialog waits, and clicks delete and confirm only after positive identification. |
 | GPDT-BATCH-VERIFY | Verify each recoverable deletion batch | live | GPDT-BATCH | After confirmation, the engine waits within the action timeout for the selected count to return to zero, increments the deleted total only after that observation, flushes a final partial batch, and reports timeout or selector drift as error instead of `done`. |
 | GPDT-CONTROL | Keep a run under present user control | live | GPDT-BATCH | Pause holds progress, resume continues the same engine, stop interrupts action waits and resolves to idle, and a supported surface cannot start a second engine while the first run is settling. |
 | GPDT-TRASH-HANDOFF | Bound navigation into the permanent Trash flow | live | GPDT-BATCH-VERIFY, GPDT-CONSENT | Navigation occurs only when the explicit empty-trash option survived a clean real run that deleted at least one item; a successfully persisted handoff is consumed once, expires after three minutes, and is accepted only on `/trash` or its subpaths. |
 | GPDT-EMPTY-VERIFY | Empty Trash only with an exact observed postcondition | live | GPDT-OBSERVE, GPDT-TRASH-HANDOFF | The flow positively identifies the empty action, dialog, and destructive confirmation within per-step timeouts, then emits `done` only after the action and dialog disappear or an explicit empty-state signal appears; ambiguous or unverifiable state emits an error. |
-| GPDT-EVIDENCE | Qualify behavior against the live Google Photos surface | live | GPDT-PREVIEW, GPDT-BATCH-VERIFY, GPDT-CONTROL, GPDT-EMPTY-VERIFY | Source and local tests pass, and each release making a live claim records the disposable-account checks in `RELEASE_GATE.md`: seeded-item counts, batch resets, exact Trash contents, empty-trash postcondition, stop/restart, and a localized run. |
+| GPDT-EVIDENCE | Qualify behavior against the live Google Photos surface | live | GPDT-PREVIEW, GPDT-DEDUP, GPDT-BATCH-VERIFY, GPDT-CONTROL, GPDT-EMPTY-VERIFY | Source and local tests pass, and each release making a live claim records the disposable-account checks in `RELEASE_GATE.md`: seeded-item counts, batch resets, exact Trash contents, empty-trash postcondition, stop/restart, a localized run, and seeded duplicate groups found and trashed as reviewed. |
 
 ## Repository evidence
 
@@ -70,6 +75,12 @@ flowchart TD
   [config.ts](../src/core/config.ts),
   [delete-engine.test.ts](../tests/delete-engine.test.ts), and
   [page-runner.test.ts](../tests/page-runner.test.ts)
+- `GPDT-DEDUP`: [dedup/](../src/core/dedup/),
+  [ui/dupes/finder.ts](../src/ui/dupes/finder.ts),
+  [dedup-hash-group.test.ts](../tests/dedup-hash-group.test.ts),
+  [dedup-scan.test.ts](../tests/dedup-scan.test.ts),
+  [dedup-grid-dom.test.ts](../tests/dedup-grid-dom.test.ts), and the id-filter
+  cases in [delete-engine.test.ts](../tests/delete-engine.test.ts)
 - `GPDT-CONSENT`: [consent.ts](../src/core/consent.ts),
   [consent.test.ts](../tests/consent.test.ts),
   [page-runner.ts](../src/core/page-runner.ts), and

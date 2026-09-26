@@ -71,6 +71,7 @@ const zh: Translations = {
     copySummary: "复制摘要",
     exportCsv: "导出 CSV",
     viewTrash: "查看回收站",
+    findDuplicates: "查找重复照片",
   },
   notes: {
     navigateFirst: "请先打开 {url}。",

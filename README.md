@@ -1,6 +1,7 @@
 # 🗑️ Google Photos Delete Tool
 
-Consent-gated bulk delete for Google Photos: batch select, dry-run, and empty-trash.
+Find and delete duplicate photos in Google Photos, and bulk delete safely:
+dry run first, batches of up to 500, optional empty trash.
 
 - Ordinary: https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb — published Chrome Web Store listing (item `jiahfbbfpacpolomdjlpdpiljllcdenb`, observed live version 3.0.1 with Add to Chrome). Store listing is the ordinary customer surface for this extension. A store `200` is not the product contract.
 - Preview: `none` — GitHub Pages is not enabled, and this product has no admitted preview, dogfood, or marketing website. Do not invent a URL.
@@ -11,6 +12,48 @@ Consent-gated bulk delete for Google Photos: batch select, dry-run, and empty-tr
 [![Release](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jiahfbbfpacpolomdjlpdpiljllcdenb?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
+
+## Find duplicates
+
+Google Photos only removes exact copies of the same file. Copies that were
+resized, re-saved, edited slightly, or uploaded twice from different apps
+stay in your library. **Find duplicates** finds them for you:
+
+1. Open the view you want to check (your library, an album, or a search).
+2. Click the extension icon, then **Find duplicates** (userscript: the
+   **Find duplicates** button in the floating panel), then **Scan this view**.
+3. The tool scrolls the view and compares small thumbnails on your computer.
+   Look-alike photos are shown in groups.
+4. In each group the best copy is kept (green) and the rest are marked for
+   Trash (red). The best copy is the largest one when the size is known,
+   otherwise the oldest. Click any photo to switch it. Each group always
+   keeps at least one photo.
+5. Use the **Similarity** slider: 95% finds near-identical copies; lower
+   values also group edits and burst shots, so check those groups.
+6. **Preview (dry run)** checks the chosen photos are still in the view
+   without changing anything. **Move to Trash** hands them to the same safe
+   delete flow as the rest of the tool: a one-time confirmation, batches,
+   Stop at any time, and 60 days in Trash to change your mind.
+
+![Find duplicates reviewing look-alike groups on a test page](docs/images/find-duplicates.png)
+
+*Test page with generated images, not real photos
+([`scripts/dupes-demo.mjs`](scripts/dupes-demo.mjs)).*
+
+**Private by design.** Thumbnails are fetched only from Google's own image
+servers (the same ones the page already uses), turned into a 64-bit
+fingerprint in memory, and forgotten when you close the review. Nothing is
+uploaded; there is no server. Works for tens of thousands of photos: the
+comparison runs in short slices so the tab stays responsive, with progress
+and Cancel throughout. Large views take a while because Google Photos loads
+the grid only as you scroll.
+
+**Why not the Google Photos API?** Since 31 March 2025 Google no longer lets
+apps read your whole library through the Photos API, so an external
+duplicate finder cannot see your photos. This tool works inside the Google
+Photos page you already have open instead.
+
+## Bulk delete
 
 Google Photos has **no "delete all"**. This tool automates the tedious
 select → trash → confirm loop in safe batches so you can reclaim your
@@ -58,6 +101,9 @@ dev artifact but is not a supported product surface.
 
 ## Features
 
+- **Find duplicates** — scan the current view, group look-alike photos by
+  perceptual hash (adjustable similarity), review which to keep, then move
+  the rest to Trash through the normal consent-gated flow.
 - **Batch delete** — select up to 500 per batch (Google's selection cap),
   loop until the view is empty. The engine detects the cap, scrolls, and
   flushes the final partial batch.
@@ -149,17 +195,19 @@ src/
 │   ├── empty-trash-baton.ts# Pending-flag semantics (localStorage / chrome)
 │   ├── page-runner.ts     # In-page orchestration: consent, license, runner
 │   ├── license.ts         # Local Ed25519 Pro license verification
-│   ├── photo-filter.ts    # Type classification (first-label-token matching)
+│   ├── photo-filter.ts    # Type classification + the id filter used by Find duplicates
+│   ├── dedup/             # Find duplicates: pHash, grouping, scan loop, keep/Trash choices
 │   ├── diagnostics.ts     # Bounded selector/label evidence for issue reports
 │   ├── status.ts          # One RunStatus union shared by every surface
 │   └── ...
 ├── selector-packs/        # pack-v1.json (versioned selectors + keywords)
 ├── ui/panel/              # ONE floating panel (userscript + standalone)
+├── ui/dupes/              # Find duplicates review (extension + userscript)
 ├── extension/             # MV3 manifests, popup (i18n), content, background
 │   └── api.ts             # Chrome/Firefox promise wrappers (callback-based)
 ├── standalone/            # Dev-only console-paste mount
 └── userscript/            # Thin mount of the shared panel
-scripts/                   # build.ts · zip.ts · verify.ts · license.ts
+scripts/                   # build.ts · zip.ts · verify.ts · license.ts · dupes-demo.mjs
 tests/                     # engine loop on a scripted DOM fake + core/surface suites
 ```
 
@@ -184,6 +232,17 @@ unattended.
 is recorded in every diagnostic report. When a drift is reported, the fix
 is a data patch to the pack, shipped as a point release. This is the
 maintenance model by design.
+
+**How does it decide what is a duplicate?** Each thumbnail is shrunk to
+32×32 gray pixels and turned into a 64-bit perceptual hash (pHash). Two
+photos whose hashes differ in only a few bits look the same to a person.
+The default 95% similarity allows 3 of 64 bits to differ. The hashing and
+grouping are ported from our Photo Dedup engine and tested against its
+reference results.
+
+**Does it find duplicates across my whole library?** It checks the view you
+scan. Scan your main Photos view to cover the library, or an album or
+search to narrow it down.
 
 **How fast is it?** Deletion runs at Google's UI pace. Exact figures are
 measured per release in the release gate, never quoted as marketing.

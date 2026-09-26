@@ -7,10 +7,10 @@ claim, or proof that Google Photos' live DOM still matches the tool.
 
 ## What finished is
 
-A person can inspect the media in the Google Photos view they chose, deliberately
-move matching items to Trash in bounded batches, and optionally empty Trash
-without the tool guessing at a destructive control or reporting completion from
-a click alone.
+A person can inspect the media in the Google Photos view they chose, find
+look-alike copies in it, deliberately move matching or chosen items to Trash in
+bounded batches, and optionally empty Trash without the tool guessing at a
+destructive control or reporting completion from a click alone.
 
 ## For whom
 
@@ -27,6 +27,11 @@ The customer contract is:
 
 - A dry run observes the current view without clicking media or destructive
   controls. It is a preview, not authority to delete.
+- Find duplicates scrolls the current view without clicking, hashes each
+  tile's thumbnail locally, and groups look-alikes at a similarity the person
+  sets. Every group keeps at least one item; the person reviews the keep/Trash
+  choice, and only the item ids they approve reach the batch flow, which
+  selects nothing it cannot identify by id.
 - Every real run is refused until the local consent acknowledgement exists.
   Selecting `Empty trash afterwards` also presents the permanent-action warning.
 - Media, counters, containers, and action controls are recognized through the
@@ -47,6 +52,9 @@ The customer contract is:
 
 - The product acts only on `photos.google.com`. It is not a Google Photos API
   client, downloader, multi-site automation service, or unattended scheduler.
+  Find duplicates reads small thumbnails from Google's own image hosts, the
+  same ones the page uses; it keeps only in-memory fingerprints and uploads
+  nothing.
 - Supported runtime surfaces are the Chromium/Firefox MV3 extension and the
   userscript. Customer-installable locators are the Chrome Web Store listing
   and the GitHub release userscript. Firefox AMO, Microsoft Edge Add-ons, and

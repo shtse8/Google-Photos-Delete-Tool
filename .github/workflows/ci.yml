@@ -32,6 +32,11 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Find duplicates end to end (test page, no Google account)
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome
+        run: node scripts/dupes-demo.mjs --check --no-screenshot
+
       - name: Verify storefront listing
         run: bun run listing:check
 

@@ -192,7 +192,7 @@ const userscriptHeader = `// ==UserScript==
 // @name         Google Photos Delete Tool
 // @namespace    https://github.com/shtse8/Google-Photos-Delete-Tool
 // @version      ${pkg.version}
-// @description  Bulk delete photos on photos.google.com with batch select, dry-run, and empty-trash (consent-gated)
+// @description  Find and delete duplicate photos in Google Photos, and bulk delete with batch select, dry-run, and empty-trash (consent-gated)
 // @author       Kyle Tse
 // @match        ${SUPPORTED_MATCH_PATTERN}
 // @grant        none

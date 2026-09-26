@@ -71,6 +71,7 @@ const ja: Translations = {
     copySummary: "要約をコピー",
     exportCsv: "CSV をエクスポート",
     viewTrash: "ゴミ箱を表示",
+    findDuplicates: "重複を探す",
   },
   notes: {
     navigateFirst: "先に {url} を開いてください。",

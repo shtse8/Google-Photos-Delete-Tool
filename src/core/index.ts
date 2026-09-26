@@ -52,6 +52,8 @@ export {
   PHOTO_TYPES,
   classifyLabel,
   shouldSelectTile,
+  tileMatchesFilter,
+  describeFilter,
   labelTypeToken,
   type PhotoType,
   type PhotoFilter,

@@ -42,6 +42,12 @@ Use a **disposable Google account** and a gallery you do not care about.
    locale (fr or zh) to exercise the keyword matchers.
 8. **Speed measurement** — from step 3, record photos/minute (deleted /
    elapsed) for the release notes.
+9. **Find duplicates** — seed K pairs of look-alike photos (the same image
+   saved twice at different sizes or quality) plus unrelated photos. Scan
+   the library view; record that the K groups are found at 95%, that no
+   unrelated photo is grouped, and the scan time. Move the red copies to
+   Trash; record that `/trash` holds exactly those K copies and every kept
+   copy is still in the library.
 
 ## Evidence record
 
@@ -56,6 +62,8 @@ Release notes must include a table:
 | Empty-trash postcondition | done after verify | status logs |
 | Stop mid-batch | idle, no error | status logs |
 | Locale spot check | pass | locale + count |
+| Find duplicates groups | K found, 0 false | group count + scan time |
+| Find duplicates Trash | exactly the K red copies | screenshot/URL |
 
 If any check fails: fix the root cause (usually a selector-pack data
 patch), bump the pack version, and re-run the whole gate before tagging.

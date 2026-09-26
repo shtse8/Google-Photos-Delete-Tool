@@ -71,6 +71,7 @@ const nl: Translations = {
     copySummary: "Samenvatting kopiëren",
     exportCsv: "CSV exporteren",
     viewTrash: "Prullenbak bekijken",
+    findDuplicates: "Duplicaten zoeken",
   },
   notes: {
     navigateFirst: "Open eerst {url}.",

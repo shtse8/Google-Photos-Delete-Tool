@@ -17,7 +17,8 @@
  * use the raw API — they are callback-based in both browsers.
  */
 import { DEFAULT_CONFIG, DeleteEngine, type Progress } from '../core'
-import type { PhotoFilter } from '../core/photo-filter'
+import { describeFilter, type PhotoFilter } from '../core/photo-filter'
+import { openDuplicateFinder } from '../ui/dupes/finder'
 import { browserDom } from '../core/browser-dom'
 import { findConfirmButton, findConfirmDialog, findEmptyTrashButton, isTrashEmpty } from '../core/selectors'
 import { sleep } from '../core/utils'
@@ -112,7 +113,7 @@ const start = async (opts: StartOptions): Promise<{ ok: boolean; error?: string 
 
     console.log(
       `${LOG} starting${dryRun ? ' (dry run)' : ''} — ` +
-      `maxCount=${maxCount}, emptyTrashAfter=${emptyTrashAfter}, filter=${JSON.stringify(filter)}`,
+      `maxCount=${maxCount}, emptyTrashAfter=${emptyTrashAfter}, filter=${describeFilter(filter)}`,
     )
 
     const local = new DeleteEngine({
@@ -251,6 +252,9 @@ async function maybeRunPendingEmptyTrash(): Promise<void> {
 
 // ─── Progress reporting ─────────────────────────────────────────
 
+/** In-page listeners (the duplicate review) — the popup gets messages. */
+const progressListeners = new Set<(p: Progress) => void>()
+
 let lastLoggedStatus: string | null = null
 let lastProgress: Progress | null = null
 let lastProgressAt = 0
@@ -258,6 +262,7 @@ let lastProgressAt = 0
 const reportProgress = (progress: Progress): void => {
   lastProgress = { ...progress }
   lastProgressAt = Date.now()
+  for (const cb of progressListeners) cb({ ...progress })
   runtimeSendMessage({ type: 'progress', data: progress })
     .catch(() => { /* popup not open */ })
 
@@ -280,8 +285,30 @@ function sendStatus(status: RunStatus | string, extra: Partial<Progress> = {}): 
   }
   lastProgress = { ...snapshot }
   lastProgressAt = Date.now()
+  for (const cb of progressListeners) cb({ ...snapshot })
   runtimeSendMessage({ type: 'progress', data: snapshot })
     .catch(() => { /* popup not open */ })
+}
+
+// ─── Find duplicates (in-page review → the same start() path) ───
+
+function openFinder(): void {
+  openDuplicateFinder({
+    // Same consent-gated start() as the popup; emptying Trash is never chained.
+    runDelete: (ids, dryRun) => start({ dryRun, emptyTrashAfter: false, filter: { kind: 'ids', ids } }),
+    stopRun: stop,
+    consentAcknowledged: async () => {
+      const ack = await readChromeAcknowledgement(STORAGE_KEYS.consent)
+      return ack.readable && ack.acknowledged
+    },
+    acknowledgeConsent: async () => {
+      await storageSet({ [STORAGE_KEYS.consent]: true })
+    },
+    onRunProgress: (cb) => {
+      progressListeners.add(cb)
+      return () => progressListeners.delete(cb)
+    },
+  })
 }
 
 // ─── Message routing ────────────────────────────────────────────
@@ -321,6 +348,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         progress: lastProgress,
         progressAsOf: lastProgressAt,
       })
+      break
+    case 'findDuplicates':
+      openFinder()
+      sendResponse({ ok: true })
       break
     case 'diagnostics':
       sendResponse({ blob: diagnostics.blob() })
