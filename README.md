@@ -3,10 +3,8 @@
 Find and delete duplicate photos in Google Photos, and bulk delete safely:
 dry run first, batches of up to 500, optional empty trash.
 
-- Ordinary: https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb — published Chrome Web Store listing (item `jiahfbbfpacpolomdjlpdpiljllcdenb`, observed live version 3.0.1 with Add to Chrome). Store listing is the ordinary customer surface for this extension. A store `200` is not the product contract.
-- Preview: `none` — GitHub Pages is not enabled, and this product has no admitted preview, dogfood, or marketing website. Do not invent a URL.
-- Vision: [`docs/vision.md`](docs/vision.md)
-- Capabilities: [`docs/capabilities.md`](docs/capabilities.md)
+Get it on the [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
+or as a userscript. It runs in your browser; nothing is uploaded.
 
 [![CI](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml)
 [![Release](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml)
@@ -64,8 +62,8 @@ empty.
 > **Why DOM automation?** The Google Photos Library API has no
 > `mediaItems.delete` endpoint (list/get/batchGet/batchCreate only) and no
 > official bulk-delete feature. DOM automation is the only practical path,
-> and this project makes it fail-closed: it never clicks a destructive
-> action it cannot positively identify.
+> so this tool stops rather than guesses: it never clicks a delete button it
+> cannot positively identify.
 
 ---
 
@@ -155,7 +153,7 @@ developer mode, and **Load unpacked**.
 3. Configure: photos per batch (default 500), empty-trash toggle, optional
    type filter (Pro).
 4. **Start**, and use **Pause / Resume / Stop** freely. Stop is immediate.
-5. Watch the honest stats: deleted count, rate, elapsed; ETA only when a
+5. Watch the progress: deleted count, rate, elapsed; ETA only when a
    dry-run total is known.
 
 ## Privacy
