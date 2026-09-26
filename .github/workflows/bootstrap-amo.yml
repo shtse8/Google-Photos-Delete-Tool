@@ -26,11 +26,14 @@ concurrency:
 jobs:
   bootstrap:
     name: Create AMO add-on via API
-    runs-on: ubuntu-latest
+    runs-on: sylphx-linux-standard
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag != '' && inputs.tag || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
       - uses: oven-sh/setup-bun@v2
         with:

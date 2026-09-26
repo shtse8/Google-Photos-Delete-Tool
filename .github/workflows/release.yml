@@ -16,7 +16,7 @@ permissions:
 jobs:
   build-and-release:
     name: Build & Release
-    runs-on: ubuntu-latest
+    runs-on: sylphx-linux-standard
     steps:
       - uses: actions/checkout@v4
 

@@ -54,7 +54,7 @@ on:
 jobs:
   resolve:
     name: Resolve target tag & pending stores
-    runs-on: ubuntu-latest
+    runs-on: sylphx-linux-standard
     permissions:
       contents: read
     outputs:
@@ -62,6 +62,9 @@ jobs:
       stores: ${{ steps.resolve.outputs.stores }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
       - name: Resolve tag and pending stores
         id: resolve
@@ -103,7 +106,7 @@ jobs:
     name: Build tag artifacts
     needs: resolve
     if: needs.resolve.outputs.stores != ''
-    runs-on: ubuntu-latest
+    runs-on: sylphx-linux-standard
     permissions:
       contents: read
     steps:
@@ -146,11 +149,14 @@ jobs:
     name: Publish to Chrome Web Store
     needs: [resolve, build]
     if: contains(needs.resolve.outputs.stores, 'cws')
-    runs-on: ubuntu-latest
+    runs-on: sylphx-linux-standard
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
       - name: Credential guard
         id: creds
@@ -269,11 +275,14 @@ jobs:
     name: Publish to Microsoft Edge Add-ons
     needs: [resolve, build]
     if: contains(needs.resolve.outputs.stores, 'edge')
-    runs-on: ubuntu-latest
+    runs-on: sylphx-linux-standard
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
       - name: Credential guard
         id: creds
@@ -455,11 +464,14 @@ jobs:
     name: Publish to Firefox Add-ons (AMO)
     needs: [resolve, build]
     if: contains(needs.resolve.outputs.stores, 'amo')
-    runs-on: ubuntu-latest
+    runs-on: sylphx-linux-standard
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
       - name: Credential guard
         id: creds

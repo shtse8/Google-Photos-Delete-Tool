@@ -9,9 +9,12 @@ on:
 jobs:
   check:
     name: Lint, Type Check, Test, Build & Verify
-    runs-on: ubuntu-latest
+    runs-on: sylphx-linux-standard
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -32,9 +35,14 @@ jobs:
       - name: Build
         run: bun run build
 
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+        with:
+          install-dependencies: true
+
       - name: Find duplicates end to end (test page, no Google account)
         env:
-          CHROMIUM_PATH: /usr/bin/google-chrome
+          CHROMIUM_PATH: ${{ steps.chrome.outputs.chrome-path }}
         run: node scripts/dupes-demo.mjs --check --no-screenshot
 
       - name: Verify storefront listing
