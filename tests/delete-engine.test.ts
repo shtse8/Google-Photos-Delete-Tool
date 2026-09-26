@@ -16,7 +16,7 @@ import { diagnostics } from '../src/core/diagnostics'
 
 class FakeTile {
   checked = false
-  constructor(readonly label: string) {}
+  constructor(readonly label: string, readonly id: string | null = null) {}
 }
 
 interface FakeScrollState {
@@ -42,6 +42,7 @@ class FakeDom implements EngineDom {
   manualSleep = false
   clicks: string[] = []
   scrollState: FakeScrollState = { top: 0, height: 1200, client: 800 }
+  scrollSteps = 0
   private sleepResolvers: (() => void)[] = []
 
   setTiles(labels: string[], checked = false): void {
@@ -50,6 +51,11 @@ class FakeDom implements EngineDom {
       t.checked = checked
       return t
     })
+  }
+
+  /** Tiles with Google Photos ids (null = the tile cannot be identified). */
+  setIdTiles(entries: [label: string, id: string | null][]): void {
+    this.tiles = entries.map(([label, id]) => new FakeTile(label, id))
   }
 
   appendTiles(labels: string[]): void {
@@ -88,6 +94,7 @@ class FakeDom implements EngineDom {
     return {
       click: () => this.clickTile(t),
       label: () => t.label,
+      id: () => t.id,
     }
   }
 
@@ -134,11 +141,13 @@ class FakeDom implements EngineDom {
   findScrollTarget(): ScrollTarget | null {
     if (this.scrollState.height > this.scrollState.client) {
       const s = this.scrollState
+      const onScroll = (): void => { this.scrollSteps++ }
       return {
         get scrollTop() { return s.top },
         get scrollHeight() { return s.height },
         get clientHeight() { return s.client },
         scrollBy: () => {
+          onScroll()
           if (s.top < s.height - s.client) s.top += s.client
         },
         scrollTo: (opts) => { s.top = opts.top },
@@ -185,7 +194,7 @@ const FAST_CONFIG = {
 const makeEngine = (
   dom: FakeDom,
   overrides: Record<string, unknown> = {},
-  filter?: { kind: 'all' } | { kind: 'type'; type: string },
+  filter?: { kind: 'all' } | { kind: 'type'; type: string } | { kind: 'ids'; ids: string[] },
 ) => {
   const onProgress = vi.fn()
   const engine = new DeleteEngine({
@@ -748,5 +757,57 @@ describe('DeleteEngine — error paths', () => {
     const result = await engine.run()
     expect(result.status).toBe('error')
     expect(typeof result.error).toBe('string')
+  })
+})
+
+describe('DeleteEngine — id filter from the duplicate review', () => {
+  const tiles: [string, string | null][] = [
+    ['Photo - a', 'id-a'],
+    ['Photo - b', 'id-b'],
+    ['Photo - c', 'id-c'],
+    ['Photo - d', null],
+    ['Photo - e', 'id-e'],
+  ]
+
+  it('moves only the chosen ids to Trash and never an unidentified tile', async () => {
+    const dom = new FakeDom()
+    dom.setIdTiles(tiles)
+    const { engine } = makeEngine(dom, {}, { kind: 'ids', ids: ['id-b', 'id-e', 'id-missing'] })
+    const result = await engine.run()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(2)
+    expect(dom.tiles.map((t) => t.label)).toEqual(['Photo - a', 'Photo - c', 'Photo - d'])
+    expect(dom.clicks.filter((c) => c.startsWith('tile:'))).toEqual(['tile:Photo - b', 'tile:Photo - e'])
+  })
+
+  it('starts from the top of the view', async () => {
+    const dom = new FakeDom()
+    dom.setIdTiles(tiles)
+    dom.scrollState = { top: 1600, height: 2400, client: 800 }
+    const { engine } = makeEngine(dom, {}, { kind: 'ids', ids: ['id-a'] })
+    await engine.run()
+    expect(dom.scrollState.top).toBe(0)
+  })
+
+  it('stops scrolling once every chosen item is selected', async () => {
+    const dom = new FakeDom()
+    dom.setIdTiles(tiles)
+    dom.scrollState = { top: 0, height: 80_000, client: 800 }
+    const { engine } = makeEngine(dom, {}, { kind: 'ids', ids: ['id-a', 'id-c'] })
+    const result = await engine.run()
+    expect(result.deleted).toBe(2)
+    // Found both on the first screen: no scroll step was needed.
+    expect(dom.scrollSteps).toBe(0)
+  })
+
+  it('a dry run counts the chosen ids present in the view and clicks nothing', async () => {
+    const dom = new FakeDom()
+    dom.setIdTiles(tiles)
+    const { engine } = makeEngine(dom, { dryRun: true }, { kind: 'ids', ids: ['id-a', 'id-e', 'id-gone'] })
+    const result = await engine.run()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(0)
+    expect(result.total).toBe(2)
+    expect(dom.clicks).toEqual([])
   })
 })

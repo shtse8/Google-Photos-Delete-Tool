@@ -73,6 +73,7 @@ const copyBtn         = document.getElementById('copy-btn')       as HTMLButtonE
 const exportBtn       = document.getElementById('export-btn')     as HTMLButtonElement
 const trashBtn        = document.getElementById('trash-btn')      as HTMLButtonElement
 const reportBtn       = document.getElementById('report-btn')     as HTMLButtonElement
+const dupesBtn        = document.getElementById('dupes-btn')      as HTMLButtonElement
 
 // ─── Icon mounting (static set, attached once) ──────────────────
 
@@ -575,6 +576,12 @@ resumeBtn.addEventListener('click', async () => { await sendToContent({ action: 
 stopBtn  .addEventListener('click', async () => { await sendToContent({ action: 'stop' });   setUIState('idle')    })
 
 // ─── Utility row ────────────────────────────────────────────────
+
+// Find duplicates: the review runs in the Google Photos tab, so close the popup.
+dupesBtn.addEventListener('click', async () => {
+  const res = await sendToContent({ action: 'findDuplicates' })
+  if ((res as { ok?: boolean } | null)?.ok) window.close()
+})
 
 reportBtn.addEventListener('click', async () => {
   const res = await sendToContent({ action: 'diagnostics' })

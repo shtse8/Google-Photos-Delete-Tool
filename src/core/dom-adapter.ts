@@ -27,6 +27,8 @@ export interface ScrollTarget {
  */
 export interface PhotoTile extends ClickTarget {
   label(): string | null
+  /** Google Photos item id of the tile, or null when it cannot be read. */
+  id?(): string | null
 }
 
 export interface EngineDom {

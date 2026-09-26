@@ -71,6 +71,7 @@ const pt: Translations = {
     copySummary: "Copiar resumo",
     exportCsv: "Exportar CSV",
     viewTrash: "Ver lixeira",
+    findDuplicates: "Encontrar duplicados",
   },
   notes: {
     navigateFirst: "Abra {url} primeiro.",

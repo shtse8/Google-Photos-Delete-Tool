@@ -4,8 +4,8 @@ import { SELECTOR_DEFS, TRASH_EMPTY_SIGNALS } from '../src/core/selectors'
 
 describe('selector pack', () => {
   it('ships a versioned data pack', () => {
-    expect(PACK_VERSION).toBe(3)
-    expect(PACK.version).toBe(3)
+    expect(PACK_VERSION).toBe(4)
+    expect(PACK.version).toBe(4)
   })
 
   it('defines every core selector', () => {

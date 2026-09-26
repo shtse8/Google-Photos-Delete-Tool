@@ -25,7 +25,9 @@ export interface SelectorPack {
     | 'checkboxChecked'
     | 'photoContainer'
     | 'scrollContainer'
-    | 'dialog',
+    | 'dialog'
+    | 'mediaLink'
+    | 'thumbnail',
     SelectorDef
   >
   actionButtons: {

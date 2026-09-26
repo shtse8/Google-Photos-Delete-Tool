@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2026-09-26
+
+### Added
+- **Find duplicates.** Scan the current Google Photos view (library, album,
+  or search), group look-alike photos by perceptual hash with an adjustable
+  similarity (default 95%), review which copy to keep (best copy chosen by
+  size when known, then age; every group keeps at least one), and move the
+  rest to Trash through the existing consent-gated, dry-run-capable delete
+  flow. Opens from the popup (extension) or the floating panel (userscript).
+- pHash and grouping ported from SylphxAI/photo-dedup and checked against
+  its golden vectors; an exact multi-band prefilter keeps grouping fast at
+  any threshold, and all work runs in short slices with progress and Cancel.
+- Delete engine id filter: selects only tiles whose Google Photos id was
+  chosen, starts from the top, and stops scrolling once all are selected.
+- Selector pack v4: pack-owned media-link and thumbnail selectors.
+
+### Privacy
+- Find duplicates fetches small thumbnails only from Google's own image
+  servers, keeps in-memory fingerprints only, and uploads nothing. No new
+  extension permission.
+
 ## [3.0.0] - 2026-08-09
 
 ### Clean break (v3)

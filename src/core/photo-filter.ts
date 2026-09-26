@@ -14,7 +14,11 @@ import { normalizeText } from './selectors'
 
 export type PhotoType = 'photo' | 'video' | 'screenshot' | 'animation' | 'collage' | 'unknown'
 
-export type PhotoFilter = { kind: 'all' } | { kind: 'type'; type: Exclude<PhotoType, 'unknown'> }
+export type PhotoFilter =
+  | { kind: 'all' }
+  | { kind: 'type'; type: Exclude<PhotoType, 'unknown'> }
+  /** Exactly these Google Photos item ids (chosen in the duplicate review). */
+  | { kind: 'ids'; ids: readonly string[] }
 
 export const PHOTO_TYPES: readonly Exclude<PhotoType, 'unknown'>[] = [
   'photo',
@@ -54,5 +58,28 @@ export function classifyLabel(label: string | null | undefined): PhotoType {
 
 export function shouldSelectTile(label: string | null | undefined, filter: PhotoFilter): boolean {
   if (filter.kind === 'all') return true
+  // An id filter needs the tile id; a label alone never matches it.
+  if (filter.kind === 'ids') return false
   return classifyLabel(label) === filter.type
+}
+
+/**
+ * Whether a tile is in scope for `filter`. An id filter matches only a tile
+ * whose id is known and listed; a tile that cannot be identified is never
+ * selected (fail closed).
+ */
+export function tileMatchesFilter(
+  tile: { label(): string | null; id?(): string | null },
+  filter: PhotoFilter,
+  idSet?: ReadonlySet<string>,
+): boolean {
+  if (filter.kind !== 'ids') return shouldSelectTile(tile.label(), filter)
+  const id = tile.id?.() ?? null
+  if (!id) return false
+  return (idSet ?? new Set(filter.ids)).has(id)
+}
+
+/** Short log text for a filter (an id filter logs its size, not every id). */
+export function describeFilter(filter: PhotoFilter): string {
+  return filter.kind === 'ids' ? `ids(${filter.ids.length})` : JSON.stringify(filter)
 }

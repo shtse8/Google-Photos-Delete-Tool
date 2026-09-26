@@ -49,6 +49,7 @@ export interface Translations {
     copySummary: string
     exportCsv: string
     viewTrash: string
+    findDuplicates: string
   }
   consent: {
     title: string

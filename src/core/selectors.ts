@@ -22,7 +22,9 @@ export const SELECTOR_DEFS: Record<
   | 'checkboxChecked'
   | 'photoContainer'
   | 'scrollContainer'
-  | 'dialog',
+  | 'dialog'
+  | 'mediaLink'
+  | 'thumbnail',
   SelectorDef
 > = PACK.selectors
 

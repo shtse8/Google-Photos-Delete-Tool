@@ -11,6 +11,8 @@ import { formatElapsed, formatEta } from '../../core/utils'
 import { ACTIVE_STATUSES } from '../../core/status'
 import type { Progress, RunStatus } from '../../core'
 import { PHOTO_TYPES, type PhotoFilter, type PhotoType } from '../../core/photo-filter'
+import { openDuplicateFinder } from '../dupes/finder'
+import { sleep } from '../../core/utils'
 
 const ROOT_ID = 'gpdt-panel-root'
 const STYLE_ID = 'gpdt-panel-style'
@@ -154,6 +156,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
         <button class="gpdt-ghost" id="gpdt-consent-cancel">Cancel</button>
       </div>
     </div>
+    <button class="gpdt-ghost" id="gpdt-dupes" style="width:100%;margin-top:8px">Find duplicates</button>
     <div class="gpdt-footer">
       <button class="gpdt-ghost" id="gpdt-report">Report issue</button>
       <button class="gpdt-ghost" id="gpdt-copy" style="display:none">Copy summary</button>
@@ -289,6 +292,27 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   pauseBtn.addEventListener('click', () => runner.pause())
   resumeBtn.addEventListener('click', () => runner.resume())
   stopBtn.addEventListener('click', () => runner.stop())
+
+  // ─── Find duplicates (review → the same consent-gated runner) ──
+
+  $<HTMLButtonElement>('gpdt-dupes').addEventListener('click', () => {
+    openDuplicateFinder({
+      runDelete: async (ids, dryRun) => {
+        let error: string | undefined
+        // start() refuses (consent, run in progress) before its first await,
+        // so a refusal has surfaced by the next macrotask.
+        const run = runner
+          .start({ maxCount: 500, dryRun, emptyTrashAfter: false, filter: { kind: 'ids', ids } })
+          .catch((err: unknown) => { error = err instanceof Error ? err.message : String(err) })
+        await Promise.race([run, sleep(0)])
+        return error ? { ok: false, error } : { ok: true }
+      },
+      stopRun: () => runner.stop(),
+      consentAcknowledged: async () => runner.consentAcknowledged(),
+      acknowledgeConsent: async () => runner.acknowledgeConsent(),
+      onRunProgress: (cb) => runner.onUpdate((s) => { if (s.progress) cb(s.progress) }),
+    })
+  })
 
   // ─── Issue report / report export ─────────────────────────────
 

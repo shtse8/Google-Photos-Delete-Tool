@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "source": "frozen-baseline-legacy-ts-duplicate-finder",
+  "capturedAt": "2026-07-09",
+  "thresholds": {
+    "IMAGE_IMAGE": 0.95,
+    "IMAGE_VIDEO": 0.9,
+    "VIDEO_VIDEO": 0.85
+  },
+  "scenarios": [
+    {
+      "name": "two_image_groups",
+      "items": [
+        {
+          "id": "img-a",
+          "phash": "ffffffffffffffff",
+          "lshKeys": ["ffff", "ffff", "ffff", "ffff"],
+          "mediaType": "IMAGE",
+          "width": 1920,
+          "height": 1080,
+          "googleCreatedAtMs": 1577836800000
+        },
+        {
+          "id": "img-b",
+          "phash": "fffffffffffffffe",
+          "lshKeys": ["ffff", "ffff", "ffff", "fffe"],
+          "mediaType": "IMAGE",
+          "width": 800,
+          "height": 600,
+          "googleCreatedAtMs": 1559347200000
+        },
+        {
+          "id": "img-c",
+          "phash": "fffffffffffffffd",
+          "lshKeys": ["ffff", "ffff", "ffff", "fffd"],
+          "mediaType": "IMAGE",
+          "width": 1920,
+          "height": 1080,
+          "googleCreatedAtMs": 1609459200000
+        },
+        {
+          "id": "img-d",
+          "phash": "0000000000000000",
+          "lshKeys": ["0000", "0000", "0000", "0000"],
+          "mediaType": "IMAGE",
+          "width": 100,
+          "height": 100,
+          "googleCreatedAtMs": 1577836800000
+        },
+        {
+          "id": "img-e",
+          "phash": "0000000000000001",
+          "lshKeys": ["0000", "0000", "0000", "0001"],
+          "mediaType": "IMAGE",
+          "width": 200,
+          "height": 200,
+          "googleCreatedAtMs": 1577836800000
+        }
+      ],
+      "frames": [],
+      "expectedGroups": [
+        {
+          "itemIds": ["img-a", "img-b", "img-c"],
+          "bestItemId": "img-a",
+          "averageSimilarity": 0.984375,
+          "candidates": [
+            { "itemId": "img-a", "similarity": 1.0, "matchType": "image" },
+            { "itemId": "img-b", "similarity": 0.984375, "matchType": "image" },
+            { "itemId": "img-c", "similarity": 0.984375, "matchType": "image" }
+          ]
+        },
+        {
+          "itemIds": ["img-d", "img-e"],
+          "bestItemId": "img-e",
+          "averageSimilarity": 0.984375,
+          "candidates": [
+            { "itemId": "img-d", "similarity": 1.0, "matchType": "image" },
+            { "itemId": "img-e", "similarity": 0.984375, "matchType": "image" }
+          ]
+        }
+      ],
+      "candidateQueries": [
+        {
+          "targetId": "img-a",
+          "expected": [
+            { "itemId": "img-b", "similarity": 0.984375, "matchType": "image" },
+            { "itemId": "img-c", "similarity": 0.984375, "matchType": "image" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "lsh_match_below_threshold",
+      "items": [
+        {
+          "id": "near-a",
+          "phash": "0000000000000000",
+          "lshKeys": ["0000", "0000", "0000", "0000"],
+          "mediaType": "IMAGE",
+          "width": 100,
+          "height": 100
+        },
+        {
+          "id": "near-b",
+          "phash": "000000000000000f",
+          "lshKeys": ["0000", "0000", "0000", "000f"],
+          "mediaType": "IMAGE",
+          "width": 100,
+          "height": 100
+        }
+      ],
+      "frames": [],
+      "expectedGroups": [],
+      "candidateQueries": [
+        {
+          "targetId": "near-a",
+          "expected": []
+        }
+      ]
+    },
+    {
+      "name": "image_video_frame_match",
+      "items": [
+        {
+          "id": "img-target",
+          "phash": "ffffffffffffffff",
+          "lshKeys": ["ffff", "ffff", "ffff", "ffff"],
+          "mediaType": "IMAGE",
+          "width": 1280,
+          "height": 720,
+          "googleCreatedAtMs": 1577836800000
+        },
+        {
+          "id": "vid-parent",
+          "phash": "aaaaaaaaaaaaaaaa",
+          "lshKeys": ["aaaa", "aaaa", "aaaa", "aaaa"],
+          "mediaType": "VIDEO",
+          "width": 1920,
+          "height": 1080,
+          "googleCreatedAtMs": 1559347200000
+        }
+      ],
+      "frames": [
+        {
+          "mediaItemId": "vid-parent",
+          "phash": "fffffffffffffffe",
+          "lshKeys": ["ffff", "ffff", "ffff", "fffe"],
+          "timestamp": 1.5
+        }
+      ],
+      "expectedGroups": [
+        {
+          "itemIds": ["img-target", "vid-parent"],
+          "bestItemId": "vid-parent",
+          "averageSimilarity": 0.984375,
+          "candidates": [
+            { "itemId": "img-target", "similarity": 1.0, "matchType": "image" },
+            {
+              "itemId": "vid-parent",
+              "similarity": 0.984375,
+              "matchType": "video_frame",
+              "frameTimestamp": 1.5
+            }
+          ]
+        }
+      ],
+      "candidateQueries": [
+        {
+          "targetId": "img-target",
+          "expected": [
+            {
+              "itemId": "vid-parent",
+              "similarity": 0.984375,
+              "matchType": "video_frame",
+              "frameTimestamp": 1.5
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

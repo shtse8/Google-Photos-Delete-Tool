@@ -1,7 +1,7 @@
 import { DEFAULT_CONFIG, type Config } from './config'
 import { DeletionLog } from './deletion-log'
 import type { EngineDom, PhotoTile } from './dom-adapter'
-import { shouldSelectTile, type PhotoFilter } from './photo-filter'
+import { describeFilter, tileMatchesFilter, type PhotoFilter } from './photo-filter'
 import { diagnostics } from './diagnostics'
 import type { RunStatus } from './status'
 import { describeButton } from './utils'
@@ -64,6 +64,10 @@ export class DeleteEngine {
   private readonly config: Config
   private readonly dom: EngineDom
   private readonly filter: PhotoFilter
+  /** Target ids for an id filter (duplicate review); null otherwise. */
+  private readonly targetIds: ReadonlySet<string> | null
+  /** Target ids clicked so far in this run. */
+  private readonly clickedIds = new Set<string>()
   private readonly onProgress?: (progress: Progress) => void
 
   private progress: Progress
@@ -92,6 +96,7 @@ export class DeleteEngine {
     this.dom = options.dom
     this.config = { ...DEFAULT_CONFIG, ...options.config }
     this.filter = options.filter ?? { kind: 'all' }
+    this.targetIds = this.filter.kind === 'ids' ? new Set(this.filter.ids) : null
     this.onProgress = options.onProgress
     this.progress = {
       deleted: 0,
@@ -198,10 +203,20 @@ export class DeleteEngine {
 
     console.log(
       `${LOG} run() start — url=${this.dom.pathname} ` +
-      `maxCount=${effectiveMax} filter=${JSON.stringify(this.filter)}`,
+      `maxCount=${effectiveMax} filter=${describeFilter(this.filter)}`,
     )
 
     try {
+      // An id run looks for specific items anywhere in the view, so it
+      // starts from the top like a dry run.
+      if (this.targetIds) {
+        const top = this.dom.findScrollTarget()
+        if (top) {
+          top.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+          await this.sleepControlled(this.config.scrollSettleMs)
+        }
+      }
+
       while (!this.stopped) {
         await this.awaitControl()
 
@@ -232,6 +247,13 @@ export class DeleteEngine {
           await this.deleteSelected()
           consecutiveNoProgress = 0
           continue
+        }
+
+        // Every chosen item is selected: no need to scroll further. The
+        // final flush below moves the last batch to Trash.
+        if (this.targetIds && this.clickedIds.size >= this.targetIds.size) {
+          console.log(`${LOG} all ${this.targetIds.size} chosen item(s) selected; flushing`)
+          break
         }
 
         // Phase 3: not yet full — try to scroll for more photos.
@@ -344,7 +366,7 @@ export class DeleteEngine {
   private async runDryRunScan(): Promise<Progress> {
     console.log(
       `${LOG} run() start (dry-run scan) — url=${this.dom.pathname} ` +
-      `filter=${JSON.stringify(this.filter)}`,
+      `filter=${describeFilter(this.filter)}`,
     )
 
     const seen = new Set<string>()
@@ -503,12 +525,18 @@ export class DeleteEngine {
       ...this.dom.checkedTiles(),
     ]
     for (const tile of tiles) {
+      if (this.targetIds) {
+        // Id run preview: count the chosen items that are present.
+        const id = tile.id?.() ?? null
+        if (id && this.targetIds.has(id)) seen.add(id)
+        continue
+      }
       const label = tile.label()
       if (!label) {
         onWarn(true)
         continue
       }
-      if (!shouldSelectTile(label, this.filter)) continue
+      if (!tileMatchesFilter(tile, this.filter)) continue
       seen.add(label)
       diagnostics.addLabelSample(label)
     }
@@ -633,11 +661,15 @@ export class DeleteEngine {
       await this.awaitControl()
       const remaining = maxToSelect - clicked
       const candidates = this.dom.uncheckedTiles()
-        .filter(tile => shouldSelectTile(tile.label(), this.filter))
+        .filter(tile => tileMatchesFilter(tile, this.filter, this.targetIds ?? undefined))
         .slice(0, remaining)
       if (candidates.length === 0) break
       for (const tile of candidates) {
         this.dom.click(tile)
+        if (this.targetIds) {
+          const id = tile.id?.()
+          if (id) this.clickedIds.add(id)
+        }
       }
       clicked += candidates.length
       if (clicked >= maxToSelect) break
@@ -652,7 +684,7 @@ export class DeleteEngine {
     await this.awaitControl()
     console.log(
       `${LOG} selected ${clicked} new item(s) ` +
-      `(counter: ${this.getCount()}, filter: ${JSON.stringify(this.filter)})`,
+      `(counter: ${this.getCount()}, filter: ${describeFilter(this.filter)})`,
     )
     return clicked
   }

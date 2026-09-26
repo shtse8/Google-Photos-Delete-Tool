@@ -8,6 +8,7 @@
 import { SELECTOR_DEFS, queryOne, queryAll, queryScrollable, findDeleteToolbarButton, findConfirmDialog, findConfirmButton } from './selectors'
 import { sleep } from './utils'
 import type { ClickTarget, EngineDom, PhotoTile, ScrollTarget } from './dom-adapter'
+import { tileIdOf } from './dedup/browser-grid'
 
 function isClickable(el: Element): boolean {
   const he = el as HTMLElement
@@ -23,12 +24,16 @@ function wrapTile(el: Element): PhotoTile {
       const labeled = el.closest('[aria-label]')
       return labeled?.getAttribute('aria-label') ?? null
     },
+    id: () => tileIdOf(el),
   }
 }
 
 function wrapScrollTarget(el: HTMLElement): ScrollTarget {
   return {
     get scrollTop() { return el.scrollTop },
+    // The engine resets the gallery to the top after each batch; without a
+    // setter that assignment throws in strict mode and fails the run.
+    set scrollTop(v: number) { el.scrollTop = v },
     get scrollHeight() { return el.scrollHeight },
     get clientHeight() { return el.clientHeight },
     scrollBy: (opts) => el.scrollBy(opts),

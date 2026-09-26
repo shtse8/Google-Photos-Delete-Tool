@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "source": "frozen-baseline-legacy-ts-phash",
+  "resolution": 32,
+  "capturedAt": "2026-07-09",
+  "fixtures": [
+    {
+      "name": "gradient",
+      "hashHex": "0102a8020b02200a",
+      "lshKeys": ["0102", "a802", "0b02", "200a"]
+    },
+    {
+      "name": "checker",
+      "hashHex": "03a029a00a0b010b",
+      "lshKeys": ["03a0", "29a0", "0a0b", "010b"]
+    },
+    {
+      "name": "solid128",
+      "hashHex": "0101000100000001",
+      "lshKeys": ["0101", "0001", "0000", "0001"]
+    },
+    {
+      "name": "solid0",
+      "hashHex": "0000000000000000",
+      "lshKeys": ["0000", "0000", "0000", "0000"]
+    }
+  ],
+  "similarityPairs": [
+    {
+      "hash1": "0102a8020b02200a",
+      "hash2": "03a029a00a0b010b",
+      "distance": 15,
+      "similarity": 0.765625
+    },
+    {
+      "hash1": "0101000100000001",
+      "hash2": "0000000000000000",
+      "distance": 4,
+      "similarity": 0.9375
+    }
+  ]
+}
