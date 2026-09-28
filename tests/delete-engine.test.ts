@@ -40,6 +40,8 @@ class FakeDom implements EngineDom {
   dialogOpen = false
   dialogHasConfirm = true
   manualSleep = false
+  /** When false, a tile click is delivered but the page ignores it (drift). */
+  clickRegisters = true
   clicks: string[] = []
   scrollState: FakeScrollState = { top: 0, height: 1200, client: 800 }
   scrollSteps = 0
@@ -162,7 +164,8 @@ class FakeDom implements EngineDom {
   }
 
   private clickTile(t: FakeTile): void {
-    t.checked = !t.checked
+    // A drifted page still receives the click; it just never selects.
+    if (this.clickRegisters) t.checked = !t.checked
     this.clicks.push(`tile:${t.label}`)
   }
 
@@ -726,6 +729,61 @@ describe('DeleteEngine — batch verify (selected-count reset)', () => {
     expect(result.error).toMatch(/never returned to 0/)
     expect(dom.clicks).toContain('confirm')
     expect(dom.tiles).toHaveLength(1)
+  })
+})
+
+describe('DeleteEngine — selection drift fails closed (GPDT-BATCH-VERIFY)', () => {
+  it('reports error, never done, when checkbox clicks never select anything', async () => {
+    const dom = new FakeDom()
+    dom.clickRegisters = false
+    dom.setTiles(['Photo - a', 'Photo - b'])
+    const { engine, onProgress } = makeEngine(dom, { maxCount: 500 })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const result = await engine.run()
+
+    expect(result.status).toBe('error')
+    expect(result.deleted).toBe(0)
+    expect(result.error).toMatch(/never showed any of them as selected/)
+    // The clicks really were delivered — the page ignored them.
+    expect(dom.clicks.filter((c) => c.startsWith('tile:')).length).toBeGreaterThanOrEqual(2)
+    // No delete/confirm was ever attempted, and the run never claimed done.
+    expect(dom.clicks.filter((c) => c === 'delete')).toHaveLength(0)
+    expect(statusesOf(onProgress)).not.toContain('done')
+    // The diagnostic report carries the observation.
+    expect(diagnostics.blob().engine?.error).toMatch(/never showed any of them as selected/)
+    warnSpy.mockRestore()
+  })
+
+  it('still reports done for a run that deletes, and for an untouched empty gallery', async () => {
+    const dom = new FakeDom()
+    dom.setTiles([])
+    const empty = makeEngine(dom)
+    expect((await empty.engine.run()).status).toBe('done')
+
+    const deleting = new FakeDom()
+    deleting.setTiles(['Photo - a'])
+    const run = makeEngine(deleting)
+    const result = await run.engine.run()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(1)
+  })
+
+  it('keeps a user stop at idle, not a drift error', async () => {
+    const dom = new FakeDom()
+    dom.manualSleep = true
+    dom.clickRegisters = false
+    dom.setTiles(['Photo - a'])
+    const { engine } = makeEngine(dom, { maxCount: 500, selectionSettleMs: 60_000 })
+
+    const runPromise = engine.run()
+    await new Promise((r) => setTimeout(r, 10))
+    engine.stop()
+    dom.releaseSleep()
+
+    const result = await runPromise
+    expect(result.status).toBe('idle')
+    expect(result.error).toBeUndefined()
   })
 })
 

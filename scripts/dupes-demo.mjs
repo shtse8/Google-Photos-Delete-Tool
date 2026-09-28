@@ -61,7 +61,13 @@ const tiles = images.map((img, i) => {
     `<div class="img" style="background-image:url(&quot;https://lh3.googleusercontent.com/pw/demo-${img.key}=w256-h256-no&quot;)"></div></a>` +
     `<div class="ckGgle" role="checkbox" aria-checked="false"></div></div>`
 }).join('')
-const html = `<!doctype html><html><head><title>Photos - test page</title><style>
+/**
+ * The fake gallery. `selectionWorks: false` models what a Google Photos
+ * markup change looks like from the tool's side: the checkbox elements are
+ * still there and still receive clicks, but nothing ever becomes selected
+ * and the counter never moves.
+ */
+const buildPage = ({ selectionWorks = true } = {}) => `<!doctype html><html><head><title>Photos - test page</title><style>
 body{margin:0;background:#202124;font-family:sans-serif}
 .yDSiEe.uGCjIb.zcLWac{height:100vh;overflow:auto;padding:16px;box-sizing:border-box}
 .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-width:720px}
@@ -69,20 +75,27 @@ body{margin:0;background:#202124;font-family:sans-serif}
 </style></head><body><div class="yDSiEe uGCjIb zcLWac" role="main"><div class="grid">${tiles}</div></div><div class="Mfixef"><span class="rtExYb">0</span><button aria-label="Move to trash" style="display:none" id="tb">Move to trash</button></div>
 <script>
 const upd=()=>{const n=document.querySelectorAll('.ckGgle[aria-checked=true]').length;document.querySelector('.rtExYb').textContent=String(n);document.getElementById('tb').style.display=n?'':'none'}
-document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.ckGgle');if(c){c.setAttribute('aria-checked',c.getAttribute('aria-checked')==='true'?'false':'true');upd()}},true)
+document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('.ckGgle');if(c){${selectionWorks ? `c.setAttribute('aria-checked',c.getAttribute('aria-checked')==='true'?'false':'true');upd()` : '/* drifted page: the click is ignored */'}}},true)
 document.getElementById('tb').addEventListener('click',()=>{const d=document.createElement('div');d.setAttribute('role','dialog');d.innerHTML='<button>Cancel</button><button id=cf>Move to trash</button>';document.body.append(d);d.querySelector('#cf').addEventListener('click',()=>{window.__trashed=(window.__trashed||[]).concat([...document.querySelectorAll('.ckGgle[aria-checked=true]')].map(c=>c.parentElement.querySelector('a').getAttribute('href')));document.querySelectorAll('.ckGgle[aria-checked=true]').forEach(c=>c.parentElement.remove());d.remove();upd()})})
 </script></body></html>`
 
+const html = buildPage()
+/** Drifted page: same markup, clicks are ignored (see buildPage). */
+const driftHtml = buildPage({ selectionWorks: false })
+
 const byKey = new Map(images.map((i) => [i.key, Buffer.from(i.data, 'base64')]))
-await page.route('https://photos.google.com/**', (route) => route.fulfill({ contentType: 'text/html', body: html }))
-await page.route('https://lh3.googleusercontent.com/**', (route) => {
-  const key = /demo-([a-z0-9]+)=/.exec(route.request().url())?.[1]
-  const body = key && byKey.get(key)
-  return body
-    ? route.fulfill({ contentType: 'image/jpeg', body, headers: { 'access-control-allow-origin': 'https://photos.google.com', 'access-control-allow-credentials': 'true' } })
-    : route.fulfill({ status: 404 })
-})
-await page.route(/^(?!https:\/\/(photos\.google\.com|lh3\.googleusercontent\.com)\/).*/, (route) => route.abort())
+const wireRoutes = (p, body) => {
+  p.route('https://photos.google.com/**', (route) => route.fulfill({ contentType: 'text/html', body }))
+  p.route('https://lh3.googleusercontent.com/**', (route) => {
+    const key = /demo-([a-z0-9]+)=/.exec(route.request().url())?.[1]
+    const data = key && byKey.get(key)
+    return data
+      ? route.fulfill({ contentType: 'image/jpeg', body: data, headers: { 'access-control-allow-origin': 'https://photos.google.com', 'access-control-allow-credentials': 'true' } })
+      : route.fulfill({ status: 404 })
+  })
+  p.route(/^(?!https:\/\/(photos\.google\.com|lh3\.googleusercontent\.com)\/).*/, (route) => route.abort())
+}
+await wireRoutes(page, html)
 
 // 2. Load the grid, inject the built userscript, run Find duplicates.
 await page.goto('https://photos.google.com/')
@@ -111,6 +124,32 @@ if (process.argv.includes('--check')) {
   console.log(`dupes-demo: planned=${planned} trashed=${trashed.length} originalsLeft=${originalsLeft}`)
   if (!ok) {
     console.error(`dupes-demo: FAILED — trashed ${JSON.stringify(trashed)}`)
+    process.exitCode = 1
+  }
+
+  // 3. Selection drift must fail closed. Same markup, but the page ignores
+  // checkbox clicks (as a Google Photos change can): the run has to end in an
+  // error that says nothing was deleted — never in a silent "Done." with an
+  // unchanged gallery.
+  const drift = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+  await wireRoutes(drift, driftHtml)
+  await drift.goto('https://photos.google.com/')
+  await drift.evaluate((src) => new Function(src)(), userscript)
+  await drift.locator('#gpdt-dupes').click()
+  await drift.getByRole('button', { name: 'Scan this view' }).click()
+  await drift.locator('#gpdt-dupes-host').getByText('To Trash', { exact: true }).waitFor({ timeout: 60_000 })
+  const driftHost = drift.locator('#gpdt-dupes-host')
+  await driftHost.locator('input[type=checkbox]').check()
+  await driftHost.getByRole('button', { name: /^Move \d+ to Trash$/ }).click()
+  await driftHost.getByText(/never showed any of them as selected/).waitFor({ timeout: 60_000 })
+  const driftTiles = await drift.locator('.ckGgle').count()
+  const driftTrashed = await drift.evaluate(() => window.__trashed ?? [])
+  const driftDone = await driftHost.getByText(/^Done\./).count()
+  const driftOk = driftTiles === 36 && driftTrashed.length === 0 && driftDone === 0
+  console.log(`dupes-demo drift: tiles=${driftTiles} trashed=${driftTrashed.length} doneShown=${driftDone} → error shown`)
+  await drift.close()
+  if (!driftOk) {
+    console.error('dupes-demo drift: FAILED — a drifted page must fail closed, not report success')
     process.exitCode = 1
   }
 }
