@@ -51,7 +51,9 @@ the moat and selector drift handled as data patches, not incidents.
 - Fail closed: unknown UI → stop + descriptive error, never a guessed
   click.
 - Stop is abort-aware: a stopped run resolves `idle`, never `error`.
-- "Done" is proven (postconditions), never assumed.
+- "Done" is proven (postconditions), never assumed. If the run clicked
+  checkboxes and the page never reported a single one as selected, the run
+  ends as an error, not as an empty success.
 - Speed/ETA numbers are shown only when a total is known (dry-run) or
   measured (release gate).
 

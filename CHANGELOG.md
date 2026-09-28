@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.1] - 2026-09-28
+
+### Fixed
+- A run that clicked photo checkboxes but never saw Google Photos report a
+  single one of them as selected used to finish with "Done. 0 photos moved
+  to Trash." — indistinguishable from an empty gallery, and a false success
+  for a destructive tool. It now ends with an error saying that nothing was
+  deleted, and the Report issue diagnostics carry how many checkboxes were
+  clicked.
+
 ## [3.1.0] - 2026-09-26
 
 ### Added

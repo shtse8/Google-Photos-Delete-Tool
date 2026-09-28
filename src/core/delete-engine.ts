@@ -59,6 +59,10 @@ export interface EngineOptions {
  * resolves with status 'idle', NEVER 'error'. The `finally` block flushes
  * whatever selection remains (unless stopped or errored), so the last
  * partial batch is always deleted (or counted, in dry-run).
+ *
+ * A run that clicked checkboxes without the page ever reporting a
+ * selected photo resolves with status 'error' (selection drift), never
+ * with 'done' — the tool cannot claim success it did not observe.
  */
 export class DeleteEngine {
   private readonly config: Config
@@ -79,6 +83,10 @@ export class DeleteEngine {
   private counterFallbackUsed = false
   private flapRecoveries = 0
   private dryRunLabelsArr: string[] = []
+  /** Checkbox clicks this run performed (drift evidence). */
+  private clickedTiles = 0
+  /** True once a run observed at least one selected photo. */
+  private selectionObserved = false
 
   /** Deletion log for rate tracking. */
   readonly log = new DeletionLog()
@@ -152,6 +160,8 @@ export class DeleteEngine {
   async run(): Promise<Progress> {
     this.stopped = false
     this.paused = false
+    this.clickedTiles = 0
+    this.selectionObserved = false
 
     // Fail closed on a non-positive / non-finite batch limit. The batch
     // contract is a *positive* limit (`config.ts`: "Must be > 0"), and a
@@ -226,6 +236,10 @@ export class DeleteEngine {
         const clicked = await this.selectVisibleCheckboxes(remainingCapacity)
         const currentCount = this.getCount()
         const counterGain = currentCount - beforeCount
+        // Drift evidence for the run: how many checkboxes we clicked and
+        // whether the page ever admitted that any of them is selected.
+        this.clickedTiles += clicked
+        if (beforeCount > 0 || currentCount > 0) this.selectionObserved = true
         // Google Photos caps its selection counter (~500 in practice).
         // When we click new checkboxes but the counter refuses to grow,
         // we've hit that cap — treat it as "batch full" and flush.
@@ -323,9 +337,28 @@ export class DeleteEngine {
       if (this.progress.status !== 'error') {
         this.progress.status = this.stopped ? 'idle' : 'done'
       }
-      this.emitProgress()
-      if (this.progress.status === 'done') {
+
+      // Selection drift fails closed. A run that clicked photo checkboxes
+      // and never saw a single one reported as selected deleted nothing:
+      // either Google Photos changed under the selector pack, or this
+      // surface does not allow selection. Answering `done` would be a
+      // false success for a destructive tool, so say what was observed
+      // and let the diagnostic report carry the evidence.
+      if (
+        this.progress.status === 'done' &&
+        this.progress.deleted === 0 &&
+        this.clickedTiles > 0 &&
+        !this.selectionObserved
+      ) {
+        this.progress.status = 'error'
+        this.progress.error =
+          `Clicked ${this.clickedTiles} photo checkbox(es) but Google Photos never ` +
+          `showed any of them as selected, so nothing was deleted. The page may ` +
+          `have changed — use Report issue to send the details.`
+        console.warn(`${LOG} ${this.progress.error}`)
       }
+
+      this.emitProgress()
 
       diagnostics.setEngine({
         status: this.progress.status,
