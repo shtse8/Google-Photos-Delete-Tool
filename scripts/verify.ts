@@ -65,6 +65,10 @@ console.log('verify: package version =', pkg.version)
   check(!m.background?.service_worker, 'firefox background has NO service_worker (unsupported in Firefox MV3)')
   check(Array.isArray(m.background?.scripts) && m.background.scripts.includes('background.js'), 'firefox background.scripts includes background.js')
   check(!!m.browser_specific_settings?.gecko?.id, 'firefox browser_specific_settings.gecko.id present')
+  check(
+    m.browser_specific_settings?.gecko?.data_collection_permissions?.required?.[0] === 'none',
+    'firefox gecko.data_collection_permissions declares none (AMO requires it)',
+  )
 }
 
 // ─── Extension built JS ─────────────────────────────────────────

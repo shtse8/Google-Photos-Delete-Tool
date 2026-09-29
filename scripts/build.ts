@@ -114,6 +114,9 @@ function firefoxManifest(): Record<string, unknown> {
     gecko: {
       id: 'google-photos-delete-tool@shtse8.github.io',
       strict_min_version: '121.0',
+      // AMO rejects new add-ons without this key. The extension collects and
+      // transmits nothing.
+      data_collection_permissions: { required: ['none'] },
     },
   }
   return m
