@@ -20,3 +20,27 @@ describe('browserDom scroll target', () => {
     expect(el.scrollTop).toBe(0)
   })
 })
+
+describe('browserDom checked tiles and tile clicks', () => {
+  it('finds a checked checkbox whose class names changed, via ARIA state', () => {
+    document.body.innerHTML =
+      '<div class="newcls" role="checkbox" aria-checked="true"></div>' +
+      '<div class="newcls3" role="checkbox" aria-checked="false"></div>'
+    expect(browserDom.checkedTiles().length).toBe(1)
+    document.body.innerHTML = '<div class="x" role="checkbox" aria-pressed="true"></div>'
+    expect(browserDom.checkedTiles().length).toBe(1)
+    document.body.innerHTML = '<div class="x" aria-checked="true"></div>'
+    expect(browserDom.checkedTiles().length).toBe(1)
+  })
+
+  it('clicks a tile with the full pointer sequence', () => {
+    document.body.innerHTML = '<div class="ckGgle" role="checkbox" aria-checked="false"></div>'
+    const el = document.querySelector<HTMLElement>('.ckGgle')!
+    const seen: string[] = []
+    for (const t of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+      el.addEventListener(t, () => seen.push(t))
+    }
+    browserDom.uncheckedTiles()[0].click()
+    expect(seen).toEqual(['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'])
+  })
+})

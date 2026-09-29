@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Photo selection (issue #20): checkboxes are now clicked with the full
+  pointer sequence (pointer/mouse down, up, click) instead of a bare
+  synthetic click, and selector pack v5 recognises a selected checkbox by
+  ARIA state (`aria-checked`, `aria-pressed`, `aria-selected`) on any
+  element, so a Google Photos class-name change no longer hides a selection.
+
 ## [3.1.1] - 2026-09-28
 
 ### Fixed

@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "_comment": "Versioned, data-driven Google Photos DOM pack. Primaries are empirical selectors validated against the live UI at release time (see docs/RELEASE_GATE.md); the live gate may promote ARIA/role selectors in a later pack without code changes. A drift fix is a data patch, never code surgery. Photo-type label keywords added in v2 (first-token matching). v3 adds pack-owned scroll-container and dialog selectors so every Google Photos observation (media tiles, selection state, scroll container, dialogs, destructive candidates) is data-driven and fail-closed. v4 adds pack-owned media-link and thumbnail selectors so duplicate finding reads each tile's id and thumbnail from data, failing closed when either is missing.",
+  "version": 5,
+  "_comment": "Versioned, data-driven Google Photos DOM pack. Primaries are empirical selectors validated against the live UI at release time (see docs/RELEASE_GATE.md); the live gate may promote ARIA/role selectors in a later pack without code changes. A drift fix is a data patch, never code surgery. Photo-type label keywords added in v2 (first-token matching). v3 adds pack-owned scroll-container and dialog selectors so every Google Photos observation (media tiles, selection state, scroll container, dialogs, destructive candidates) is data-driven and fail-closed. v4 adds pack-owned media-link and thumbnail selectors so duplicate finding reads each tile's id and thumbnail from data, failing closed when either is missing. v5 broadens the checked-checkbox fallbacks to ARIA state semantics (aria-checked / aria-pressed / aria-selected on any element) so a class-name change cannot hide a selection.",
   "selectors": {
     "counter": {
       "name": "Selected photo count",
@@ -23,7 +23,10 @@
       "primary": ".ckGgle[aria-checked=true]",
       "fallbacks": [
         "[role=\"checkbox\"][aria-checked=\"true\"]",
-        "[data-lat][aria-checked=\"true\"]"
+        "[data-lat][aria-checked=\"true\"]",
+        "[role=\"checkbox\"][aria-pressed=\"true\"]",
+        "[role=\"checkbox\"][aria-selected=\"true\"]",
+        "[aria-checked=\"true\"]"
       ]
     },
     "photoContainer": {
