@@ -138,7 +138,7 @@ for (const dir of ['extension', 'extension-firefox']) {
 {
   const pack = JSON.parse(read('src/selector-packs/pack-v1.json'))
   const selectors = pack.selectors ?? {}
-  check(pack.version === 4, 'selector pack version == 4 (media link + thumbnail)')
+  check(pack.version === 5, "selector pack version == 5 (ARIA checked fallbacks)")
   check(!!selectors.scrollContainer && !!selectors.dialog, 'pack identifies scroll container and dialogs')
   check(!!selectors.mediaLink && !!selectors.thumbnail, 'pack identifies media links and thumbnails')
   check(!!pack.photoTypes?.photo?.length && !!pack.photoTypes?.screenshot?.length, 'pack photoTypes keyword lists non-empty')
