@@ -17,9 +17,31 @@ function isClickable(el: Element): boolean {
   return true
 }
 
+/**
+ * Click the way a pointer does: pointer/mouse down and up, then click, at
+ * the element's centre. Google Photos can ignore a bare synthetic
+ * `click()` on a checkbox whose handler listens for the pointer sequence.
+ */
+export function pointerClick(el: HTMLElement): void {
+  const r = el.getBoundingClientRect()
+  const init = {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    button: 0,
+    clientX: r.left + r.width / 2,
+    clientY: r.top + r.height / 2,
+  }
+  const fire = (type: string) => {
+    const Ctor = type.startsWith('pointer') && typeof PointerEvent !== 'undefined' ? PointerEvent : MouseEvent
+    el.dispatchEvent(new Ctor(type, init))
+  }
+  for (const t of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) fire(t)
+}
+
 function wrapTile(el: Element): PhotoTile {
   return {
-    click: () => (el as HTMLElement).click(),
+    click: () => pointerClick(el as HTMLElement),
     label: () => {
       const labeled = el.closest('[aria-label]')
       return labeled?.getAttribute('aria-label') ?? null
