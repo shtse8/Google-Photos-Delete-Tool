@@ -29,8 +29,9 @@ describe('browserDom checked tiles and tile clicks', () => {
     expect(browserDom.checkedTiles().length).toBe(1)
     document.body.innerHTML = '<div class="x" role="checkbox" aria-pressed="true"></div>'
     expect(browserDom.checkedTiles().length).toBe(1)
-    document.body.innerHTML = '<div class="x" aria-checked="true"></div>'
-    expect(browserDom.checkedTiles().length).toBe(1)
+    // A checked non-checkbox (menu item, toggle) is not a photo selection.
+    document.body.innerHTML = '<div class="x" role="menuitemcheckbox" aria-checked="true"></div>'
+    expect(browserDom.checkedTiles().length).toBe(0)
   })
 
   it('clicks a tile with the full pointer sequence', () => {
