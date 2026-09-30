@@ -116,5 +116,5 @@ export function buildDiagnosticIssueUrl(blob: DiagnosticBlob, title = '[drift] T
     '3. …',
   ].join('\n')
   const params = new URLSearchParams({ title, body })
-  return `https://github.com/shtse8/Google-Photos-Delete-Tool/issues/new?${params.toString()}`
+  return `https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues/new?${params.toString()}`
 }

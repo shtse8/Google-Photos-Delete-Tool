@@ -128,7 +128,7 @@ company delivery vocabulary.
     `https://greasyfork.org/en/scripts/google-photos-delete-tool`
     — HTTP 404 (`404 - Page Not Found`). Userscript locator is the GitHub
     release asset
-    `https://github.com/shtse8/Google-Photos-Delete-Tool/releases/download/v3.0.1/google-photos-delete.user.js`.
+    `https://github.com/SylphxAI/Google-Photos-Delete-Tool/releases/download/v3.0.1/google-photos-delete.user.js`.
 
   The `store-state` branch (`state.json`) records what is live per store —
   advanced only after the platform API confirms a publish. A green CI run or

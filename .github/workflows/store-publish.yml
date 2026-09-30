@@ -371,7 +371,7 @@ jobs:
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
         run: |
           set -euo pipefail
-          NOTES='{"notes":"Release ${{ needs.resolve.outputs.tag }}. Open-source extension; DOM automation clicks the same UI elements a user would. Source: https://github.com/shtse8/Google-Photos-Delete-Tool"}'
+          NOTES='{"notes":"Release ${{ needs.resolve.outputs.tag }}. Open-source extension; DOM automation clicks the same UI elements a user would. Source: https://github.com/SylphxAI/Google-Photos-Delete-Tool"}'
           RESP="$(curl -sS -i -X POST \
             -H "Authorization: ApiKey $EDGE_API_KEY" \
             -H "X-ClientID: $EDGE_CLIENT_ID" \
@@ -501,7 +501,7 @@ jobs:
           approval-notes: |
             Release ${{ needs.resolve.outputs.tag }}. Open-source extension (MIT); DOM
             automation clicks the same UI elements a human would. Source:
-            https://github.com/shtse8/Google-Photos-Delete-Tool
+            https://github.com/SylphxAI/Google-Photos-Delete-Tool
 
       - name: Record live state
         if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'

@@ -95,5 +95,5 @@ date.
 ## Contact
 
 For questions, open an issue at
-<https://github.com/shtse8/Google-Photos-Delete-Tool/issues> or email
+<https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues> or email
 <shtse8@gmail.com>.
