@@ -34,7 +34,7 @@ animations — and a dry-run report/export.
 
 Chrome Web Store: (link)
 Firefox: (link when AMO live)
-Source: https://github.com/shtse8/Google-Photos-Delete-Tool
+Source: https://github.com/SylphxAI/Google-Photos-Delete-Tool
 
 ## First comment
 

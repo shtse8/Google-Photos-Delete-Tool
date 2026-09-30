@@ -29,7 +29,7 @@ What took the time wasn't the clicking — it was making it safe:
   is free forever.
 
 Chrome Web Store: https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb
-Source (MIT): https://github.com/shtse8/Google-Photos-Delete-Tool
+Source (MIT): https://github.com/SylphxAI/Google-Photos-Delete-Tool
 
 Happy to answer questions about the matching strategy, the release gate
 (version/artifact verification), or why DOM automation beats the API here.

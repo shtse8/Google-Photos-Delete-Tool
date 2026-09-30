@@ -27,7 +27,7 @@ browser extension, also available as a Tampermonkey userscript):
   adds filters like "only screenshots" and a dry-run report).
 
 Chrome Web Store: https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb
-Source: https://github.com/shtse8/Google-Photos-Delete-Tool
+Source: https://github.com/SylphxAI/Google-Photos-Delete-Tool
 
 r/privacy / r/degoogle angle (only if it fits the thread): consent-gated,
 zero-server, no telemetry, local license verification, open source.

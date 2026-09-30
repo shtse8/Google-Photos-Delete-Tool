@@ -199,11 +199,11 @@ const userscriptHeader = `// ==UserScript==
 // @author       Kyle Tse
 // @match        ${SUPPORTED_MATCH_PATTERN}
 // @grant        none
-// @homepage     https://github.com/shtse8/Google-Photos-Delete-Tool
-// @supportURL   https://github.com/shtse8/Google-Photos-Delete-Tool/issues
+// @homepage     https://github.com/SylphxAI/Google-Photos-Delete-Tool
+// @supportURL   https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues
 // @license      MIT
-// @downloadURL  https://github.com/shtse8/Google-Photos-Delete-Tool/releases/latest/download/google-photos-delete.user.js
-// @updateURL    https://github.com/shtse8/Google-Photos-Delete-Tool/releases/latest/download/google-photos-delete.user.js
+// @downloadURL  https://github.com/SylphxAI/Google-Photos-Delete-Tool/releases/latest/download/google-photos-delete.user.js
+// @updateURL    https://github.com/SylphxAI/Google-Photos-Delete-Tool/releases/latest/download/google-photos-delete.user.js
 // ==/UserScript==
 `
 

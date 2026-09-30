@@ -332,7 +332,7 @@ describe('PageRunner — issue report URL', () => {
     stubNavigator()
     const runner = new PageRunner({ dom: new RunnerFakeDom() as unknown as EngineDom, baton: fakeBaton() })
     const url = runner.buildIssueUrl()
-    expect(url).toMatch(/^https:\/\/github\.com\/shtse8\/Google-Photos-Delete-Tool\/issues\/new\?/)
+    expect(url).toMatch(/^https:\/\/github\.com\/SylphxAI\/Google-Photos-Delete-Tool\/issues\/new\?/)
     const decoded = decodeURIComponent(url).replace(/\+/g, ' ')
     expect(decoded).toContain('[drift] Tool stopped working correctly')
     expect(decoded).toContain('Diagnostic data')

@@ -6,8 +6,8 @@ dry run first, batches of up to 500, optional empty trash.
 Get it on the [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
 or as a userscript. It runs in your browser; nothing is uploaded.
 
-[![CI](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/ci.yml)
-[![Release](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml/badge.svg)](https://github.com/shtse8/Google-Photos-Delete-Tool/actions/workflows/release.yml)
+[![CI](https://github.com/SylphxAI/Google-Photos-Delete-Tool/actions/workflows/ci.yml/badge.svg)](https://github.com/SylphxAI/Google-Photos-Delete-Tool/actions/workflows/ci.yml)
+[![Release](https://github.com/SylphxAI/Google-Photos-Delete-Tool/actions/workflows/release.yml/badge.svg)](https://github.com/SylphxAI/Google-Photos-Delete-Tool/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/jiahfbbfpacpolomdjlpdpiljllcdenb?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
 
@@ -141,7 +141,7 @@ developer mode, and **Load unpacked**.
 1. Install [Tampermonkey](https://www.tampermonkey.net/) or
    [Violentmonkey](https://violentmonkey.github.io/).
 2. Install the latest
-   [`google-photos-delete.user.js`](https://github.com/shtse8/Google-Photos-Delete-Tool/releases/latest/download/google-photos-delete.user.js).
+   [`google-photos-delete.user.js`](https://github.com/SylphxAI/Google-Photos-Delete-Tool/releases/latest/download/google-photos-delete.user.js).
 3. Open [photos.google.com](https://photos.google.com/?hl=en) — the
    floating panel appears bottom-right.
 
