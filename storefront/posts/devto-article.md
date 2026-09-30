@@ -28,7 +28,7 @@ constraints that make it safe.
      that treats review queues as expected states (store-state branch).
 5. Numbers so far
    - 10k+ CWS installs, 9 languages, 100% issue reports with diagnostic
-     blobs (replace with current numbers at publish time — do not invent).
+     blobs (use the current figures at publish time).
 
 ## Where to publish
 

@@ -1,4 +1,4 @@
-# Storefront — single source of truth
+# Storefront
 
 `listing.json` is the **only** place store listing copy is written.
 Screenshots and post drafts live here too.
@@ -7,7 +7,7 @@ Screenshots and post drafts live here too.
 |---|---|
 | `listing.json` | All store copy: CWS, Edge Add-ons, AMO. Validated by `bun run listing:check` in CI. |
 | `posts/` | Copy-paste-ready content drafts (Show HN, Reddit, dev.to, Product Hunt). |
-| `screenshots/` | Real product captures listed in `listing.json` (pending capture). |
+| `screenshots/` | Real product captures listed in `listing.json`. |
 
 ## Editing listing copy
 
@@ -29,6 +29,6 @@ Real captures only — no mockups. Capture at 1280×800 from a real
 `photos.google.com` session:
 
 1. `dry-run.png` — dry-run result with count
-2. `running.png` — real run with honest stats
+2. `running.png` — real run with live stats
 3. `filters.png` — Pro type filters
 4. `empty-trash.png` — verified empty-trash done state

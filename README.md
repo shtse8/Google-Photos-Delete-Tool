@@ -1,4 +1,4 @@
-# 🗑️ Google Photos Delete Tool
+# Google Photos Delete Tool
 
 Find and delete duplicate photos in Google Photos, and bulk delete safely:
 dry run first, batches of up to 500, optional empty trash.
@@ -53,81 +53,59 @@ Photos page you already have open instead.
 
 ## Bulk delete
 
-Google Photos has **no "delete all"**. This tool automates the tedious
-select → trash → confirm loop in safe batches so you can reclaim your
-storage. It works entirely in your browser: it clicks the same UI elements
-a human would click, in batches of up to 500, until your current view is
-empty.
+Google Photos has no "delete all". This tool runs the select, trash, confirm
+loop for you in batches of up to 500 until your current view is empty. It works
+in your browser by clicking the same controls a person would, because the
+Google Photos Library API has no delete endpoint.
 
-> **Why DOM automation?** The Google Photos Library API has no
-> `mediaItems.delete` endpoint (list/get/batchGet/batchCreate only) and no
-> official bulk-delete feature. DOM automation is the only practical path,
-> so this tool stops rather than guesses: it never clicks a delete button it
-> cannot positively identify.
+## Two surfaces, one engine
 
----
-
-## Supported surfaces (two, by design)
-
-| Surface | How to get it | Notes |
+| Surface | Get it | Includes |
 |---|---|---|
-| **Chrome / Firefox extension** | [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb); Firefox Add-ons not published | Full popup UI, badge, i18n (9 languages), empty-trash flow. Firefox artifact exists in source; the AMO listing is unpublished (404). |
-| **Userscript** (Tampermonkey / Violentmonkey / Greasemonkey) | `google-photos-delete.user.js` from the latest release | Same engine, same floating panel, same safety model |
+| **Chrome / Firefox extension** | [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb); Firefox zip on each release | Popup UI, badge, 9 languages, empty-trash flow |
+| **Userscript** (Tampermonkey, Violentmonkey, Greasemonkey) | `google-photos-delete.user.js` from the latest release | Same engine, floating panel, same safety model |
 
-The bookmarklet and DevTools-console distributions were **removed** in v3:
-they duplicated the panel with divergent behavior and shipped instructions
-that did not match the code. The standalone `inject.js` is still built as a
-dev artifact but is not a supported product surface.
+## Built to be trusted
 
-## Safety model (non-negotiable)
-
-- **Fail-closed destructive matching.** The delete/confirm/empty-trash
-  buttons are matched by positive multilingual keywords against
-  `aria-label`/tooltip/text. The tool never guesses "the last non-cancel
-  button" — an unknown UI means **stop and error**, not click.
-- **Consent gate.** The first real (non-dry) run requires you to
-  acknowledge what you are about to do. Nothing is ever scheduled or
-  unattended.
-- **60-day trash.** Deleted photos go to the Google Photos Trash where
-  they stay for 60 days. "Empty trash afterwards" is **opt-in**, permanent,
-  and only reported `done` after it verifies the trash actually emptied.
-- **Honest numbers.** The progress bar is indeterminate while the total is
-  unknown; ETA is shown only after a dry-run established a total. Speed
-  claims are measured in the release gate, not invented in marketing.
-- **No telemetry, zero server.** Everything runs in your browser. Pro
-  license verification is local (Ed25519). Nothing leaves your machine.
+- **Fail-closed matching.** Delete, confirm and empty-trash buttons are matched
+  by positive multilingual keywords on `aria-label`, tooltip or text. An unknown
+  UI stops the run with an error; it never clicks a guess.
+- **Consent gate.** The first real run asks you to acknowledge what will
+  happen. Nothing is scheduled or unattended.
+- **60-day Trash.** Deleted photos sit in Google Photos Trash for 60 days.
+  "Empty trash afterwards" is opt-in, permanent, and reported `done` only after
+  the trash is verified empty.
+- **Accurate numbers.** The progress bar is indeterminate while the total is
+  unknown; ETA appears once a dry run has established a total.
+- **No telemetry, no server.** Everything runs in your browser. Pro licence
+  verification is local (Ed25519).
 
 ## Features
 
-- **Find duplicates** — scan the current view, group look-alike photos by
-  perceptual hash (adjustable similarity), review which to keep, then move
-  the rest to Trash through the normal consent-gated flow.
-- **Batch delete** — select up to 500 per batch (Google's selection cap),
-  loop until the view is empty. The engine detects the cap, scrolls, and
-  flushes the final partial batch.
-- **Pause / Resume / Stop** — stop is instant and abort-aware; a stopped
-  run never reports a false error.
-- **Dry run** — scroll-and-count mode that never clicks anything, returns
-  a count and (with Pro) a per-type breakdown.
-- **Empty trash (opt-in)** — navigates to `/trash`, empties it, and
-  verifies the postcondition before reporting done.
-- **Type filters (Pro)** — delete only screenshots, videos, animations,
-  collages, or photos, matched on the first label token.
-- **Versioned selector packs** — all Google-Photos-specific selectors and
-  keyword lists live in a versioned JSON data pack; a UI drift fix is a
-  data patch, not code surgery.
-- **Self-diagnosing reports** — the panel's **Report issue** button opens
-  a pre-filled GitHub issue with a structured diagnostic blob (pack
-  version, selector matches, observed labels) so "it's broken" becomes
-  actionable drift data.
-- **9-language extension UI** with compile-time-complete translations.
+- **Find duplicates:** scan the current view, group look-alike photos by
+  perceptual hash at an adjustable similarity, review which to keep, then move
+  the rest to Trash through the consent-gated flow.
+- **Batch delete:** up to 500 per batch (Google's selection cap); the engine
+  detects the cap, scrolls and flushes the final partial batch.
+- **Pause / Resume / Stop:** stop is instant; a stopped run never reports a
+  false error.
+- **Dry run:** scrolls and counts without clicking anything, and (with Pro)
+  returns a per-type breakdown.
+- **Empty trash (opt-in):** opens `/trash`, empties it and verifies the result.
+- **Type filters (Pro):** delete only screenshots, videos, animations, collages
+  or photos.
+- **Versioned selector packs:** Google Photos selectors and keyword lists live
+  in a versioned JSON pack, so a UI change ships as a data patch.
+- **Report issue:** one click opens a pre-filled GitHub issue with pack version,
+  selector matches and observed labels.
+- **9 languages** in the extension UI, with compile-time-complete translations.
 
 ## Installation
 
 ### Chrome / Firefox
 
 1. Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
-   or Firefox Add-ons (when published).
+   or load the Firefox zip from the release.
 2. Navigate to [photos.google.com](https://photos.google.com/?hl=en).
 3. Click the extension icon, confirm the safety notice on your first real
    run, then press **Start**.
@@ -211,12 +189,10 @@ tests/                     # engine loop on a scripted DOM fake + core/surface s
 
 ### Release gate
 
-Every release must pass the live-run protocol documented in
-[`docs/RELEASE_GATE.md`](docs/RELEASE_GATE.md): a disposable account, a
-fixed deletion scenario, and recorded postconditions (counter resets,
-trash contents, empty-trash proof). Release notes carry the evidence.
-Selector drift is a patch to the pack data file, triaged from
-diagnostic reports.
+Every release passes the live-run protocol in
+[`docs/RELEASE_GATE.md`](docs/RELEASE_GATE.md): a disposable account, a fixed
+deletion scenario, and recorded postconditions. Release notes carry the
+evidence.
 
 ## FAQ
 
@@ -242,8 +218,8 @@ reference results.
 scan. Scan your main Photos view to cover the library, or an album or
 search to narrow it down.
 
-**How fast is it?** Deletion runs at Google's UI pace. Exact figures are
-measured per release in the release gate, never quoted as marketing.
+**How fast is it?** Deletion runs at Google's UI pace; each release's photos per
+minute is measured in the release gate and published in its notes.
 
 **What about the trash?** Deleted photos go to Trash for 60 days.
 "Empty trash afterwards" empties and permanently removes them — with your
@@ -251,9 +227,6 @@ explicit opt-in.
 
 ## License & provenance
 
-MIT — see [`LICENSE`](LICENSE). This project is a modernized fork of
+MIT, see [`LICENSE`](LICENSE). A Sylphx open-source product, modernized from
 [mrishab/google-photos-delete-tool](https://github.com/mrishab/google-photos-delete-tool).
-Note: the upstream project ships **no license file**, so the MIT grant
-here covers the fork's own original contributions and re-engineering; the
-legal status of directly inherited upstream code is ambiguous and should
-be treated accordingly.
+See [`docs/LICENSE_PROVENANCE.md`](docs/LICENSE_PROVENANCE.md).

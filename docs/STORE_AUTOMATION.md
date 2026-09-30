@@ -1,10 +1,9 @@
-# Store Automation — architecture, bootstrap, runbook, evidence
+# Store automation
 
-The distribution system is **agent-native after one bootstrap**: a tag on
-`master` becomes GitHub release assets immediately, and each store is
-published by a scheduled retry loop as soon as that store's review queue
-allows. The only human steps are the ones platforms require: account
-creation, credential issuance, and the very first product submission.
+A tag on `master` becomes GitHub release assets immediately, and a scheduled
+retry loop publishes each store as soon as its review queue allows. Human steps
+are limited to what platforms require: account creation, credential issuance
+and the first product submission.
 
 ## Model
 
@@ -31,7 +30,7 @@ store-retry.yml (every 6h) ──▶ store-publish.yml
 - **One concurrency group** (`store-publish`) prevents overlapping runs
   from racing the state branch.
 
-## What is automated vs one-time human
+## Automated versus one-time human
 
 | Step | Who | When |
 |---|---|---|
@@ -70,32 +69,23 @@ Then run the handoff scripts: `node scripts/greasy-fork-upload.mjs`,
 Every script fails loudly and prints the live page text on selector
 drift — the agent adapts, never fakes.
 
-## One-time bootstrap checklist (do once, then no human in the loop)
+## Secrets
 
-### 1Password inventory — what to store, where it goes
+| Store | Repo secrets |
+|---|---|
+| Chrome Web Store | `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN` ([setup](CHROME_WEB_STORE_SETUP.md)) |
+| Microsoft Edge Add-ons | `EDGE_CLIENT_ID`, `EDGE_API_KEY`, `EDGE_PRODUCT_ID` |
+| Firefox AMO | `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET` |
 
-Store these in 1Password (never in chat). Each maps to a repo secret or
-a session:
+Passwords for Google, Microsoft and Mozilla accounts never enter the repo or an
+agent; identity stays with the account holder.
 
-| 1Password item | Fields | Repo secret / use |
-|---|---|---|
-| AMO API credentials | issuer (API key) + secret | `FIREFOX_JWT_ISSUER` / `FIREFOX_JWT_SECRET` |
-| Edge Publish API | Client ID + API key + expiry | `EDGE_CLIENT_ID` / `EDGE_API_KEY` / `EDGE_PRODUCT_ID` |
-| CWS credentials | (already configured) | `CHROME_*` — no change |
-| Greasy Fork | nothing | user's browser session only (Tier 2) |
-| Google / Microsoft / Mozilla logins | passwords | NEVER — identity stays with the user |
+## One-time bootstrap
 
-After adding AMO + Edge secrets, the store-retry loop and this checklist
-are the entire system; every remaining step below is Tier 1.
+### Chrome Web Store
 
-## One-time bootstrap checklist (do once, then no human in the loop)
-
-### Chrome Web Store — done
-
-Secrets already present: `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`,
-`CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN`.
-v3.0.0 is in Google review; v3.0.1 upload is blocked (`ITEM_NOT_UPDATABLE`)
-until review clears — the retry loop publishes it automatically after.
+Add the four secrets above. While an earlier version is in review, uploads
+return `ITEM_NOT_UPDATABLE` and the retry loop publishes once review clears.
 
 ### Microsoft Edge Add-ons (~30 min, once)
 
@@ -114,10 +104,10 @@ until review clears — the retry loop publishes it automatically after.
    - `EDGE_CLIENT_ID` — the Client ID from step 3
    - `EDGE_API_KEY` — the API key from step 3 (note the expiry date)
    - `EDGE_PRODUCT_ID` — the product GUID from step 4
-6. Dispatch: `gh workflow run "Publish Stores (manual)" -f stores=edge -f tag=v3.0.1`
+6. Dispatch: `gh workflow run "Publish Stores (manual)" -f stores=edge -f tag=<tag>`
    — from then on the retry loop publishes every tag automatically.
 
-Edge API contract (v1.1, verified 2026-08-09 from Microsoft docs):
+Edge API contract (v1.1):
 base `https://api.addons.microsoftedge.microsoft.com/v1`; headers
 `Authorization: ApiKey $EDGE_API_KEY` + `X-ClientID: $EDGE_CLIENT_ID`.
 No API exists for creating a product or updating listing metadata —
@@ -158,12 +148,10 @@ the entire lifetime cost.
 gh workflow run "Update CWS Listing (manual)"
 ```
 
-Fails loudly while the item is in review — observed live: the API
-returns `ITEM_NOT_UPDATABLE` (upload path) or HTTP `304 Not Modified`
-(metadata path) until Google clears the review. Re-dispatch after review
-clears. If Google rejects or sunsets the metadata endpoints (community
-tooling reports a 2026-10-15 sunset), the browser-handoff fallback pastes
-the same file into the dashboard: `node scripts/cws-listing.mjs --item-id <id>`.
+It fails while the item is in review (`ITEM_NOT_UPDATABLE` on upload, HTTP 304
+on metadata); re-dispatch after review clears. If the metadata endpoints are
+unavailable, the browser-handoff fallback pastes the same file into the
+dashboard: `node scripts/cws-listing.mjs --item-id <id>`.
 Screenshots: `node scripts/cws-screenshots.mjs` captures real 1280×800
 shots from the user's own Google Photos session (dry-run + filters are
 safe; running/empty-trash require `--allow-destructive` and the user
@@ -174,7 +162,7 @@ by design.
 
 ```bash
 # publish a specific tag to a specific store right now
-gh workflow run "Publish Stores (manual)" -f stores=cws -f tag=v3.0.1
+gh workflow run "Publish Stores (manual)" -f stores=cws -f tag=<tag>
 
 # publish whatever is pending to all stores (same engine as the retry)
 gh workflow run "Publish Stores (manual)" -f stores=auto

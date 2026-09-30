@@ -1,4 +1,4 @@
-# Release Gate — Live-Run Evidence Protocol
+# Release gate: live-run evidence protocol
 
 Every release of Google Photos Delete Tool must carry **live-run
 evidence** in its release notes. A green CI pipeline proves the source;
@@ -9,7 +9,7 @@ that second proof.
 
 - Google Photos changes its DOM and localization without notice; selectors
   and dialog flows drift.
-- "Done" for a destructive tool must mean *verified* done.
+- `done` for a destructive tool must mean verified done.
 - The selector pack (`src/selector-packs/pack-v1.json`) is a data patch
   precisely so that a drift found here is cheap to fix and re-verify.
 
