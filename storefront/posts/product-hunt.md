@@ -1,8 +1,7 @@
 # Product Hunt launch draft
 
-Timing: AFTER CWS v3 is live (a storefront link converts). Use the
-existing 10k-user base to seed first-day upvotes (ask in-app/README, not
-spam). One launch only — make it count.
+Timing: launch with the Chrome Web Store link live. Invite the existing
+10k-user base to upvote on day one (ask in the README, no spam). One launch.
 
 ## Title (60 chars max)
 
@@ -33,7 +32,6 @@ Free forever: delete engine, dry run, empty trash. One-time Pro license
 animations — and a dry-run report/export.
 
 Chrome Web Store: (link)
-Firefox: (link when AMO live)
 Source: https://github.com/SylphxAI/Google-Photos-Delete-Tool
 
 ## First comment

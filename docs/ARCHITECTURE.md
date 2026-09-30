@@ -1,8 +1,8 @@
 # Architecture — Google Photos Delete Tool
 
-## North star
+## Shape
 
-Most capability with the least system: **one engine, one control panel,
+The least system that does the job: **one engine, one control panel,
 two surfaces (extension + userscript), zero servers**, with trust
 (fail-closed destructive matching, consent, verified postconditions) as
 the moat and selector drift handled as data patches, not incidents.
@@ -66,8 +66,4 @@ header, pack integrity); `scripts/zip.ts` produces the two zips;
 `.github/workflows/release.yml` runs typecheck → lint → test → build →
 verify → zip → GitHub release → CWS publish.
 
-## Live-run evidence
-
-Every release must pass `docs/RELEASE_GATE.md` — the source/CI proof is
-complemented by a disposable-account live run with recorded
-postconditions, attached to the release notes.
+Every release also passes the live run in `docs/RELEASE_GATE.md`.

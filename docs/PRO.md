@@ -42,22 +42,18 @@ bun run license:issue --email=buyer@example.com
 bun run license:verify <token>
 ```
 
-## Key custody (critical)
+## Key custody
 
-- The private key **never enters this repository**. The canonical record
-  is `/home/codex/secure/gpdt-pro-license.key` (base64url PKCS8 DER,
-  mode 600); the seller tooling default is `~/.gpdt/gpdt-license-private.pem`
-  (same keypair, PEM form, mode 600). Both locations are outside the
-  repo; `$GPDT_PRO_PRIVATE_KEY` overrides the path for CI/signing
-  servers. The embedded public key in `src/core/license.ts` matches this
-  keypair — verified end-to-end (`license:issue` → `license:verify`).
-- **Losing the private key invalidates every issued token.** Users cannot
-  re-verify. There is no revocation server by design.
-- Rotation: run `license:keygen`, embed the new public key in
-  `src/core/license.ts`, release. Old tokens stop verifying — that is
-  intentional and documented.
-- Issued tokens are single-payload licenses; there is deliberately no
-  expiry field (a lifetime token cannot be revoked without key rotation).
+- The private key stays outside this repository. The seller tooling reads
+  `~/.gpdt/gpdt-license-private.pem` (mode 600), or the path in
+  `$GPDT_PRO_PRIVATE_KEY` for CI. The public key embedded in
+  `src/core/license.ts` matches it.
+- Losing the private key invalidates every issued token, and there is no
+  revocation server by design.
+- Rotation: run `license:keygen`, embed the new public key, release. Old tokens
+  stop verifying.
+- Tokens carry no expiry field; a lifetime token cannot be revoked without key
+  rotation.
 
 ## Testing
 
@@ -65,27 +61,21 @@ bun run license:verify <token>
 throwaway keypair plus the production-key shape check, without the seller
 key.
 
-## Sales integration (user-authority handoff)
+## Sales
 
-1. **Gumroad product.** One-time purchase, digital deliverable. Price is
-   a business decision (suggested entry: $5–9 USD — a convenience unlock
-   for power users of a free tool).
-2. **Delivery.** The checkout confirmation/email tells the buyer to open
-   the extension → Pro → paste the token. Tokens are issued per order
-   with `bun run license:issue --email=<buyer email>`; keep an order
-   ledger (email ↔ token ↔ date) outside the repo for support.
-3. **Manual issuance is correct at this scale.** If volume ever makes it
-   painful, add a serverless issuer (still Ed25519; the embedded public
-   key does not change). Paddle License API is the managed alternative —
-   it adds an account system and a server; do not adopt it until manual
-   issuance actually hurts.
+1. **Gumroad product:** one-time purchase, digital deliverable, a convenience
+   unlock for power users of a free tool.
+2. **Delivery:** the checkout email tells the buyer to open the extension, then
+   Pro, and paste the token. Issue one per order with
+   `bun run license:issue --email=<buyer email>` and keep an order ledger
+   (email, token, date) outside the repo for support.
+3. **Scale:** manual issuance fits current volume. A serverless issuer keeps the
+   same Ed25519 key; Paddle's License API is the managed alternative.
 
-## Chrome Web Store compliance note
+## Chrome Web Store compliance
 
-The extension itself is free and its core functionality (batch delete,
-dry-run, empty-trash) is fully free. Pro unlocks **additive analysis**
-(type filters, dry-run report/export) via a token sold outside the
-Chrome Web Store — the standard compliant shape for CWS (no in-extension
-payment processing, no paywalled core). The CWS listing description must
-**disclose the paid Pro layer**; updating the listing text is a
-storefront handoff (the current listing still carries v2 wording).
+The extension is free and its core (batch delete, dry run, empty trash) is
+fully free. Pro adds analysis (type filters, dry-run report and export) through
+a token sold outside the store, the standard compliant shape for the Chrome Web
+Store: no in-extension payment and no paywalled core. The store listing
+discloses the paid Pro layer.

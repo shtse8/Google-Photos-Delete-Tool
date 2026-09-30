@@ -1,6 +1,6 @@
 # Privacy Policy — Google Photos Delete Tool
 
-**Last updated:** 2026-09-26
+**Last updated:** 2026-09-30
 
 ## Overview
 
@@ -59,8 +59,7 @@ None of this is transmitted anywhere.
   Find duplicates fetches thumbnails from Google's image servers with the
   page's own access rules; it needs no extra permission.
 
-The former `activeTab` permission was removed in v3.0.0; the content
-script is declared directly for the single supported domain.
+The content script is declared directly for the single supported domain.
 
 ## Effects on Your Google Photos Account
 
@@ -96,4 +95,5 @@ date.
 
 For questions, open an issue at
 <https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues> or email
-<shtse8@gmail.com>.
+<contact@sylphx.com>. Security reports go through the repository's
+[security advisories](https://github.com/SylphxAI/Google-Photos-Delete-Tool/security/advisories/new).
