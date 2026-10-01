@@ -61,3 +61,19 @@ describe('post-run card button', () => {
     expect(buttons()).toContain('Dismiss')
   })
 })
+
+describe('teaser dismissal', () => {
+  it('stays dismissed for the same result and shows again for a new one', () => {
+    const host = document.createElement('div')
+    const teaser = buildDryRunTeaser(counts, labels.length, false)!
+    renderProTeaser(host, teaser)
+    expect(host.style.display).toBe('block')
+    ;(host.querySelector('button') as HTMLButtonElement).click()
+    expect(host.style.display).toBe('none')
+    renderProTeaser(host, teaser)
+    expect(host.style.display).toBe('none')
+    const other = buildDryRunTeaser(countLabelTypes([...labels, 'Video - 2 Jan 2020, 09:00:00']), labels.length + 1, false)!
+    renderProTeaser(host, other)
+    expect(host.style.display).toBe('block')
+  })
+})

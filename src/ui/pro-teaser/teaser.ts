@@ -7,7 +7,9 @@ import type { DryRunTeaser } from '../../core/pro-moments'
 
 export function renderProTeaser(host: HTMLElement, teaser: DryRunTeaser | null): void {
   host.replaceChildren()
-  if (!teaser) {
+  // A dismissed teaser stays hidden when the same result is re-rendered
+  // (repeat status messages); a new dry run with different counts shows again.
+  if (!teaser || host.dataset.dismissed === teaser.countsLine) {
     host.style.display = 'none'
     return
   }
@@ -27,7 +29,10 @@ export function renderProTeaser(host: HTMLElement, teaser: DryRunTeaser | null):
   dismiss.type = 'button'
   dismiss.textContent = 'Dismiss'
   dismiss.style.cssText = 'all:unset;cursor:pointer;opacity:0.6;text-decoration:underline'
-  dismiss.addEventListener('click', () => renderProTeaser(host, null))
+  dismiss.addEventListener('click', () => {
+    host.dataset.dismissed = teaser.countsLine
+    renderProTeaser(host, null)
+  })
   cta.append(link, dismiss)
   host.append(counts, cta)
 }
