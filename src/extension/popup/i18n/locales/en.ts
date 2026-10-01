@@ -58,6 +58,7 @@ const en: Translations = {
       hint: "Verified locally; never leaves your device",
       placeholder: "Paste license token",
       activate: "Activate",
+      getPro: "Get Pro — US$9.99 once",
       active: "Pro active — filters enabled",
       invalid: "Invalid license token",
     },

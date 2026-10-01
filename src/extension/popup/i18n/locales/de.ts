@@ -58,6 +58,7 @@ const de: Translations = {
       hint: "Lokal geprüft; verlässt das Gerät nie",
       placeholder: "Lizenz-Token einfügen",
       activate: "Aktivieren",
+      getPro: "Get Pro — US$9.99 once",
       active: "Pro aktiv — Filter aktiviert",
       invalid: "Ungültiger Lizenz-Token",
     },

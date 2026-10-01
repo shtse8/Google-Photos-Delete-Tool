@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.2.1] - 2026-10-01
+
+### Added
+- "Get Pro - US$9.99 once" link next to the Pro license box in the popup and
+  the userscript panel. It opens the README `#pro` section in a new tab, so
+  the purchase link can change without a store release; no network call.
+- README "Pro" section: what Pro unlocks, price, how the token arrives and
+  where to paste it.
+
+### Changed
+- Pro licence verification accepts two public keys: the original and a new
+  one. Tokens issued under the original key stay valid.
+
+### Fixed
+- `GPDT_PRO_PRIVATE_KEY` now means the same for `license:keygen` and
+  `license:issue`: a path to a key file, or the key content itself.
+
 ## [3.2.0] - 2026-10-01
 
 ### Changed

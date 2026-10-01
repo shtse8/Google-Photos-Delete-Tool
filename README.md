@@ -142,10 +142,22 @@ Zero data collection, zero servers, zero telemetry. Full statement in
 
 ## Pro
 
-The delete engine, dry-run, and empty-trash are free forever. A one-time
-**Pro** license unlocks the analysis layer: type filters and the dry-run
-report/export. Pro is a locally-verified Ed25519 token — no account, no
-backend. Seller tooling and key management: see [`docs/PRO.md`](docs/PRO.md).
+Deleting stays free forever: the delete engine, dry-run and empty-trash cost
+nothing. **Pro** adds the analysis layer on top:
+
+- **Type filters** - clean up only screenshots, videos, photos, animations or
+  collages.
+- **Dry-run report and export** - see exactly what a run would remove, and
+  export it as CSV before you commit.
+
+**US$9.99, one time, lifetime.** No subscription, no account.
+
+**[Buy Pro](PAYMENT_LINK_URL)**
+
+Your token arrives by email right after checkout. Open the extension (or the
+userscript panel), find the **Pro license** box, paste the token and press
+**Activate**. It is verified on your device, offline, and never leaves it.
+Seller tooling and key custody: [`docs/PRO.md`](docs/PRO.md).
 
 ## Development
 

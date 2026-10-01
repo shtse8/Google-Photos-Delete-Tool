@@ -132,6 +132,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
         <input type="text" id="gpdt-license" placeholder="paste token" style="flex:1" />
         <button class="gpdt-ghost" id="gpdt-license-btn" style="padding:6px 8px">Activate</button>
       </span>
+      <a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro" target="_blank" rel="noopener" style="font-size:11px; color:#8b8b95; white-space:nowrap">Get Pro — US$9.99 once</a>
     </div>
     <div id="gpdt-license-status" class="gpdt-note"></div>
     <div class="gpdt-stats">

@@ -58,6 +58,7 @@ const zh: Translations = {
       hint: "本地验证，绝不离开设备",
       placeholder: "粘贴许可证令牌",
       activate: "激活",
+      getPro: "Get Pro — US$9.99 once",
       active: "Pro 已激活 — 筛选已启用",
       invalid: "许可证令牌无效",
     },

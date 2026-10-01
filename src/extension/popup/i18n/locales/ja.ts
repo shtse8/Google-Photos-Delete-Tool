@@ -58,6 +58,7 @@ const ja: Translations = {
       hint: "端末内で検証。外部に送信されません",
       placeholder: "ライセンストークンを貼り付け",
       activate: "有効化",
+      getPro: "Get Pro — US$9.99 once",
       active: "Pro 有効 — フィルター利用可",
       invalid: "無効なライセンストークン",
     },

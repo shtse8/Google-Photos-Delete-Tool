@@ -58,6 +58,7 @@ const nl: Translations = {
       hint: "Lokaal geverifieerd; verlaat nooit je apparaat",
       placeholder: "Licentietoken plakken",
       activate: "Activeren",
+      getPro: "Get Pro — US$9.99 once",
       active: "Pro actief — filters ingeschakeld",
       invalid: "Ongeldige licentietoken",
     },

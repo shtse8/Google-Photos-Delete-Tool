@@ -37,7 +37,7 @@ export interface Translations {
     dryRun: { label: string; hint: string }
     emptyTrash: { label: string; hint: string }
     filter: { label: string; hint: string; all: string; screenshot: string; video: string; photo: string; animation: string; collage: string }
-    license: { label: string; hint: string; placeholder: string; activate: string; active: string; invalid: string }
+    license: { label: string; hint: string; placeholder: string; activate: string; getPro: string; active: string; invalid: string }
     language: { label: string; trigger: string }
   }
   actions: {

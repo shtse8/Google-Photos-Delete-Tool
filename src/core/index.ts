@@ -64,6 +64,7 @@ export {
   encodeBase64Url,
   decodeBase64Url,
   PRO_PUBLIC_KEY_BASE64URL,
+  PRO_PUBLIC_KEYS_BASE64URL,
   type ProLicensePayload,
   type LicenseResult,
 } from './license'

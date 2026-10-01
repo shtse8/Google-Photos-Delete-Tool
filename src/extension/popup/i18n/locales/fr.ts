@@ -58,6 +58,7 @@ const fr: Translations = {
       hint: "Vérifiée localement ; ne quitte jamais votre appareil",
       placeholder: "Collez le jeton de licence",
       activate: "Activer",
+      getPro: "Get Pro — US$9.99 once",
       active: "Pro actif — filtres activés",
       invalid: "Jeton de licence invalide",
     },
