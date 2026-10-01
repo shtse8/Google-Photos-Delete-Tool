@@ -90,3 +90,9 @@ describe('date filter report line and link', () => {
     expect(u.hash).toBe('#pro')
   })
 })
+
+describe('presets Pro link', () => {
+  it('carries utm_medium=presets', () => {
+    expect(new URL(proUrl('presets')).searchParams.get('utm_medium')).toBe('presets')
+  })
+})

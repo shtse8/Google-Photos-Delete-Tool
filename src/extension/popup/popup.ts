@@ -17,7 +17,8 @@ import {
   admitDestructiveRun,
   type Acknowledgement,
 } from '../../core/consent'
-import { storageGet, storageSet, tabsCreate, tabsQuery, tabsSendMessage } from '../api'
+import { createChromePresetStore, storageGet, storageSet, tabsCreate, tabsQuery, tabsSendMessage } from '../api'
+import { createPresetManager, presetViewHint, type CleanupPreset } from '../../core/presets'
 import { buildFilterFromControls, type PhotoFilter } from '../../core/photo-filter'
 import { ACTIVE_STATUSES, TERMINAL_STATUSES, type RunStatus } from '../../core/status'
 import {
@@ -95,6 +96,7 @@ mountIcon('field-icon-dry',  'flask')
 mountIcon('field-icon-empty','trashX')
 mountIcon('field-icon-filter','filter')
 mountIcon('field-icon-date','filter')
+mountIcon('field-icon-presets','filter')
 mountIcon('field-icon-license','key')
 mountIcon('start-icon',      'play')
 mountIcon('pause-icon',      'pause')
@@ -116,6 +118,7 @@ const showDateReport = (text: string | null): void => {
 }
 let lastReport: { total: number; labels: string[] } | null = null
 let currentView: PhotosView | null = null
+let currentTabUrl: string | null = null
 let surfaceReady = false
 
 
@@ -294,6 +297,100 @@ emptyTrashInput.addEventListener('change', () => {
 })
 filterSelect.addEventListener('change', saveSettings)
 
+// ─── Saved presets (Pro) ────────────────────────────────────────
+// Applying a preset only fills the controls; it never starts a run, so the
+// consent gate and the dry run are untouched. Nothing here runs on a timer.
+
+const presetSelect   = document.getElementById('preset-select')    as HTMLSelectElement
+const presetName     = document.getElementById('preset-name')      as HTMLInputElement
+const presetSave     = document.getElementById('preset-save')      as HTMLButtonElement
+const presetApply    = document.getElementById('preset-apply')     as HTMLButtonElement
+const presetRename   = document.getElementById('preset-rename')    as HTMLButtonElement
+const presetDelete   = document.getElementById('preset-delete')    as HTMLButtonElement
+const presetViewHintEl = document.getElementById('preset-view-hint') as HTMLElement
+const presetErrorEl  = document.getElementById('preset-error')     as HTMLElement
+const presetProLink  = document.getElementById('preset-pro')       as HTMLElement
+const presets = createPresetManager(createChromePresetStore(), () => proActive)
+let presetList: CleanupPreset[] = []
+
+function showPresetError(msg: string | null): void {
+  presetErrorEl.textContent = msg ?? ''
+  presetErrorEl.classList.toggle('hidden', !msg)
+}
+
+function renderPresetHint(): void {
+  const preset = presetList.find(p => p.id === presetSelect.value)
+  const url = preset ? presetViewHint(preset, currentTabUrl) : null
+  presetViewHintEl.textContent = url ? tHtml('settings.presets.viewHint', { url }) : ''
+  presetViewHintEl.classList.toggle('hidden', !url)
+}
+
+async function renderPresets(selectId?: string): Promise<void> {
+  presetList = await presets.list()
+  presetSelect.replaceChildren()
+  if (presetList.length === 0) {
+    const none = document.createElement('option')
+    none.textContent = t('settings.presets.none')
+    presetSelect.append(none)
+  }
+  for (const p of presetList) {
+    const o = document.createElement('option')
+    o.value = p.id
+    o.textContent = p.name
+    presetSelect.append(o)
+  }
+  if (selectId && presetList.some(p => p.id === selectId)) presetSelect.value = selectId
+  refreshDryRunDependentFields()
+  renderPresetHint()
+}
+
+const presetFailed = (r: { ok: boolean; error?: string }): boolean => {
+  if (r.ok) return false
+  showPresetError(r.error ?? null)
+  return true
+}
+
+presetSelect.addEventListener('change', () => {
+  const p = presetList.find(x => x.id === presetSelect.value)
+  presetName.value = p?.name ?? ''
+  renderPresetHint()
+})
+presetSave.addEventListener('click', async () => {
+  showPresetError(null)
+  const r = await presets.save(
+    presetName.value,
+    { type: filterSelect.value, dateMode: dateModeSelect.value, dateA: dateAInput.value, dateB: dateBInput.value },
+    currentTabUrl,
+  )
+  if (presetFailed(r)) return
+  presetName.value = ''
+  await renderPresets(r.ok ? r.preset.id : undefined)
+})
+presetApply.addEventListener('click', async () => {
+  showPresetError(null)
+  const r = await presets.apply(presetSelect.value)
+  if (presetFailed(r) || !r.ok) return
+  const p = r.preset
+  filterSelect.value = p.type
+  dateModeSelect.value = p.dateMode
+  dateAInput.value = p.dateA
+  dateBInput.value = p.dateB
+  saveSettings()
+  refreshDryRunDependentFields()
+})
+presetRename.addEventListener('click', async () => {
+  showPresetError(null)
+  const id = presetSelect.value
+  if (presetFailed(await presets.rename(id, presetName.value))) return
+  await renderPresets(id)
+})
+presetDelete.addEventListener('click', async () => {
+  showPresetError(null)
+  if (presetFailed(await presets.remove(presetSelect.value))) return
+  presetName.value = ''
+  await renderPresets()
+})
+
 // ─── Pro license ────────────────────────────────────────────────
 
 async function refreshProState(): Promise<void> {
@@ -316,6 +413,7 @@ async function refreshProState(): Promise<void> {
     licenseStatus.className = result.ok ? 'license-status ok' : 'license-status bad'
   }
   refreshDryRunDependentFields()
+  void renderPresets()
 }
 
 licenseBtn.addEventListener('click', async () => {
@@ -336,6 +434,7 @@ licenseBtn.addEventListener('click', async () => {
   licenseStatus.className = 'license-status ok'
   proActive = true
   refreshDryRunDependentFields()
+  void renderPresets()
 })
 
 // ─── Content-script communication ───────────────────────────────
@@ -389,6 +488,12 @@ const refreshDryRunDependentFields = (): void => {
   dateAInput.disabled      = lockedByEngine || !proActive
   dateBInput.disabled      = lockedByEngine || !proActive
   dateProLink.classList.toggle('hidden', proActive)
+  const presetsLocked = lockedByEngine || !proActive
+  presetSelect.disabled = presetsLocked || presetList.length === 0
+  presetName.disabled = presetsLocked
+  presetSave.disabled = presetsLocked
+  presetApply.disabled = presetRename.disabled = presetDelete.disabled = presetSelect.disabled
+  presetProLink.classList.toggle('hidden', proActive)
   const mode = dateModeSelect.value
   dateRow.classList.toggle('hidden', mode === 'off')
   dateBInput.classList.toggle('hidden', mode !== 'between')
@@ -439,6 +544,8 @@ async function refreshSurfaceAdmission(): Promise<void> {
   try {
     const [tab] = await tabsQuery({ active: true, currentWindow: true })
     const admission = admitSurface(tab?.url)
+    currentTabUrl = tab?.url ?? null
+    void renderPresets()
     if (!admission.ok) {
       surfaceReady = false
       currentView = null

@@ -15,6 +15,15 @@ All notable changes to this project will be documented in this file.
   from `storefront/listing.json`.
 - `verify` now checks the Edge package (manifest v3, permissions, background,
   icons) and fails any extension build that assigns `innerHTML`/`outerHTML`.
+- Pro saved cleanup presets: save the current filter setup (type, date mode,
+  dates and an optional note of the view URL) under a name, up to 20, then
+  apply, rename or delete it, in the popup and the userscript panel. Applying
+  only fills the controls; the run, the dry run and the consent step are
+  unchanged, and presets never run on their own (no timers or background
+  runs). A saved view that differs from the current page is shown as a hint
+  and never opened. Free users see the row disabled with a Get Pro link
+  (`utm_medium=presets`). Stored in `chrome.storage.local` (extension) or
+  `localStorage` (userscript); corrupt data is ignored.
 
 ### Changed
 - Firefox package passes `web-ext lint` with 0 warnings (was 5): popup markup

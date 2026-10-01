@@ -157,6 +157,14 @@ nothing. **Pro** adds the analysis layer on top:
   skipped, and the dry run says how many ("N items skipped: date not
   readable"). "Before" and "after" exclude the date you pick. It combines with
   the type filter: both must match.
+- **Saved cleanup presets** - save the current filter setup (type, date mode and
+  dates, plus an optional note of the view you were on, such as an album) under
+  a name, up to 20, then apply, rename or delete it. Applying a preset only
+  fills the controls: you still press Start, the dry run still works and the
+  consent step is still required. A preset never runs by itself (no timers, no
+  background runs), and if its saved view differs from the page you are on it
+  only shows the address as a hint; it never navigates. Presets live on your
+  device (extension storage, or the userscript's local storage).
 - **Dry-run report and export** - see exactly what a run would remove, and
   export it as CSV before you commit.
 

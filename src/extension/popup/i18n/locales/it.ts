@@ -62,6 +62,18 @@ const it: Translations = {
       between: "Between two dates",
       pro: "Pro: Get Pro",
     },
+    presets: {
+      label: "Saved presets",
+      hint: "Pro: re-apply a filter setup. Fills the controls only; you still start the run",
+      pro: "Pro: Get Pro",
+      none: "No saved presets",
+      namePlaceholder: "Preset name",
+      save: "Save current",
+      apply: "Apply",
+      rename: "Rename",
+      delete: "Delete",
+      viewHint: "Saved on {url}. Open it yourself if you want that view.",
+    },
     license: {
       label: "Licenza Pro",
       hint: "Verificata localmente; non lascia mai il dispositivo",

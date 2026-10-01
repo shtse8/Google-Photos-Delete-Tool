@@ -66,6 +66,19 @@ export {
   type PhotoFilter,
 } from './photo-filter'
 export {
+  PRESETS_KEY,
+  MAX_PRESETS,
+  MAX_PRESET_NAME,
+  sanitizePresets,
+  createPresetManager,
+  createLocalStoragePresetStore,
+  presetViewHint,
+  type CleanupPreset,
+  type PresetControls,
+  type PresetManager,
+  type PresetStore,
+} from './presets'
+export {
   verifyLicense,
   importProPublicKey,
   encodeBase64Url,

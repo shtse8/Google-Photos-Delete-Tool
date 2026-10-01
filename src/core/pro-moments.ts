@@ -12,7 +12,7 @@ export const PRO_TOKEN_KEY = 'proToken'
 
 export const PRO_URL = 'https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro'
 
-export type ProMedium = 'dryrun_teaser' | 'post_run' | 'date_filter'
+export type ProMedium = 'dryrun_teaser' | 'post_run' | 'date_filter' | 'presets'
 
 /** The README #pro URL with UTM parameters (before the anchor). */
 export function proUrl(medium: ProMedium): string {

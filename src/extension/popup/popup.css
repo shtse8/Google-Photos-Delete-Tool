@@ -901,3 +901,8 @@ body {
 .license-get:hover { color: inherit; }
 
 .date-input { width: 130px; text-align: left; appearance: auto; -moz-appearance: auto; }
+
+/* ─── Saved presets (Pro) ─────────────────────────────────────── */
+.preset-actions { gap: 6px; }
+.preset-actions .btn { padding: 7px 8px; font-size: 12px; }
+.preset-input { width: 100%; flex: 1; min-width: 0; }
