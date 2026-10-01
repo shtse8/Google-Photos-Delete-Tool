@@ -110,6 +110,9 @@ function firefoxManifest(): Record<string, unknown> {
   const m: Record<string, unknown> = { ...baseManifest, version: pkg.version }
   delete (m.background as { service_worker?: string })?.service_worker
   m.background = { scripts: ['background.js'] }
+  // AMO limits add-on names to 50 characters; the shared 58-character store
+  // title would be rejected, so Firefox keeps its original name.
+  m.name = 'Google Photos Delete Tool'
   m.browser_specific_settings = {
     gecko: {
       id: 'google-photos-delete-tool@shtse8.github.io',

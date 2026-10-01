@@ -27,6 +27,7 @@ import {
   throwForDestructiveRefusal,
   writeLocalAcknowledgement,
 } from './consent'
+import type { PostRunResult } from './post-run-prompt'
 import { RunInProgressError, StopRequested, waitUntilAbortable } from './run-occupancy'
 
 export { ConsentRequiredError, PermanentActionRequiredError } from './consent'
@@ -61,6 +62,7 @@ export class PageRunner {
   private emptyTrashStopped = false
   private progress: Progress | null = null
   private statusListeners = new Set<(s: RunnerStatus) => void>()
+  private settledListeners = new Set<(r: PostRunResult) => void>()
   private summary: DryRunSummary | null = null
   private readonly dom: EngineDom
   private readonly baton: EmptyTrashBaton
@@ -97,6 +99,12 @@ export class PageRunner {
     this.statusListeners.add(cb)
     cb(this.getStatus())
     return () => this.statusListeners.delete(cb)
+  }
+
+  /** Called once per engine run, after it settled, with the observed result. */
+  onRunSettled(cb: (r: PostRunResult) => void): () => void {
+    this.settledListeners.add(cb)
+    return () => this.settledListeners.delete(cb)
   }
 
   private emit(): void {
@@ -206,13 +214,28 @@ export class PageRunner {
       }
 
       // Empty-trash chain: only after a clean, real run that deleted ≥1.
-      if (shouldNavigateToEmptyTrash({
+      const chainsToTrash = shouldNavigateToEmptyTrash({
         dryRun: opts.dryRun,
         emptyTrashAfter: opts.emptyTrashAfter,
         stopped: engine.isStopped,
         status: result.status,
         deleted: result.deleted,
-      })) {
+      })
+      for (const cb of this.settledListeners) {
+        try {
+          cb({
+            dryRun: opts.dryRun,
+            stopped: engine.isStopped,
+            status: result.status,
+            deleted: result.deleted,
+            filterKind: opts.filter.kind,
+            navigatingToTrash: chainsToTrash,
+          })
+        } catch (err) {
+          console.warn('[gpdt:runner] run-settled listener failed:', err)
+        }
+      }
+      if (chainsToTrash) {
         const ok = await this.baton.writePending()
         if (ok) {
           this.setProgress({
