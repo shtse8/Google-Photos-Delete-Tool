@@ -20,6 +20,10 @@ All notable changes to this project will be documented in this file.
 - After the similarity slider regroups, the selected keep rule (Newest,
   Oldest, Best copy) is applied to the new groups, so the dropdown and the
   selection agree. Each group still keeps exactly one photo.
+- The GitHub release now attaches the Edge package next to the Chrome and
+  Firefox zips.
+- The "auto-accepted" count reads "1 group" instead of "1 groups"; the Japanese
+  "Pro をアンロック" replaces "Pro を解除", which could read as cancelling Pro.
 
 ### Added
 - A test that fails when a non-English locale's Pro key still holds the

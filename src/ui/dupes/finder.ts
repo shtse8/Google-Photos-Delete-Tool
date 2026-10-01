@@ -133,6 +133,8 @@ export function openDuplicateFinder(host: FinderHost): void {
   let pro = false
   let variant: ProVariant = 'a'
   let keepRule: KeepRule = 'default'
+  /** Ids the user flipped by hand; regrouping must not re-apply the keep rule over them. */
+  const manual = new Set<string>()
   let autoAccept = false
   let showConfident = false
   let toolsNote = ''
@@ -223,13 +225,14 @@ export function openDuplicateFinder(host: FinderHost): void {
     if (!pro) { keepRule = 'default'; autoAccept = false }
     // The selected rule must govern the new groups too, so the dropdown and the
     // selection never disagree after the slider regroups.
-    if (pro && keepRule !== 'default') applyRule()
+    // Groups holding a manual flip keep it; only untouched groups get the rule.
+    if (pro && keepRule !== 'default') applyRule(groups.filter((g) => !g.itemIds.some((id) => manual.has(id))))
     renderReview()
   }
 
   /** Apply the selected keep rule to the current groups (one keeper each) and set the note. */
-  function applyRule(): void {
-    const res = applyKeepRule(groups, (id) => byId.get(id), keepRule, overrides)
+  function applyRule(target: DupGroup[] = groups): void {
+    const res = applyKeepRule(target, (id) => byId.get(id), keepRule, overrides)
     const n = res.applied.toLocaleString(getLocale())
     toolsNote = keepRule === 'default' ? t('finder.backDefault')
       : res.fellBack > 0
@@ -288,6 +291,7 @@ export function openDuplicateFinder(host: FinderHost): void {
     select.addEventListener('change', () => {
       if (!pro) return
       keepRule = select.value as KeepRule
+      manual.clear()
       applyRule()
       renderReview()
     })
@@ -321,7 +325,7 @@ export function openDuplicateFinder(host: FinderHost): void {
       h('div', { class: 'row' }, exportBtn, ...(pro ? [] : [tag()])),
     ]
     if (pro && autoAccept) {
-      const toggle = h('button', { class: 'ghost' }, t(showConfident ? 'finder.autoHide' : 'finder.autoShow', { n: confidentCount.toLocaleString(getLocale()) }))
+      const toggle = h('button', { class: 'ghost' }, t(`finder.auto${showConfident ? 'Hide' : 'Show'}${confidentCount === 1 ? 'One' : 'Many'}`, { n: confidentCount.toLocaleString(getLocale()) }))
       toggle.addEventListener('click', () => { showConfident = !showConfident; shown = PAGE; renderReview() })
       const approveAll = h('button', { class: 'ghost' }, t('finder.approveAll', { n: pending.toLocaleString(getLocale()) }))
       approveAll.disabled = pending === 0
@@ -359,6 +363,7 @@ export function openDuplicateFinder(host: FinderHost): void {
           flash(card, 'Each group keeps at least one photo. Mark another one to keep first.')
           return
         }
+        manual.add(id)
         renderReview()
       })
       const date = item.takenAt ? new Date(item.takenAt).toLocaleDateString() : ''
@@ -456,7 +461,7 @@ export function openDuplicateFinder(host: FinderHost): void {
 
   function renderRestart(): void {
     const again = h('button', { class: 'primary' }, 'Scan again')
-    again.addEventListener('click', () => { overrides.clear(); approved.clear(); toolsNote = ''; keepRule = 'default'; void runScan() })
+    again.addEventListener('click', () => { overrides.clear(); manual.clear(); approved.clear(); toolsNote = ''; keepRule = 'default'; void runScan() })
     const back = h('button', { class: 'ghost' }, 'Back to review')
     back.classList.toggle('hidden', groups.length === 0)
     back.addEventListener('click', () => renderReview())

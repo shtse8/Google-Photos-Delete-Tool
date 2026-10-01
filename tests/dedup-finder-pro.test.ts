@@ -156,10 +156,10 @@ describe('auto-accept count and keep rule after regroup', () => {
     autoBox(root).checked = true
     autoBox(root).dispatchEvent(new Event('change'))
     const show = btn(root, /auto-accepted/)
-    expect(show.textContent).toBe('1 groups auto-accepted (show)')
+    expect(show.textContent).toBe('1 group auto-accepted (show)')
     expect(trashLabel(root)).toBe('Move 1 to Trash') // the auto-accepted group is already in the total
     show.click()
-    expect(btn(root, /auto-accepted/).textContent).toBe('1 groups auto-accepted (hide)')
+    expect(btn(root, /auto-accepted/).textContent).toBe('1 group auto-accepted (hide)')
     expect(root.querySelectorAll('.group')).toHaveLength(2)
   })
 
@@ -177,5 +177,24 @@ describe('auto-accept count and keep rule after regroup', () => {
     expect(keptIds.some((u) => u.endsWith('/a1'))).toBe(true)
     expect(keptIds.some((u) => u.endsWith('/b1'))).toBe(true)
     expect(trashLabel(root)).toBe('Move 2 to Trash')
+  })
+
+  it('keeps a manual Keep flip when the similarity slider regroups', async () => {
+    const root = await open(true)
+    select(root).value = 'newest'
+    select(root).dispatchEvent(new Event('change'))
+    expect(trashLabel(root)).toBe('Move 2 to Trash')
+    // Flip one red photo to Keep by hand.
+    ;(root.querySelector('.item.delete img') as HTMLElement).click()
+    expect(trashLabel(root)).toBe('Move 1 to Trash')
+    // Only the identical pair groups at 100%: it holds the flip, so it is not re-ruled.
+    await setSlider(root, 100, 1)
+    expect(select(root).value).toBe('newest')
+    expect(root.querySelectorAll('.item.keep')).toHaveLength(2) // the flip survived
+    expect(trashLabel(root)).toBe('Move 0 to Trash') // the Trash count did not rise
+    // Choosing a rule on purpose replaces the flip.
+    select(root).value = 'oldest'
+    select(root).dispatchEvent(new Event('change'))
+    expect(trashLabel(root)).toBe('Move 1 to Trash')
   })
 })

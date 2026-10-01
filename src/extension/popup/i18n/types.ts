@@ -91,8 +91,10 @@ export interface Translations {
     exportCsv: string
     proNote: string
     /** "{n} groups auto-accepted (show)" */
-    autoShow: string
-    autoHide: string
+    autoShowOne: string
+    autoShowMany: string
+    autoHideOne: string
+    autoHideMany: string
     /** "{n} need your review: ..." */
     reviewNote: string
     approveAll: string
