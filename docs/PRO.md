@@ -68,6 +68,33 @@ throwaway keypair plus the embedded-key list, and
 `tests/license-buyer.test.ts` covers `verify-buyer` (old/new key, email match,
 wrong plan, foreign signature) with throwaway keys.
 
+## Conversion test
+
+The Pro paywall copy is A/B tested without telemetry. Each install picks
+variant `a` (original wording) or `b` (value-first wording, "Unlock Pro") once
+at random and keeps it in local storage (`chrome.storage.local` in the
+extension, `localStorage` in the userscript); if storage fails it uses `a`.
+Nothing is sent anywhere. The variant only appears as `utm_content=a|b` on the
+Pro link a user chooses to click, next to `utm_source=extension`,
+`utm_medium` (`dryrun_teaser`, `post_run`, `date_filter`, `license_box`) and
+`utm_campaign=pro`. All links are built from `PRO_URL` in
+`src/core/pro-moments.ts`; point that constant at the Stripe Payment Link to
+have Stripe record the UTM parameters on each checkout.
+
+Reading results:
+
+- **Stripe:** checkout sessions (Payments, then Checkout sessions, or the
+  Payment Link's detail page) show the URL parameters each session started with;
+  count paid sessions per `utm_content` (and per `utm_medium` for the moment).
+  Compare against clicks only if the link is served from a page that counts
+  them; Stripe alone gives purchases, not impressions.
+- **Chrome Web Store dashboard:** installs and uninstalls per period give the
+  denominator. Installs are not split by variant, so divide paid sessions of
+  each variant by half the installs (the split is random and even), and run
+  the test over whole weeks before comparing.
+- Keep both variants until the gap is larger than noise at the observed
+  purchase counts; then set the winner as the only copy and drop the other.
+
 ## Sales
 
 1. **Product:** Pro is sold as a Stripe Payment Link, US$9.99 one-time and

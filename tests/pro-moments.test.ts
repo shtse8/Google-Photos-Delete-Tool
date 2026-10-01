@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest'
-import { buildDryRunTeaser, countLabelTypes, dateReportLine, proUrl } from '../src/core/pro-moments'
+import { PRO_COPY, PRO_URL, buildDryRunTeaser, countLabelTypes, dateReportLine, getProVariant, proUrl } from '../src/core/pro-moments'
 import { renderProTeaser } from '../src/ui/pro-teaser/teaser'
 import { showPostRunPrompt } from '../src/ui/post-run/prompt'
 import { claimPostRunPrompt } from '../src/core/post-run-prompt'
@@ -24,6 +24,7 @@ describe('dry-run teaser', () => {
     expect(u.searchParams.get('utm_source')).toBe('extension')
     expect(u.searchParams.get('utm_medium')).toBe('dryrun_teaser')
     expect(u.searchParams.get('utm_campaign')).toBe('pro')
+    expect(u.searchParams.get('utm_content')).toBe('a')
   })
   it('never shows for Pro users or an empty scan', () => {
     expect(buildDryRunTeaser(counts, labels.length, true)).toBeNull()
@@ -94,5 +95,75 @@ describe('date filter report line and link', () => {
 describe('presets Pro link', () => {
   it('carries utm_medium=presets', () => {
     expect(new URL(proUrl('presets')).searchParams.get('utm_medium')).toBe('presets')
+  })
+})
+
+describe('copy A/B variant', () => {
+  const memStore = (initial?: unknown) => {
+    let v: unknown = initial
+    return { get: async () => v, set: async (x: 'a' | 'b') => { v = x }, peek: () => v }
+  }
+
+  it('picks once at random, stores it and stays stable', async () => {
+    const s = memStore()
+    expect(await getProVariant(s, () => 0.9)).toBe('b')
+    expect(s.peek()).toBe('b')
+    expect(await getProVariant(s, () => 0.1)).toBe('b')
+    const s2 = memStore()
+    expect(await getProVariant(s2, () => 0.1)).toBe('a')
+  })
+  it('ignores an invalid stored value', async () => {
+    expect(await getProVariant(memStore('zzz'), () => 0.9)).toBe('b')
+  })
+  it('falls back to a on a read or write error', async () => {
+    const bad = (): Promise<never> => Promise.reject(new Error('storage down'))
+    expect(await getProVariant({ get: bad, set: bad }, () => 0.9)).toBe('a')
+    expect(await getProVariant({ get: async () => null, set: bad }, () => 0.9)).toBe('a')
+  })
+  it('renders both teaser copies and link labels', () => {
+    for (const v of ['a', 'b'] as const) {
+      const host = document.createElement('div')
+      renderProTeaser(host, buildDryRunTeaser(counts, labels.length, false, v))
+      expect(host.textContent).toContain(PRO_COPY[v].ctaLine)
+      expect(host.querySelector('a')!.textContent).toBe(PRO_COPY[v].linkLabel)
+    }
+    expect(PRO_COPY.a.ctaLine).toBe('Delete only the types you choose with Pro — US$9.99 once')
+    expect(PRO_COPY.b.linkLabel).toBe('Unlock Pro')
+  })
+  it('renders both post-run button labels', async () => {
+    const result = { dryRun: false, stopped: false, status: 'done' as const, deleted: 5, filterKind: 'all' as const }
+    const mem = { isShown: async () => false, markShown: async () => {} }
+    for (const v of ['a', 'b'] as const) {
+      document.body.replaceChildren()
+      showPostRunPrompt((await claimPostRunPrompt(result, mem, 'chrome', false, v))!)
+      const labelsNow = [...document.querySelectorAll('#gpdt-post-run-prompt button')].map(b => b.textContent)
+      expect(labelsNow).toContain(PRO_COPY[v].linkLabel)
+    }
+  })
+  it('puts utm_content on every Pro link, from the one PRO_URL', async () => {
+    const result = { dryRun: false, stopped: false, status: 'done' as const, deleted: 5, filterKind: 'all' as const }
+    for (const v of ['a', 'b'] as const) {
+      const urls = [
+        buildDryRunTeaser(counts, labels.length, false, v)!.url,
+        (await claimPostRunPrompt(result, { isShown: async () => false, markShown: async () => {} }, 'chrome', false, v))!.proUrl!,
+        proUrl('date_filter', v),
+        proUrl('license_box', v),
+      ]
+      for (const url of urls) {
+        const u = new URL(url)
+        expect(u.searchParams.get('utm_content')).toBe(v)
+        expect(u.searchParams.get('utm_source')).toBe('extension')
+        expect(u.searchParams.get('utm_campaign')).toBe('pro')
+        expect(url.startsWith(PRO_URL.split('#')[0]!)).toBe(true)
+      }
+    }
+  })
+  it('keeps static popup links tagged with utm_content', async () => {
+    const { readFileSync } = await import('node:fs')
+    const html = readFileSync('src/extension/popup/popup.html', 'utf8')
+    for (const id of ['date-pro', 'license-get']) {
+      const tag = html.match(new RegExp(`<a[^>]*id="${id}"[^>]*>`))![0]
+      expect(tag).toContain('utm_content=a')
+    }
   })
 })

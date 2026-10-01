@@ -14,7 +14,7 @@ import { PHOTO_TYPES, buildFilterFromControls, type PhotoType } from '../../core
 import { openDuplicateFinder } from '../dupes/finder'
 import { sleep } from '../../core/utils'
 import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../../core/post-run-prompt'
-import { buildDryRunTeaser, dateReportLine, proUrl } from '../../core/pro-moments'
+import { PRO_VARIANT_KEY, buildDryRunTeaser, dateReportLine, getProVariant, proUrl, type ProVariant } from '../../core/pro-moments'
 import { createLocalStoragePresetStore, createPresetManager, presetViewHint, type CleanupPreset } from '../../core/presets'
 import { renderProTeaser } from '../pro-teaser/teaser'
 import { showPostRunPrompt } from '../post-run/prompt'
@@ -169,7 +169,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
         <input type="text" id="gpdt-license" placeholder="paste token" style="flex:1" />
         <button class="gpdt-ghost" id="gpdt-license-btn" style="padding:6px 8px">Activate</button>
       </span>
-      <a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro" target="_blank" rel="noopener" style="font-size:11px; color:#8b8b95; white-space:nowrap">Get Pro — US$9.99 once</a>
+      <a id="gpdt-license-get" href="" target="_blank" rel="noopener" style="font-size:11px; color:#8b8b95; white-space:nowrap">Get Pro — US$9.99 once</a>
     </div>
     <div id="gpdt-license-status" class="gpdt-note"></div>
     <div class="gpdt-stats">
@@ -218,7 +218,19 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const dateA = $<HTMLInputElement>('gpdt-date-a')
   const dateB = $<HTMLInputElement>('gpdt-date-b')
   const datePro = $<HTMLElement>('gpdt-date-pro')
-  $<HTMLAnchorElement>('gpdt-date-pro-link').href = proUrl('date_filter')
+  // Copy A/B variant: stable per install in localStorage, "a" on any failure.
+  let proVariant: ProVariant = 'a'
+  const dateProLink = $<HTMLAnchorElement>('gpdt-date-pro-link')
+  const licenseGetLink = $<HTMLAnchorElement>('gpdt-license-get')
+  const setProLinks = (): void => {
+    dateProLink.href = proUrl('date_filter', proVariant)
+    licenseGetLink.href = proUrl('license_box', proVariant)
+  }
+  setProLinks()
+  void getProVariant({
+    get: async () => window.localStorage.getItem(PRO_VARIANT_KEY),
+    set: async (v) => window.localStorage.setItem(PRO_VARIANT_KEY, v),
+  }).then((v) => { proVariant = v; setProLinks() })
   const syncDateControls = (locked: boolean): void => {
     const off = locked || !pro
     dateModeSelect.disabled = off
@@ -583,7 +595,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
         .join(' · ')
       if (teaserFor !== summary) {
         teaserFor = summary
-        renderProTeaser(proTeaserEl, buildDryRunTeaser(summary.counts, summary.total, pro))
+        renderProTeaser(proTeaserEl, buildDryRunTeaser(summary.counts, summary.total, pro, proVariant))
       }
       statusEl.textContent = summary.dateReport
         ? dateReportLine(summary.dateReport)
@@ -599,7 +611,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     void claimPostRunPrompt(result, {
       isShown: async () => window.localStorage.getItem(POST_RUN_PROMPT_KEY) === '1',
       markShown: async () => window.localStorage.setItem(POST_RUN_PROMPT_KEY, '1'),
-    }, detectBrowser(navigator.userAgent), pro).then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
+    }, detectBrowser(navigator.userAgent), pro, proVariant).then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
   })
   void refreshProState()
 }

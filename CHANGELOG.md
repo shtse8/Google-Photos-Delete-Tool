@@ -32,6 +32,12 @@ All notable changes to this project will be documented in this file.
   controls disabled with a Get Pro link (`utm_medium=dupes`) and keep today's
   review unchanged. Every group still keeps at least one photo and nothing
   moves without your confirmation. No network calls, no telemetry.
+- Pro paywall copy A/B test, measured without telemetry: each install picks
+  variant "a" or "b" once at random (local storage only, "a" if storage fails)
+  and every Pro link carries `utm_content=<variant>` next to the existing UTM
+  parameters. Variant "b" words the dry-run teaser and the Get Pro button
+  value-first. `PRO_URL` stays the single place the target URL lives. See the
+  "Conversion test" section of docs/PRO.md.
 
 ### Changed
 - Firefox package passes `web-ext lint` with 0 warnings (was 5): popup markup

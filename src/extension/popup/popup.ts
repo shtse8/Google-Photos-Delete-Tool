@@ -3,7 +3,7 @@ import { setMarkup } from './set-markup'
 import { formatElapsed } from '../../core/utils'
 import { buildDiagnosticIssueUrl, type DiagnosticBlob } from '../../core/diagnostics'
 import { verifyLicense } from '../../core/license'
-import { PRO_TOKEN_KEY, buildDryRunTeaser, countLabelTypes, dateReportLine } from '../../core/pro-moments'
+import { PRO_TOKEN_KEY, PRO_VARIANT_KEY, buildDryRunTeaser, countLabelTypes, dateReportLine, getProVariant, proUrl, type ProVariant } from '../../core/pro-moments'
 import { renderProTeaser } from '../../ui/pro-teaser/teaser'
 import { TRASH_URL } from '../../core/empty-trash-baton'
 import {
@@ -48,6 +48,7 @@ const dateRow         = document.getElementById('date-row')       as HTMLElement
 const dateAInput      = document.getElementById('date-a')         as HTMLInputElement
 const dateBInput      = document.getElementById('date-b')         as HTMLInputElement
 const dateProLink     = document.getElementById('date-pro')       as HTMLElement
+const licenseGetLink  = document.getElementById('license-get')    as HTMLAnchorElement
 const licenseInput    = document.getElementById('license-token')  as HTMLInputElement
 const licenseBtn      = document.getElementById('license-btn')    as HTMLButtonElement
 const licenseStatus   = document.getElementById('license-status') as HTMLElement
@@ -894,7 +895,7 @@ async function refreshReport(): Promise<void> {
     exportBtn.classList.toggle('hidden', !proActive)
     // Free users: show what a type filter would act on. Real runs have no
     // dry-run labels, so no summary and no teaser.
-    renderProTeaser(proTeaserEl, buildDryRunTeaser(countLabelTypes(summary.labels), summary.labels.length, proActive))
+    renderProTeaser(proTeaserEl, buildDryRunTeaser(countLabelTypes(summary.labels), summary.labels.length, proActive, proVariant))
   } else {
     renderProTeaser(proTeaserEl, null)
   }
@@ -907,6 +908,17 @@ chrome.runtime.onMessage.addListener((message) => {
 })
 
 // ─── Bootstrap ──────────────────────────────────────────────────
+
+// Copy A/B variant (stable per install, chrome.storage.local; "a" on any failure).
+let proVariant: ProVariant = 'a'
+void getProVariant({
+  get: async () => (await storageGet([PRO_VARIANT_KEY]))[PRO_VARIANT_KEY],
+  set: (v) => storageSet({ [PRO_VARIANT_KEY]: v }),
+}).then((v) => {
+  proVariant = v
+  ;(dateProLink as HTMLAnchorElement).href = proUrl('date_filter', v)
+  licenseGetLink.href = proUrl('license_box', v)
+})
 
 void (async () => {
   let data: Record<string, unknown> = {}

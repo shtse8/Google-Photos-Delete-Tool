@@ -11,7 +11,7 @@
  * parameters on the links: the Chrome Web Store developer dashboard reports
  * installs by UTM source.
  */
-import { proUrl } from './pro-moments'
+import { PRO_COPY, proUrl, type ProVariant } from './pro-moments'
 import type { RunStatus } from './status'
 
 export const POST_RUN_PROMPT_KEY = 'gpdt_postRunPrompt_v1'
@@ -48,6 +48,8 @@ export interface PostRunPrompt {
   shareText: string
   /** Pro page link for free users; null for Pro users (button hidden). */
   proUrl: string | null
+  /** Label of the Pro button (copy variant). */
+  proLabel: string
 }
 
 export function shouldShowPostRunPrompt(r: PostRunResult, alreadyShown: boolean): boolean {
@@ -105,6 +107,7 @@ export async function claimPostRunPrompt(
   storage: PromptStorage,
   browser: PromptBrowser,
   isPro: boolean,
+  variant: ProVariant = 'a',
 ): Promise<PostRunPrompt | null> {
   if (!shouldShowPostRunPrompt(result, false)) return null
   try {
@@ -121,6 +124,7 @@ export async function claimPostRunPrompt(
     ratingUrl: ratingUrlFor(browser),
     shareUrl,
     shareText: buildShareText(kind, result.deleted, shareUrl),
-    proUrl: isPro ? null : proUrl('post_run'),
+    proUrl: isPro ? null : proUrl('post_run', variant),
+    proLabel: PRO_COPY[variant].linkLabel,
   }
 }
