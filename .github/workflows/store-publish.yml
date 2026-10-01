@@ -268,19 +268,33 @@ jobs:
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
         run: |
+          publish() {
+            bun x chrome-webstore-upload-cli@3.5.0 publish \
+              --extension-id "$CHROME_EXTENSION_ID" \
+              --client-id "$CHROME_CLIENT_ID" \
+              --client-secret "$CHROME_CLIENT_SECRET" \
+              --refresh-token "$CHROME_REFRESH_TOKEN" 2>&1
+          }
           set +e
-          OUT="$(bun x chrome-webstore-upload-cli@3.5.0 publish \
-            --extension-id "$CHROME_EXTENSION_ID" \
-            --client-id "$CHROME_CLIENT_ID" \
-            --client-secret "$CHROME_CLIENT_SECRET" \
-            --refresh-token "$CHROME_REFRESH_TOKEN" 2>&1)"
+          OUT="$(publish)"
           RC=$?
           set -e
           echo "$OUT"
+          RETRIED=""
+          if [ $RC -ne 0 ] && printf '%s' "$OUT" | grep -qiE 'not reachable|Timeout while connecting'; then
+            echo "::notice::CWS publish hit a transient reachability error; retrying once after 10 min"
+            sleep 600
+            RETRIED=" (retried once after 10 min)"
+            set +e
+            OUT="$(publish)"
+            RC=$?
+            set -e
+            echo "$OUT"
+          fi
           if [ $RC -eq 0 ]; then
             echo "published=yes" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::CWS publish failed (exit $RC) — inspect the dashboard; state not advanced"
+            echo "::error::CWS publish failed (exit $RC)$RETRIED — inspect the dashboard; state not advanced"
             exit 1
           fi
 
