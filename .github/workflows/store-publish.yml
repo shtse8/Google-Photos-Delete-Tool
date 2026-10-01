@@ -32,7 +32,16 @@ on:
         required: false
         type: string
         default: ''
+      cancel_pending:
+        description: 'CWS only: cancel a pending review before upload (manual publish-cws.yml dispatch only; never the scheduled retry)'
+        required: false
+        type: boolean
+        default: false
     secrets:
+      CWS_SERVICE_ACCOUNT_JSON:
+        required: false
+      CWS_PUBLISHER_ID:
+        required: false
       CHROME_EXTENSION_ID:
         required: false
       CHROME_CLIENT_ID:
@@ -154,16 +163,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Service account (CWS API v2) wins when CWS_SERVICE_ACCOUNT_JSON is set;
+      # otherwise the OAuth refresh-token path below is used unchanged.
       - name: Credential guard
         id: creds
         env:
-          HAS_CWS: ${{ secrets.CHROME_EXTENSION_ID != '' && secrets.CHROME_CLIENT_ID != '' && secrets.CHROME_CLIENT_SECRET != '' && secrets.CHROME_REFRESH_TOKEN != '' }}
+          CWS_SERVICE_ACCOUNT_JSON: ${{ secrets.CWS_SERVICE_ACCOUNT_JSON }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          CANCEL_PENDING: ${{ inputs.cancel_pending && 'true' || 'false' }}
         run: |
-          if [ "$HAS_CWS" = "true" ]; then
-            echo "ready=yes" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::CWS skipped: CHROME_* secrets not configured (see docs/STORE_AUTOMATION.md)"
+          set -euo pipefail
+          MODE="$(node scripts/cws-v2.mjs mode)"
+          echo "auth=$MODE" >> "$GITHUB_OUTPUT"
+          if [ "$MODE" = "none" ]; then
+            echo "::notice::CWS skipped: no service account or CHROME_* secrets configured (see docs/STORE_AUTOMATION.md)"
             echo "ready=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::CWS auth path: $MODE"
+            if [ "$MODE" = "oauth" ] && [ "$CANCEL_PENDING" = "true" ]; then
+              echo "::warning::cancel_pending needs the CWS v2 service account (CWS_SERVICE_ACCOUNT_JSON); ignored on the OAuth path"
+            fi
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Store state check
@@ -194,7 +218,7 @@ jobs:
 
       - name: Upload to Chrome Web Store
         id: upload
-        if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
+        if: steps.creds.outputs.auth == 'oauth' && steps.state.outputs.status == 'pending'
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
@@ -222,9 +246,22 @@ jobs:
             exit 1
           fi
 
+      - name: Publish via Chrome Web Store API v2 (service account)
+        id: v2
+        if: steps.creds.outputs.auth == 'sa' && steps.state.outputs.status == 'pending'
+        env:
+          CWS_SERVICE_ACCOUNT_JSON: ${{ secrets.CWS_SERVICE_ACCOUNT_JSON }}
+          CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CANCEL_PENDING: ${{ inputs.cancel_pending && 'true' || 'false' }}
+        run: |
+          ARGS=(publish --zip zips/google-photos-delete-tool.zip)
+          if [ "$CANCEL_PENDING" = "true" ]; then ARGS+=(--cancel-pending); fi
+          node scripts/cws-v2.mjs "${ARGS[@]}"
+
       - name: Publish to Chrome Web Store
         id: publish
-        if: steps.upload.outputs.uploaded == 'yes'
+        if: steps.creds.outputs.auth == 'oauth' && steps.upload.outputs.uploaded == 'yes'
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
@@ -248,7 +285,7 @@ jobs:
           fi
 
       - name: Record submitted state
-        if: steps.publish.outputs.published == 'yes'
+        if: steps.publish.outputs.published == 'yes' || steps.v2.outputs.published == 'yes'
         run: |
           set -euo pipefail
           STATE_FILE=/tmp/store-state.json node scripts/store-state.mjs set cws ${{ needs.resolve.outputs.tag }}

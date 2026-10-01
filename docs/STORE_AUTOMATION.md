@@ -15,7 +15,7 @@ release.yml ──▶ GitHub Release assets (source of truth, always green)
    │
    ▼
 store-retry.yml (every 6h) ──▶ store-publish.yml
-                                  ├─ cws  : upload → publish → state ✓
+                                  ├─ cws  : upload → publish → readback → state ✓
                                   ├─ edge : upload → poll → publish → state ✓
                                   └─ amo  : wdzeng/firefox-addon → state ✓
 ```
@@ -42,7 +42,7 @@ store-retry.yml (every 6h) ──▶ store-publish.yml
 | Step | Who | When |
 |---|---|---|
 | GitHub release from tag | agent | every tag |
-| CWS package publish | agent | retry loop; blocked while item is in review |
+| CWS package publish | agent | retry loop; blocked while item is in review unless a manual dispatch sets `cancel_pending` |
 | CWS listing text | agent (API) / dashboard fallback | re-dispatch `update-cws-listing.yml` |
 | Edge package publish | agent | after one-time bootstrap |
 | AMO version publish | agent | after one-time bootstrap |
@@ -80,7 +80,8 @@ drift — the agent adapts, never fakes.
 
 | Store | Repo secrets |
 |---|---|
-| Chrome Web Store | `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN` ([setup](CHROME_WEB_STORE_SETUP.md)) |
+| Chrome Web Store (API v2, preferred) | `CWS_SERVICE_ACCOUNT_JSON`, `CWS_PUBLISHER_ID`, `CHROME_EXTENSION_ID` |
+| Chrome Web Store (OAuth fallback) | `CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET`, `CHROME_REFRESH_TOKEN` ([setup](CHROME_WEB_STORE_SETUP.md)) |
 | Microsoft Edge Add-ons | `EDGE_CLIENT_ID`, `EDGE_API_KEY`, `EDGE_PRODUCT_ID` |
 | Firefox AMO | `FIREFOX_JWT_ISSUER`, `FIREFOX_JWT_SECRET` |
 
@@ -91,8 +92,52 @@ agent; identity stays with the account holder.
 
 ### Chrome Web Store
 
-Add the four secrets above. While an earlier version is in review, uploads
-return `ITEM_NOT_UPDATABLE` and the retry loop publishes once review clears.
+Two auth paths share one workflow (`store-publish.yml`). When
+`CWS_SERVICE_ACCOUNT_JSON` is set the CWS API v2 service-account path is used;
+otherwise the OAuth refresh-token path runs unchanged. A service-account secret
+without `CWS_PUBLISHER_ID` or `CHROME_EXTENSION_ID` fails the run rather than
+silently falling back.
+
+**Service account setup (once, no human clicks afterwards)**
+
+1. In the Sylphx GCP project (owned by the company Google account
+   `agent@sylphx.com`), enable the **Chrome Web Store API**.
+2. Use the shared service account `cws-publisher` (one per publisher; the CWS
+   dashboard accepts only one). It needs no IAM roles. Create a JSON key for it.
+3. In the CWS Developer Dashboard, **Account**, set the **Service account**
+   field to the `cws-publisher` email. The dashboard owner does this once.
+4. Add repo secrets: `CWS_SERVICE_ACCOUNT_JSON` (the whole key file),
+   `CWS_PUBLISHER_ID` (the publisher id from the dashboard), and
+   `CHROME_EXTENSION_ID` (already set).
+
+`scripts/cws-v2.mjs` signs a JWT with `node:crypto`, exchanges it for an access
+token (scope `https://www.googleapis.com/auth/chromewebstore`), and calls the
+v2 endpoints on `https://chromewebstore.googleapis.com`: `fetchStatus`,
+`:upload`, `:publish`, `:cancelSubmission` (full list in the script header).
+The key and token are never printed (the token is masked). After publish it
+reads the item back with `fetchStatus` and fails (no state advance) unless the
+submission shows as `PENDING_REVIEW`, `STAGED`, `PUBLISHED` or
+`PUBLISHED_TO_TESTERS`; the state and version go to the run log and step
+summary. Auth, upload, publish and readback errors exit 1.
+
+**Pending reviews and `cancel_pending`**
+
+While a version is in review the item cannot take an upload. Without
+`cancel_pending` the run exits 0 with a notice and the retry loop tries again
+(v2 has no documented error code for this, so the script reads `fetchStatus`
+first; `ITEM_NOT_UPDATABLE` is only a fallback match on a failed upload).
+To cancel the pending submission, upload and publish in one run, dispatch the
+manual entrypoint with the switch:
+
+```bash
+gh workflow run "Publish to Chrome Web Store (manual)" -f tag=<tag> -f cancel_pending=true
+```
+
+`cancel_pending` is off by default, exists only on that manual dispatch, and is
+never passed by the scheduled retry or `publish-stores.yml`. It has no effect on
+the OAuth path (the run warns), because v1 has no cancel call. v2 documents no
+call to withdraw a `STAGED` (approved, unpublished) submission other than
+`:publish`.
 
 ### Microsoft Edge Add-ons (~30 min, once)
 

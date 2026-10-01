@@ -13,6 +13,11 @@ on:
         description: 'Git tag to build and publish (default: latest release tag)'
         required: false
         default: ''
+      cancel_pending:
+        description: 'Cancel a pending CWS review before uploading (service-account path only; default off)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -27,4 +32,5 @@ jobs:
     with:
       stores: cws
       tag: ${{ inputs.tag }}
+      cancel_pending: ${{ inputs.cancel_pending }}
     secrets: inherit
