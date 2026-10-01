@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.5.2] - 2026-10-01
+
+### Changed
+- Store name and description now appear in your language (de, es, fr, it, nl, pt-BR, zh-CN, zh-TW, ja).
+
 ## [3.5.1] - 2026-10-01
 
 ### Changed
