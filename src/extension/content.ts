@@ -43,7 +43,7 @@ import {
   waitUntilAbortable,
 } from '../core/run-occupancy'
 import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../core/post-run-prompt'
-import { PRO_TOKEN_KEY } from '../core/pro-moments'
+import { PRO_TOKEN_KEY, PRO_VARIANT_KEY, getProVariant } from '../core/pro-moments'
 import { verifyLicense } from '../core/license'
 import { showPostRunPrompt } from '../ui/post-run/prompt'
 import { createChromeBaton, runtimeSendMessage, storageGet, storageRemove, storageSet } from './api'
@@ -180,6 +180,11 @@ async function isProActive(): Promise<boolean> {
   }
 }
 
+const proVariantStore = {
+  get: async () => (await storageGet([PRO_VARIANT_KEY]))[PRO_VARIANT_KEY],
+  set: (variant: 'a' | 'b') => storageSet({ [PRO_VARIANT_KEY]: variant }),
+}
+
 async function maybeShowPostRunPrompt(
   local: DeleteEngine,
   dryRun: boolean,
@@ -203,7 +208,7 @@ async function maybeShowPostRunPrompt(
   }, {
     isShown: async () => Boolean((await storageGet([POST_RUN_PROMPT_KEY]))[POST_RUN_PROMPT_KEY]),
     markShown: () => storageSet({ [POST_RUN_PROMPT_KEY]: true }),
-  }, detectBrowser(navigator.userAgent), await isProActive())
+  }, detectBrowser(navigator.userAgent), await isProActive(), await getProVariant(proVariantStore))
   if (prompt) showPostRunPrompt(prompt)
 }
 

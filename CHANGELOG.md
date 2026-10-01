@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Pro paywall copy A/B test, measured without telemetry: each install picks
+  variant "a" or "b" once at random (local storage only, "a" if storage fails)
+  and every Pro link carries `utm_content=<variant>` next to the existing UTM
+  parameters. Variant "b" words the dry-run teaser and the Get Pro button
+  value-first. `PRO_URL` stays the single place the target URL lives. See the
+  "Conversion test" section of docs/PRO.md.
+
 ## [3.4.0] - 2026-10-01
 
 ### Added
