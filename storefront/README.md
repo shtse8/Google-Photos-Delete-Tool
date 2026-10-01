@@ -32,3 +32,13 @@ Real captures only — no mockups. Capture at 1280×800 from a real
 2. `running.png` — real run with live stats
 3. `filters.png` — Pro type filters
 4. `empty-trash.png` — verified empty-trash done state
+
+## Localized store name and description
+
+`_locales/<code>/messages.json` (Chrome codes: en default, de, es, fr, it, nl,
+pt_BR, zh_CN, zh_TW, ja) holds `appName` (max 75), `appNameEdge` (max 45; used
+by the Edge and Firefox builds), `appShortName` (max 12), `appDescription` (max
+132) and `appActionTitle`. The manifest references them as `__MSG_*__` with
+`default_locale: "en"`. `cws.localized` in `listing.json` repeats title and
+summary per locale for the dashboard's per-language listing; `listing:check`
+fails if it drifts from `_locales`.

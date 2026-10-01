@@ -72,6 +72,9 @@ async function buildExtension(outDir: string): Promise<void> {
     readFileSync(resolve(root, 'src/extension/popup/popup.html'), 'utf-8'),
   )
 
+  // Localized store name/description (manifest __MSG_*__ keys)
+  cpSync(resolve(root, '_locales'), resolve(outDir, '_locales'), { recursive: true })
+
   // Icons
   const iconsOut = resolve(outDir, 'icons')
   mkdirSync(iconsOut, { recursive: true })
@@ -111,9 +114,10 @@ function firefoxManifest(): Record<string, unknown> {
   const m: Record<string, unknown> = { ...baseManifest, version: pkg.version }
   delete (m.background as { service_worker?: string })?.service_worker
   m.background = { scripts: ['background.js'] }
-  // AMO limits add-on names to 50 characters; the shared 58-character store
-  // title would be rejected, so Firefox keeps its original name.
-  m.name = 'Google Photos Delete Tool'
+  // AMO limits add-on names to 50 characters; the 75-character Chrome store
+  // title would be rejected, so Firefox uses the short localized name
+  // (appNameEdge, at most 45 characters in every locale).
+  m.name = '__MSG_appNameEdge__'
   m.browser_specific_settings = {
     gecko: {
       id: 'google-photos-delete-tool@shtse8.github.io',
@@ -142,13 +146,14 @@ console.log('✅ Chrome extension → dist/extension/')
 
 // ─── Edge extension ─────────────────────────────────────────────
 // Edge reads the extension name from the manifest and caps it at 45
-// characters, so the Edge package is the Chrome build with the short name.
+// characters per locale, so the Edge package is the Chrome build with the
+// short localized name (appNameEdge in _locales/*/messages.json).
 const edgeDir = resolve(root, 'dist/extension-edge')
 rmSync(edgeDir, { recursive: true, force: true })
 cpSync(chromeDir, edgeDir, { recursive: true })
 writeFileSync(
   resolve(edgeDir, 'manifest.json'),
-  JSON.stringify({ ...chromeManifest(), name: 'Google Photos Delete Tool' }, null, 2),
+  JSON.stringify({ ...chromeManifest(), name: '__MSG_appNameEdge__' }, null, 2),
 )
 console.log('✅ Edge extension → dist/extension-edge/')
 

@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "message": "Google Fotos Löschtool – Duplikate finden & Massenlöschen",
+    "description": "Store name of the extension (max 75 characters)."
+  },
+  "appNameEdge": {
+    "message": "Google Fotos Löschtool",
+    "description": "Short name used by the Edge and Firefox builds (max 45 characters)."
+  },
+  "appShortName": {
+    "message": "Foto-Löscher",
+    "description": "Short name shown where space is tight (max 12 characters)."
+  },
+  "appDescription": {
+    "message": "Doppelte Fotos finden und in Google Fotos in großen Mengen löschen. Erst Testlauf, dann Papierkorb. Läuft lokal im Browser.",
+    "description": "One-sentence description (max 132 characters)."
+  },
+  "appActionTitle": {
+    "message": "Google Fotos Löschtool",
+    "description": "Toolbar button tooltip."
+  }
+}

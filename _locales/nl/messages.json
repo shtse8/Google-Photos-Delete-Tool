@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "message": "Google Foto’s Verwijderen – Dubbele foto’s vinden & bulk wissen",
+    "description": "Store name of the extension (max 75 characters)."
+  },
+  "appNameEdge": {
+    "message": "Google Foto’s Verwijdertool",
+    "description": "Short name used by the Edge and Firefox builds (max 45 characters)."
+  },
+  "appShortName": {
+    "message": "Foto Wissen",
+    "description": "Short name shown where space is tight (max 12 characters)."
+  },
+  "appDescription": {
+    "message": "Vind dubbele foto’s en verwijder ze in bulk in Google Foto’s. Eerst een proefrun, dan prullenbak. Draait lokaal in je browser.",
+    "description": "One-sentence description (max 132 characters)."
+  },
+  "appActionTitle": {
+    "message": "Google Foto’s Verwijderen",
+    "description": "Toolbar button tooltip."
+  }
+}

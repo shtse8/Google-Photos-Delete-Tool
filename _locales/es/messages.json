@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "message": "Borrar Google Fotos – Buscador de duplicados y borrado masivo",
+    "description": "Store name of the extension (max 75 characters)."
+  },
+  "appNameEdge": {
+    "message": "Herramienta para borrar Google Fotos",
+    "description": "Short name used by the Edge and Firefox builds (max 45 characters)."
+  },
+  "appShortName": {
+    "message": "Borrar Fotos",
+    "description": "Short name shown where space is tight (max 12 characters)."
+  },
+  "appDescription": {
+    "message": "Encuentra fotos duplicadas y bórralas en masa en Google Fotos. Primero una prueba, luego a la papelera. Todo corre en tu navegador.",
+    "description": "One-sentence description (max 132 characters)."
+  },
+  "appActionTitle": {
+    "message": "Borrar Google Fotos",
+    "description": "Toolbar button tooltip."
+  }
+}

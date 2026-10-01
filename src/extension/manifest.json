@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Google Photos Delete Tool – Duplicate Finder & Bulk Delete",
-  "short_name": "Photo Delete",
-  "version": "3.5.1",
-  "description": "Find and delete duplicate photos in Google Photos, and bulk delete safely: dry run, batches, empty trash. Private.",
+  "default_locale": "en",
+  "name": "__MSG_appName__",
+  "short_name": "__MSG_appShortName__",
+  "version": "3.5.2",
+  "description": "__MSG_appDescription__",
   "permissions": [
     "storage"
   ],
@@ -20,7 +21,8 @@
       "32": "icons/icon-32.png",
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
-    }
+    },
+    "default_title": "__MSG_appActionTitle__"
   },
   "content_scripts": [
     {

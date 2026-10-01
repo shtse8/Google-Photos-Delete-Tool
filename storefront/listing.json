@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "appliesTo": "3.5.1",
+  "appliesTo": "3.5.2",
   "shared": {
     "name": "Google Photos Delete Tool",
     "tagline": "Find duplicate photos and bulk delete in Google Photos",
@@ -59,7 +59,49 @@
       "Userscript for Tampermonkey / Violentmonkey (same engine, same safety model) and a Firefox add-on. Support: GitHub issues.",
       "Google Photos is a trademark of Google LLC.",
       "by Sylphx \u00b7 https://sylphx.com"
-    ]
+    ],
+    "localized": {
+      "en": {
+        "title": "Google Photos Delete Tool \u2013 Duplicate Finder & Bulk Delete",
+        "summary": "Find duplicate photos and bulk delete in Google Photos. Dry run first, deleted photos go to Trash. Runs locally in your browser."
+      },
+      "de": {
+        "title": "Google Fotos L\u00f6schtool \u2013 Duplikate finden & Massenl\u00f6schen",
+        "summary": "Doppelte Fotos finden und in Google Fotos in gro\u00dfen Mengen l\u00f6schen. Erst Testlauf, dann Papierkorb. L\u00e4uft lokal im Browser."
+      },
+      "es": {
+        "title": "Borrar Google Fotos \u2013 Buscador de duplicados y borrado masivo",
+        "summary": "Encuentra fotos duplicadas y b\u00f3rralas en masa en Google Fotos. Primero una prueba, luego a la papelera. Todo corre en tu navegador."
+      },
+      "fr": {
+        "title": "Suppression Google Photos \u2013 Doublons et suppression en masse",
+        "summary": "Trouvez les doublons et supprimez en masse dans Google Photos. Simulation d\u2019abord, puis corbeille. Tout reste dans votre navigateur."
+      },
+      "it": {
+        "title": "Elimina Google Foto \u2013 Trova duplicati ed elimina in blocco",
+        "summary": "Trova le foto duplicate ed eliminale in blocco su Google Foto. Prima una prova, poi il cestino. Tutto gira nel tuo browser."
+      },
+      "nl": {
+        "title": "Google Foto\u2019s Verwijderen \u2013 Dubbele foto\u2019s vinden & bulk wissen",
+        "summary": "Vind dubbele foto\u2019s en verwijder ze in bulk in Google Foto\u2019s. Eerst een proefrun, dan prullenbak. Draait lokaal in je browser."
+      },
+      "pt_BR": {
+        "title": "Excluir Google Fotos \u2013 Localizador de duplicadas e exclus\u00e3o em massa",
+        "summary": "Encontre fotos duplicadas e exclua em massa no Google Fotos. Primeiro um teste, depois a lixeira. Tudo roda no seu navegador."
+      },
+      "zh_CN": {
+        "title": "Google \u76f8\u518c\u6279\u91cf\u5220\u9664\u5de5\u5177 \u2013 \u91cd\u590d\u7167\u7247\u67e5\u627e\u4e0e\u6279\u91cf\u6e05\u7406",
+        "summary": "\u67e5\u627e\u91cd\u590d\u7167\u7247\uff0c\u6279\u91cf\u5220\u9664 Google \u76f8\u518c\u4e2d\u7684\u7167\u7247\u3002\u5148\u8bd5\u8fd0\u884c\uff0c\u5220\u9664\u7684\u7167\u7247\u8fdb\u5165\u56de\u6536\u7ad9\u3002\u5168\u90e8\u5728\u6d4f\u89c8\u5668\u672c\u5730\u8fd0\u884c\u3002"
+      },
+      "zh_TW": {
+        "title": "Google \u76f8\u7c3f\u6279\u6b21\u522a\u9664\u5de5\u5177 \u2013 \u91cd\u8907\u7167\u7247\u5c0b\u627e\u8207\u5927\u91cf\u6e05\u7406",
+        "summary": "\u5c0b\u627e\u91cd\u8907\u7167\u7247\uff0c\u6279\u6b21\u522a\u9664 Google \u76f8\u7c3f\u4e2d\u7684\u7167\u7247\u3002\u5148\u8a66\u8dd1\uff0c\u522a\u9664\u7684\u7167\u7247\u6703\u9032\u5165\u5783\u573e\u6876\u3002\u5168\u90e8\u5728\u700f\u89bd\u5668\u672c\u6a5f\u57f7\u884c\u3002"
+      },
+      "ja": {
+        "title": "Google \u30d5\u30a9\u30c8\u4e00\u62ec\u524a\u9664\u30c4\u30fc\u30eb \u2013 \u91cd\u8907\u5199\u771f\u306e\u691c\u51fa\u3068\u4e00\u62ec\u524a\u9664",
+        "summary": "\u91cd\u8907\u3057\u305f\u5199\u771f\u3092\u898b\u3064\u3051\u3066\u3001Google \u30d5\u30a9\u30c8\u3067\u4e00\u62ec\u524a\u9664\u3002\u307e\u305a\u306f\u30c9\u30e9\u30a4\u30e9\u30f3\u3001\u524a\u9664\u3057\u305f\u5199\u771f\u306f\u30b4\u30df\u7bb1\u3078\u3002\u51e6\u7406\u306f\u3059\u3079\u3066\u30d6\u30e9\u30a6\u30b6\u5185\u3067\u5b8c\u7d50\u3057\u307e\u3059\u3002"
+      }
+    }
   },
   "edge": {
     "name": "Google Photos Delete Tool",

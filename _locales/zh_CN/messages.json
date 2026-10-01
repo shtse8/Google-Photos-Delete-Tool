@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "message": "Google 相册批量删除工具 – 重复照片查找与批量清理",
+    "description": "Store name of the extension (max 75 characters)."
+  },
+  "appNameEdge": {
+    "message": "Google 相册批量删除工具",
+    "description": "Short name used by the Edge and Firefox builds (max 45 characters)."
+  },
+  "appShortName": {
+    "message": "相册清理",
+    "description": "Short name shown where space is tight (max 12 characters)."
+  },
+  "appDescription": {
+    "message": "查找重复照片，批量删除 Google 相册中的照片。先试运行，删除的照片进入回收站。全部在浏览器本地运行。",
+    "description": "One-sentence description (max 132 characters)."
+  },
+  "appActionTitle": {
+    "message": "Google 相册批量删除",
+    "description": "Toolbar button tooltip."
+  }
+}
