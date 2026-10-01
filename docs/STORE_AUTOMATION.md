@@ -20,9 +20,16 @@ store-retry.yml (every 6h) ──▶ store-publish.yml
                                   └─ amo  : wdzeng/firefox-addon → state ✓
 ```
 
-- **`store-state` branch** (`state.json`) records what is **live** per
-  store — not what was pushed. State advances only after the platform API
-  confirms a publish.
+- **`store-state` branch** (`state.json`) records the release tag accepted by
+  each store submission API, not proof of the live public version. Review may
+  still be pending. State advances only after the existing publish API/action
+  succeeds and the state commit (when changed) and push succeed. A commit
+  failure stops recording; only a clean staged diff permits skipping a commit.
+- **Both manual CWS entrypoints use the same publisher.**
+  `publish-cws.yml` delegates to `store-publish.yml` with `stores: cws`, passing
+  its optional tag unchanged. Blank tags resolve the latest GitHub release;
+  explicit tags build that tag, with tag/package-version verification. They
+  share the retry loop's concurrency group and review-queue handling.
 - **Review queues are expected.** `ITEM_NOT_UPDATABLE` (CWS),
   `InProgressSubmission` / `NoModulesUpdated` (Edge) exit 0 with a notice
   and retry next cycle. Real failures (auth, validation) exit 1 and never
@@ -170,7 +177,7 @@ gh workflow run "Publish Stores (manual)" -f stores=auto
 # run the retry loop once now
 gh workflow run "Store Publish Retry (scheduled)"
 
-# check what is live where
+# check recorded submissions (not live-version proof)
 git fetch origin store-state && git show origin/store-state:state.json
 ```
 
@@ -181,8 +188,10 @@ git fetch origin store-state && git show origin/store-state:state.json
 | Source | `storefront/listing.json` validated by `bun run listing:check` (CI) |
 | CI | workflows parse (YAML), listing limits enforced, builds+verify green |
 | Deploy | workflow runs: upload/publish steps, operation IDs, status JSON |
-| Live | `store-state` branch (`state.json` per store) + store pages readback |
+| Submitted | `store-state` branch (`state.json` per store); review may still be pending |
+| Live | Independent store page/version readback after review; unknown without that evidence |
 
-A green workflow run is **not** the proof — the `store-state` record and
-the store page are. The workflow prints operation IDs and status bodies
+A green workflow run or `store-state` record alone is **not** live-version
+proof. Without independent store-page/version readback, the public version
+remains unknown. The workflow prints operation IDs and status bodies
 so every claim has a platform-side locator.

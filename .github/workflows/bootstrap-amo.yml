@@ -59,7 +59,7 @@ jobs:
           fi
           node scripts/amo-create.mjs --zip google-photos-delete-tool-firefox.zip
 
-      - name: Record live state
+      - name: Record submitted state
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -76,6 +76,12 @@ jobs:
           fi
           cp /tmp/store-state.json state.json
           git add state.json
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: amo=$TAG" --quiet || true
+          if git diff --cached --quiet; then
+            echo "No staged state changes; commit skipped"
+          else
+            DIFF_RC=$?
+            [ "$DIFF_RC" -eq 1 ] || exit "$DIFF_RC"
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: amo=$TAG" --quiet
+          fi
           git push origin HEAD:store-state
-          echo "::notice::AMO bootstrap complete; state recorded (amo=$TAG)"
+          echo "::notice::AMO bootstrap submitted; state recorded (amo=$TAG, public version unverified)"

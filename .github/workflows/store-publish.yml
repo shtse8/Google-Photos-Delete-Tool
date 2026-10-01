@@ -7,7 +7,7 @@ name: Store Publish (reusable)
 #
 # Model: a git tag creates GitHub release assets only. Stores are
 # decoupled, stateful, and retryable:
-#   - store-state branch records what is LIVE per store (state.json)
+#   - store-state branch records accepted submissions per store (state.json)
 #   - a store is published only when its recorded state is behind the
 #     target tag
 #   - platform review blocks (ITEM_NOT_UPDATABLE, InProgressSubmission,
@@ -16,8 +16,9 @@ name: Store Publish (reusable)
 #     Google/Microsoft queue
 #   - real failures (auth, validation) exit 1 and do NOT advance state
 #
-# Evidence: success is only recorded after platform API readback
-# (CWS publish status, Edge operation status, AMO API response).
+# Evidence: submission acceptance is recorded after platform API readback
+# (CWS publish status, Edge operation status, AMO API response). This does
+# not establish review completion or the live public version.
 
 on:
   workflow_call:
@@ -245,7 +246,7 @@ jobs:
             exit 1
           fi
 
-      - name: Record live state
+      - name: Record submitted state
         if: steps.publish.outputs.published == 'yes'
         run: |
           set -euo pipefail
@@ -259,9 +260,15 @@ jobs:
           fi
           cp /tmp/store-state.json state.json
           git add state.json
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: cws=${{ needs.resolve.outputs.tag }}" --quiet || true
+          if git diff --cached --quiet; then
+            echo "No staged state changes; commit skipped"
+          else
+            DIFF_RC=$?
+            [ "$DIFF_RC" -eq 1 ] || exit "$DIFF_RC"
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: cws=${{ needs.resolve.outputs.tag }}" --quiet
+          fi
           git push origin HEAD:store-state
-          echo "::notice::CWS ${{ needs.resolve.outputs.tag }} published; state recorded"
+          echo "::notice::CWS ${{ needs.resolve.outputs.tag }} submission accepted; state recorded (public version unverified)"
 
 
   # ──────────────────────── Microsoft Edge Add-ons ────────────────
@@ -431,7 +438,7 @@ jobs:
           echo "::error::Edge publish still processing after 10 minutes"
           exit 1
 
-      - name: Record live state
+      - name: Record submitted state
         if: steps.wait.outputs.published == 'yes'
         run: |
           set -euo pipefail
@@ -445,9 +452,15 @@ jobs:
           fi
           cp /tmp/store-state.json state.json
           git add state.json
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: edge=${{ needs.resolve.outputs.tag }}" --quiet || true
+          if git diff --cached --quiet; then
+            echo "No staged state changes; commit skipped"
+          else
+            DIFF_RC=$?
+            [ "$DIFF_RC" -eq 1 ] || exit "$DIFF_RC"
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: edge=${{ needs.resolve.outputs.tag }}" --quiet
+          fi
           git push origin HEAD:store-state
-          echo "::notice::Edge ${{ needs.resolve.outputs.tag }} published; state recorded"
+          echo "::notice::Edge ${{ needs.resolve.outputs.tag }} submission accepted; state recorded (public version unverified)"
 
 
   # ───────────────────────────── Firefox AMO ──────────────────────
@@ -503,7 +516,7 @@ jobs:
             automation clicks the same UI elements a human would. Source:
             https://github.com/SylphxAI/Google-Photos-Delete-Tool
 
-      - name: Record live state
+      - name: Record submitted state
         if: steps.creds.outputs.ready == 'yes' && steps.state.outputs.status == 'pending'
         run: |
           set -euo pipefail
@@ -517,6 +530,12 @@ jobs:
           fi
           cp /tmp/store-state.json state.json
           git add state.json
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: amo=${{ needs.resolve.outputs.tag }}" --quiet || true
+          if git diff --cached --quiet; then
+            echo "No staged state changes; commit skipped"
+          else
+            DIFF_RC=$?
+            [ "$DIFF_RC" -eq 1 ] || exit "$DIFF_RC"
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "store-state: amo=${{ needs.resolve.outputs.tag }}" --quiet
+          fi
           git push origin HEAD:store-state
-          echo "::notice::AMO ${{ needs.resolve.outputs.tag }} published; state recorded"
+          echo "::notice::AMO ${{ needs.resolve.outputs.tag }} submission accepted; state recorded (public version unverified)"
