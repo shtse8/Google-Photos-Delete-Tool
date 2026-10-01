@@ -50,6 +50,8 @@ export interface PostRunPrompt {
   proUrl: string | null
   /** Label of the Pro button (copy variant). */
   proLabel: string
+  /** Copy variant, so a surface with locale support can localize the label. */
+  variant: ProVariant
 }
 
 export function shouldShowPostRunPrompt(r: PostRunResult, alreadyShown: boolean): boolean {
@@ -126,5 +128,6 @@ export async function claimPostRunPrompt(
     shareText: buildShareText(kind, result.deleted, shareUrl),
     proUrl: isPro ? null : proUrl('post_run', variant),
     proLabel: PRO_COPY[variant].linkLabel,
+    variant: variant,
   }
 }

@@ -58,6 +58,7 @@ jobs:
           files: |
             google-photos-delete-tool.zip
             google-photos-delete-tool-firefox.zip
+            google-photos-delete-tool-edge.zip
             dist/standalone/inject.js
             dist/userscript/google-photos-delete.user.js
           generate_release_notes: true

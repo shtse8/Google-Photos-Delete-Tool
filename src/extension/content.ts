@@ -46,6 +46,7 @@ import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../core/
 import { PRO_TOKEN_KEY, PRO_VARIANT_KEY, getProVariant } from '../core/pro-moments'
 import { verifyLicense } from '../core/license'
 import { showPostRunPrompt } from '../ui/post-run/prompt'
+import { LOCALES, detectBrowserLocale, setLocale } from './popup/i18n'
 import { createChromeBaton, runtimeSendMessage, storageGet, storageRemove, storageSet } from './api'
 
 const LOG = '[gpdt:content]'
@@ -185,6 +186,20 @@ const proVariantStore = {
   set: (variant: 'a' | 'b') => storageSet({ [PRO_VARIANT_KEY]: variant }),
 }
 
+/**
+ * Use the language the person picked in the popup (chrome.storage.local
+ * "locale"), else the browser's, for the in-page cards. English on any failure.
+ */
+async function syncLocale(): Promise<void> {
+  try {
+    const stored = (await storageGet(['locale'])).locale
+    const known = LOCALES.find((l) => l.code === stored)
+    setLocale(known ? known.code : detectBrowserLocale())
+  } catch {
+    setLocale('en')
+  }
+}
+
 async function maybeShowPostRunPrompt(
   local: DeleteEngine,
   dryRun: boolean,
@@ -209,7 +224,10 @@ async function maybeShowPostRunPrompt(
     isShown: async () => Boolean((await storageGet([POST_RUN_PROMPT_KEY]))[POST_RUN_PROMPT_KEY]),
     markShown: () => storageSet({ [POST_RUN_PROMPT_KEY]: true }),
   }, detectBrowser(navigator.userAgent), await isProActive(), await getProVariant(proVariantStore))
-  if (prompt) showPostRunPrompt(prompt)
+  if (prompt) {
+    await syncLocale()
+    showPostRunPrompt(prompt)
+  }
 }
 
 // ─── Empty-trash chain (after a clean real run) ─────────────────
@@ -345,6 +363,10 @@ function sendStatus(status: RunStatus | string, extra: Partial<Progress> = {}): 
 // ─── Find duplicates (in-page review → the same start() path) ───
 
 function openFinder(): void {
+  void syncLocale().then(() => openFinderLocalized())
+}
+
+function openFinderLocalized(): void {
   openDuplicateFinder({
     // Same consent-gated start() as the popup; emptying Trash is never chained.
     runDelete: (ids, dryRun) => start({ dryRun, emptyTrashAfter: false, filter: { kind: 'ids', ids } }),

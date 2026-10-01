@@ -77,6 +77,10 @@ export interface DryRunTeaser {
   ctaLine: string
   linkLabel: string
   url: string
+  /** Structured form of the teaser so a surface with locale support can re-render the copy. */
+  variant: ProVariant
+  parts: { type: Exclude<PhotoType, 'unknown'>; n: number }[]
+  total: number
 }
 
 export type TypeCounts = Record<PhotoType, number>
@@ -95,9 +99,8 @@ export function countLabelTypes(labels: readonly string[]): TypeCounts {
  */
 export function buildDryRunTeaser(counts: TypeCounts, total: number, isPro: boolean, variant: ProVariant = 'a'): DryRunTeaser | null {
   if (isPro || total <= 0) return null
-  const parts = PHOTO_TYPES
-    .filter(t => counts[t] > 0)
-    .map(t => `${counts[t].toLocaleString('en-US')} ${PLURAL[t][counts[t] === 1 ? 0 : 1]}`)
+  const typed = PHOTO_TYPES.filter(t => counts[t] > 0)
+  const parts = typed.map(t => `${counts[t].toLocaleString('en-US')} ${PLURAL[t][counts[t] === 1 ? 0 : 1]}`)
   const countsLine = parts.length > 0
     ? `This view has ${parts.join(', ')}.`
     : `This view has ${total.toLocaleString('en-US')} items.`
@@ -106,6 +109,9 @@ export function buildDryRunTeaser(counts: TypeCounts, total: number, isPro: bool
     ctaLine: PRO_COPY[variant].ctaLine,
     linkLabel: PRO_COPY[variant].linkLabel,
     url: proUrl('dryrun_teaser', variant),
+    variant,
+    parts: typed.map(type => ({ type, n: counts[type] })),
+    total,
   }
 }
 
