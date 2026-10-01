@@ -111,6 +111,10 @@ export async function mintAccessToken(keyJson, fetchImpl = fetch) {
   return data.access_token
 }
 
+export const PUBLISH_RETRY_MS = 600000
+/** CWS reachability checks on the support URL / privacy policy are transient. */
+export const isTransientPublishError = (text) => /not reachable|Timeout while connecting/i.test(text ?? '')
+
 const itemName = (publisherId, itemId) => `publishers/${publisherId}/items/${itemId}`
 
 async function call(fetchImpl, token, method, url, body) {
@@ -171,8 +175,16 @@ export async function publishV2(opts) {
   }
   if (uploadState !== 'SUCCEEDED') throw new Error(`upload did not succeed (uploadState=${uploadState ?? 'unset'})`)
 
-  const pub = await call(fetchImpl, token, 'POST', `${API_BASE}/v2/${name}:publish`)
-  if (!pub.ok) throw new Error(`publish failed (HTTP ${pub.status})`)
+  const doPublish = () => call(fetchImpl, token, 'POST', `${API_BASE}/v2/${name}:publish`)
+  let pub = await doPublish()
+  if (!pub.ok && isTransientPublishError(pub.text)) {
+    log(`::notice::CWS publish hit a transient reachability error (HTTP ${pub.status}); retrying once after 10 min`)
+    await sleep(PUBLISH_RETRY_MS)
+    pub = await doPublish()
+    if (!pub.ok) throw new Error(`publish failed (HTTP ${pub.status}); retried once after 10 min`)
+  } else if (!pub.ok) {
+    throw new Error(`publish failed (HTTP ${pub.status})`)
+  }
 
   const after = await status()
   if (!after.ok) throw new Error(`readback fetchStatus failed (HTTP ${after.status})`)

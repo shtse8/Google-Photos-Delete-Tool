@@ -126,6 +126,36 @@ describe('publishV2', () => {
   })
 })
 
+describe('publish retry on transient reachability errors', () => {
+  const notReachable = { error: { message: 'Publish condition not met: Support URL is not reachable.; Privacy policy link is not reachable. Timeout while connecting.' } }
+  const head = [
+    { match: `${N}:fetchStatus` },
+    { match: `:upload`, body: { uploadState: 'SUCCEEDED', crxVersion: '1.2.3' } },
+  ]
+  it('retries once after 10 min and succeeds', async () => {
+    const api = fakeApi([...head, { match: `:publish`, status: 400, body: notReachable }, { match: `:publish`, body: {} }, { match: `${N}:fetchStatus`, body: accepted }])
+    const sleep = vi.fn(async () => {})
+    const log = vi.fn()
+    const r = await publishV2({ ...base, sleep, log, fetchImpl: api.fetchImpl })
+    expect(r.outcome).toBe('published')
+    expect(sleep).toHaveBeenCalledWith(600000)
+    expect(api.calls.filter((c) => c.endsWith(':publish'))).toHaveLength(2)
+    expect(api.calls.filter((c) => c.includes(':upload'))).toHaveLength(1)
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('::notice::'))
+  })
+  it('fails after a second reachability error, naming the retry', async () => {
+    const api = fakeApi([...head, { match: `:publish`, status: 400, body: notReachable }, { match: `:publish`, status: 400, body: notReachable }])
+    await expect(publishV2({ ...base, fetchImpl: api.fetchImpl })).rejects.toThrow('publish failed (HTTP 400); retried once after 10 min')
+  })
+  it('does not retry any other publish error', async () => {
+    const api = fakeApi([...head, { match: `:publish`, status: 403, body: { error: 'forbidden' } }])
+    const sleep = vi.fn(async () => {})
+    const err = await publishV2({ ...base, sleep, fetchImpl: api.fetchImpl }).catch((e: Error) => e)
+    expect((err as Error).message).toBe('publish failed (HTTP 403)')
+    expect(sleep).not.toHaveBeenCalled()
+  })
+})
+
 describe('workflow wiring', () => {
   const engine = wf('store-publish.yml')
   it('selects the path in the credential guard and gates each path on it', () => {
@@ -134,6 +164,11 @@ describe('workflow wiring', () => {
     expect(engine).toContain("steps.creds.outputs.auth == 'oauth'")
     expect(engine).toContain('chrome-webstore-upload-cli@3.5.0 upload')
     expect(engine).toContain("steps.publish.outputs.published == 'yes' || steps.v2.outputs.published == 'yes'")
+  })
+  it('retries the OAuth publish once after 10 min on a reachability error only', () => {
+    expect(engine).toContain("grep -qiE 'not reachable|Timeout while connecting'")
+    expect(engine).toContain('sleep 600')
+    expect(engine).toContain('retried once after 10 min')
   })
   it('exposes cancel_pending only through the manual CWS dispatch, default off', () => {
     expect(engine).toMatch(/cancel_pending:[\s\S]*?type: boolean\n\s+default: false/)
