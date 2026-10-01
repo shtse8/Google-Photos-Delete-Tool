@@ -1,6 +1,6 @@
 /* GPDT landing tracking. gtag.js (GA4 + Google Ads) with Consent Mode v2.
    Ids come from config.json. While any id is a placeholder, no tag loads.
-   No personal data is ever sent: events carry no email, name or free text. */
+   Events carry no email, name or free text. Cookies and identifiers follow the visitor's choice. */
 (function () {
   'use strict'
   var CWS = 'https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb'
@@ -13,9 +13,15 @@
   function placeholder(v) { return !v || /X{4}/.test(String(v)) }
   function read() { try { return localStorage.getItem(STORE_KEY) } catch (e) { return null } }
   function write(k, v) { try { localStorage.setItem(k, v) } catch (e) { /* ignore */ } }
-  function state(on) {
-    var v = on ? 'granted' : 'denied'
-    return { ad_storage: v, ad_user_data: v, ad_personalization: v, analytics_storage: v }
+  // Choice: 'all' | 'analytics' | 'none'. Old values migrate: granted -> all, denied -> none.
+  function normalize(v) {
+    if (v === 'granted') return 'all'
+    if (v === 'denied') return 'none'
+    return v === 'all' || v === 'analytics' || v === 'none' ? v : null
+  }
+  function state(choice) {
+    var ad = choice === 'all' ? 'granted' : 'denied'
+    return { ad_storage: ad, ad_user_data: ad, ad_personalization: ad, analytics_storage: choice === 'none' ? 'denied' : 'granted' }
   }
 
   // UTM carry-through: the Add to Chrome link keeps this page's utm_* values.
@@ -33,8 +39,9 @@
     var el = document.getElementById('consent')
     if (!el) return
     el.hidden = false
-    el.querySelector('[data-consent="accept"]').addEventListener('click', function () { write(STORE_KEY, 'granted'); update(true); el.hidden = true })
-    el.querySelector('[data-consent="reject"]').addEventListener('click', function () { write(STORE_KEY, 'denied'); update(false); el.hidden = true })
+    ;['all', 'analytics', 'none'].forEach(function (choice) {
+      el.querySelector('[data-consent="' + choice + '"]').addEventListener('click', function () { write(STORE_KEY, choice); update(choice); el.hidden = true })
+    })
   }
 
   function start(cfg) {
@@ -49,10 +56,12 @@
     window.gtag = gtag
 
     // Consent defaults go first, before gtag('config'). Most specific region rule first.
-    gtag('consent', 'default', Object.assign(state(false), { region: REGIONS, wait_for_update: 500 }))
-    gtag('consent', 'default', state(true))
-    var saved = read()
-    if (saved === 'granted' || saved === 'denied') gtag('consent', 'update', state(saved === 'granted'))
+    gtag('consent', 'default', Object.assign(state('none'), { region: REGIONS, wait_for_update: 500 }))
+    gtag('consent', 'default', state('all'))
+    var raw = read()
+    var saved = normalize(raw)
+    if (saved && saved !== raw) write(STORE_KEY, saved)
+    if (saved) gtag('consent', 'update', state(saved))
     gtag('set', 'ads_data_redaction', true)
     gtag('js', new Date())
 
@@ -66,7 +75,7 @@
     s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(useGa ? ga4 : ads)
     document.head.appendChild(s)
 
-    if (saved !== 'granted' && saved !== 'denied') banner(function (on) { gtag('consent', 'update', state(on)) })
+    if (!saved) banner(function (choice) { gtag('consent', 'update', state(choice)) })
 
     var link = document.getElementById('add-to-chrome')
     if (link) {
