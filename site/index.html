@@ -3,50 +3,160 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Delete all Google Photos or find duplicates in bulk | Google Photos Delete Tool</title>
-<meta name="description" content="Bulk delete Google Photos or find look-alike duplicates, safely. Dry run first, batches, Trash for 60 days. Runs in your browser; nothing is uploaded.">
+<title>Bulk delete Google Photos and find duplicates | Google Photos Delete Tool</title>
+<meta name="description" content="Delete thousands of Google Photos in one run and find the look-alike duplicates Google misses. Dry run first, batches of 500, 60-day Trash. Free Chrome extension.">
 <link rel="canonical" href="https://sylphxai.github.io/Google-Photos-Delete-Tool/">
+<meta name="theme-color" content="#faf8f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121110" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="img/icon-128.png" type="image/png">
+<link rel="apple-touch-icon" href="img/icon-128.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Google Photos Delete Tool by Sylphx">
+<meta property="og:title" content="Bulk delete Google Photos and find duplicates">
+<meta property="og:description" content="Delete thousands of photos in one run and find the look-alike duplicates Google misses. Dry run first. Free Chrome extension.">
+<meta property="og:url" content="https://sylphxai.github.io/Google-Photos-Delete-Tool/">
+<meta property="og:image" content="https://sylphxai.github.io/Google-Photos-Delete-Tool/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Google Photos Delete Tool: bulk delete and find duplicates, by Sylphx">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Bulk delete Google Photos and find duplicates">
+<meta name="twitter:description" content="Delete thousands of photos in one run and find the look-alike duplicates Google misses. Dry run first. Free Chrome extension.">
+<meta name="twitter:image" content="https://sylphxai.github.io/Google-Photos-Delete-Tool/img/og.png">
+<link rel="preload" as="image" type="image/webp" imagesrcset="img/find-duplicates-480.webp 480w, img/find-duplicates.webp 960w, img/find-duplicates-1280.webp 1280w" imagesizes="(min-width: 1024px) 600px, 100vw" fetchpriority="high">
 <link rel="stylesheet" href="style.css">
-<link rel="preload" as="image" href="img/find-duplicates-480.webp" type="image/webp">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Google Photos Delete Tool","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Browser extension","operatingSystem":"Chrome on Windows, macOS, Linux and ChromeOS","url":"https://sylphxai.github.io/Google-Photos-Delete-Tool/","downloadUrl":"https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb","image":"https://sylphxai.github.io/Google-Photos-Delete-Tool/img/og.png","description":"Bulk delete Google Photos and find look-alike duplicates. Dry run first, batches of up to 500, deleted items go to the 60-day Trash. Runs in your browser.","offers":[{"@type":"Offer","name":"Free","price":"0","priceCurrency":"USD"},{"@type":"Offer","name":"Pro, one-time","price":"9.99","priceCurrency":"USD"}],"publisher":{"@type":"Organization","name":"Sylphx Limited","url":"https://sylphx.com","email":"hi@sylphx.com","telephone":"+443333357935","address":{"@type":"PostalAddress","streetAddress":"128 City Road","addressLocality":"London","postalCode":"EC1V 2NX","addressCountry":"GB"}}}
+</script>
 </head>
 <body>
-<header>Google Photos Delete Tool <span style="color:var(--mut);font-weight:400">by Sylphx</span></header>
-<main>
-<section>
-<h1>Delete all your Google Photos, or find the duplicates, in bulk</h1>
-<p class="lead">Clearing a library one photo at a time takes days. Do it in minutes, and see exactly what will go before anything is touched.</p>
-<a id="add-to-chrome" class="btn" href="https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb">Add to Chrome</a>
-<p class="sub">Free. Core features stay free. Opens the Chrome Web Store.</p>
-<div class="stats"><div><b id="stat-users">10,000+</b>users</div><div><b id="stat-rating">4.7</b>rating</div></div>
-<p class="sub" id="stat-source">Source: Chrome Web Store listing</p>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="./"><img src="img/icon-128.png" width="28" height="28" alt=""><span>Google Photos Delete Tool</span><span class="by">by Sylphx</span></a>
+    <nav aria-label="Page"><a href="#how">How it works</a><a href="#duplicates">Duplicates</a><a href="#pro">Pro</a><a href="#faq">FAQ</a></nav>
+    <a class="btn btn-sm" data-cta="add-to-chrome" href="https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb">Add to Chrome</a>
+  </div>
+</header>
+<main id="main">
+<section class="hero wrap">
+  <div class="hero-copy">
+    <p class="eyebrow">Free Chrome extension for Google Photos</p>
+    <h1>Bulk delete Google Photos. Find the duplicates it misses.</h1>
+    <p class="lead">Pick a view, preview exactly what will go, then delete thousands of photos in one run, in safe batches of up to 500. Everything runs in your browser.</p>
+    <div class="cta-row">
+      <a id="add-to-chrome" class="btn" data-cta="add-to-chrome" href="https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb">Add to Chrome, it's free</a>
+      <a class="btn btn-ghost" href="#how">How it works</a>
+    </div>
+    <p class="desktop-note">On a phone? The extension runs in desktop Chrome. Open this page on your computer to install it.</p>
+    <ul class="proof" aria-label="Chrome Web Store ratings">
+      <li><b id="stat-rating">4.7</b><span class="stars" aria-hidden="true">★★★★★</span><span id="stat-count">134 ratings</span></li>
+      <li><b id="stat-users">10,000+</b><span>users</span></li>
+      <li><b>MIT</b><span>open source</span></li>
+    </ul>
+    <p class="sub" id="stat-source">Source: Chrome Web Store listing, 2026-10-01</p>
+  </div>
+  <figure class="hero-shot">
+    <img src="img/find-duplicates-480.webp" srcset="img/find-duplicates-480.webp 480w, img/find-duplicates.webp 960w, img/find-duplicates-1280.webp 1280w" sizes="(min-width: 1024px) 600px, 100vw" width="1280" height="800" alt="Find duplicates: groups of look-alike photos, the best copy kept in green and the rest marked for Trash" fetchpriority="high">
+    <figcaption>Find duplicates, shown on a test page with generated images.</figcaption>
+  </figure>
 </section>
-<section>
-<h2>Built to be safe</h2>
-<div class="grid">
-<div class="card"><h3>Dry run first</h3><p>Preview exactly which photos match. Nothing is deleted until you confirm.</p></div>
-<div class="card"><h3>Batches of up to 500</h3><p>Deletes in steady batches, so large libraries finish without babysitting.</p></div>
-<div class="card"><h3>Trash for 60 days</h3><p>Deleted photos go to Google Photos Trash, where you can restore them for 60 days.</p></div>
-<div class="card"><h3>Runs locally</h3><p>Everything happens in your browser. Nothing is uploaded to us or anyone else.</p></div>
-</div>
+
+<section id="how" class="wrap">
+  <h2>Three steps, and you stay in control</h2>
+  <ol class="steps">
+    <li><span class="n">1</span><h3>Open the view</h3><p>Your whole library, an album or a search in Google Photos. That view is the only thing the tool touches.</p></li>
+    <li><span class="n">2</span><h3>Dry run</h3><p>It scrolls and counts what matches without clicking anything, so you see the number before you commit.</p></li>
+    <li><span class="n">3</span><h3>Delete in batches</h3><p>Confirm once, then watch it work through batches of up to 500. Pause, resume or stop at any time.</p></li>
+  </ol>
 </section>
-<section>
-<h2>Find duplicates, even the look-alikes</h2>
-<p class="lead">Google Photos only removes exact copies. Resized, re-saved or re-uploaded copies stay. Find duplicates groups them, keeps the best copy and marks the rest for Trash.</p>
-<img src="img/find-duplicates-480.webp" srcset="img/find-duplicates-480.webp 480w, img/find-duplicates.webp 960w" sizes="(max-width:960px) 100vw, 960px" width="960" height="600" alt="Reviewing groups of look-alike photos, best copy kept in green" fetchpriority="high">
+
+<section class="wrap">
+  <h2>Built so you never lose the wrong photo</h2>
+  <div class="grid grid-2">
+    <div class="card"><h3>Nothing runs until you confirm</h3><p>The first real run asks you to confirm what is about to happen. Nothing is ever scheduled or unattended.</p></div>
+    <div class="card"><h3>60 days to change your mind</h3><p>Deleted photos go to Google Photos Trash, where you can restore them for 60 days. Emptying Trash is optional and always asked first.</p></div>
+    <div class="card"><h3>Stops instead of guessing</h3><p>If Google changes a button the tool cannot positively identify, it stops. It never clicks something it is unsure of.</p></div>
+    <div class="card"><h3>Your photos stay on your computer</h3><p>Everything runs in your browser. No photo, thumbnail or fingerprint is uploaded to us or anyone else.</p></div>
+  </div>
 </section>
-<section>
-<h2>Pro, for power users</h2>
-<p class="lead">One payment of US$9.99, yours for good. No subscription.</p>
-<ul class="tick"><li>Type and date filters</li><li>Presets for the cleanups you repeat</li><li>Power tools for reviewing duplicates</li></ul>
-<p><a class="btn" href="https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro">See Pro</a></p>
-<p class="sub">The token arrives by email within minutes. The core tool is fully free.</p>
+
+<section id="duplicates" class="wrap split">
+  <div>
+    <h2>Find the look-alikes Google keeps</h2>
+    <p class="lead">Google Photos removes only exact copies. Resized, re-saved, lightly edited or twice-uploaded copies stay. Find duplicates groups them, keeps the best copy and marks the rest for Trash.</p>
+    <ul class="tick">
+      <li>Set how strict the match is with a similarity slider.</li>
+      <li>Every group always keeps at least one photo. Click any photo to switch it.</li>
+      <li>Free, and it works on tens of thousands of photos.</li>
+    </ul>
+  </div>
+  <div class="card mini">
+    <p class="kicker">Why an extension</p>
+    <p>Since 31 March 2025, Google no longer lets apps read your whole library through the Photos API, so outside duplicate finders cannot see your photos. This tool works inside the Google Photos page you already have open.</p>
+  </div>
+</section>
+
+<section id="pro" class="wrap">
+  <h2>Free for good. Pro when you clean up often.</h2>
+  <p class="lead">Pro is US$9.99, paid once. No subscription, no account.</p>
+  <div class="plans">
+    <div class="plan">
+      <h3>Free</h3>
+      <p class="price">US$0</p>
+      <ul class="tick">
+        <li>Bulk delete in batches of up to 500</li>
+        <li>Dry run that clicks nothing</li>
+        <li>Find duplicates, including look-alikes</li>
+        <li>Optional Empty trash, checked afterwards</li>
+        <li>Pause, resume and stop</li>
+        <li>Interface in 9 languages</li>
+      </ul>
+      <a class="btn btn-ghost" data-cta="add-to-chrome" href="https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb">Add to Chrome</a>
+    </div>
+    <div class="plan plan-pro">
+      <h3>Pro</h3>
+      <p class="price">US$9.99 <span>once</span></p>
+      <ul class="tick">
+        <li>Everything in Free</li>
+        <li>Type filters: only screenshots, videos, photos, animations or collages</li>
+        <li>Date filter: before, after or between two dates (dates shown in English or French)</li>
+        <li>Up to 20 saved presets for cleanups you repeat</li>
+        <li>Duplicate tools: keep the newest or oldest in every group, auto-accept groups 98% or more alike, CSV export</li>
+        <li>Dry-run report with CSV export</li>
+      </ul>
+      <a class="btn" data-cta="pro" href="https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro">See Pro details</a>
+      <p class="sub">Pro is a token you paste into the extension. It is checked on your device and works offline.</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="wrap">
+  <h2>Questions</h2>
+  <div class="faq">
+    <details><summary>Can I undo a delete?</summary><p>Yes, for 60 days. Deleted photos go to Google Photos Trash and you can restore them from there. The only permanent step is the optional "Empty trash afterwards", which asks you first.</p></details>
+    <details><summary>Does it upload my photos?</summary><p>No. It runs inside the Google Photos page in your browser. Find duplicates downloads small thumbnails only from Google's own servers, turns each into a fingerprint in memory and forgets it when you close the review.</p></details>
+    <details><summary>Can I delete only part of my library?</summary><p>Yes. Open an album or a search and the tool acts on that view only. Pro adds type and date filters for finer control.</p></details>
+    <details><summary>Which browsers does it work in?</summary><p>Desktop Chrome, and Chromium browsers that install from the Chrome Web Store. A userscript for Tampermonkey or Violentmonkey is on <a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool/releases/latest">GitHub</a>. It does not run on phones.</p></details>
+    <details><summary>Is it made by Google?</summary><p>No. It is made by Sylphx Limited and is not affiliated with or endorsed by Google.</p></details>
+    <details><summary>How do I get help?</summary><p>Email <a href="mailto:hi@sylphx.com">hi@sylphx.com</a> or open an issue on <a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues">GitHub</a>.</p></details>
+  </div>
+</section>
+
+<section class="wrap closing">
+  <h2>Clear out your library today</h2>
+  <p class="lead">Free, open source, and a dry run before anything is touched.</p>
+  <a class="btn" data-cta="add-to-chrome" href="https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb">Add to Chrome, it's free</a>
 </section>
 </main>
-<footer>
-<p>Google Photos is a trademark of Google LLC. This tool is independent and not affiliated with or endorsed by Google.</p>
-<p>by <a href="https://sylphx.com">Sylphx</a> &middot; <a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool">Open source (MIT)</a> &middot; <a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/PRIVACY.md">Privacy</a> &middot; <a href="#" id="cookie-settings">Cookie settings</a></p>
+<footer class="foot">
+  <div class="wrap">
+    <nav aria-label="Legal"><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="#" id="cookie-settings" data-cookie-settings>Cookie settings</a><a href="mailto:hi@sylphx.com">hi@sylphx.com</a><a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool">Open source (MIT)</a></nav>
+    <p>Google Photos Delete Tool is made by <a href="https://sylphx.com">Sylphx</a>. Sylphx Limited, registered in England and Wales, company no. 16438428. Registered office: 128 City Road, London EC1V 2NX, United Kingdom. <a href="tel:+443333357935">+44 333 335 7935</a>.</p>
+    <p>Google Photos is a trademark of Google LLC. This tool is independent and not affiliated with or endorsed by Google.</p>
+  </div>
 </footer>
-<div id="consent" hidden role="region" aria-label="Cookie consent"><span>We use cookies to see how people find us (analytics) and which ads work (ad measurement). We never collect your name or email. You choose. <a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/PRIVACY.md">Privacy</a></span><button type="button" data-consent="all">Accept all</button><button type="button" data-consent="analytics">Analytics only</button><button type="button" data-consent="none">Reject</button></div>
+<div id="consent" hidden role="region" aria-label="Cookie consent"><span>We use cookies to see how people find us (analytics) and which ads work (ad measurement). We never collect your name or email. You choose. <a href="privacy.html">Privacy</a></span><button type="button" data-consent="all">Accept all</button><button type="button" data-consent="analytics">Analytics only</button><button type="button" data-consent="none">Reject</button></div>
 <script src="stats.js" defer></script>
 <script src="tracking.js" data-page="index" defer></script>
 </body>

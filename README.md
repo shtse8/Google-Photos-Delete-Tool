@@ -193,9 +193,16 @@ nothing. **Pro** adds the analysis layer on top:
 
 **US$9.99, one time, lifetime.** No subscription, no account.
 
-Your token arrives by email right after checkout. Open the extension (or the
-userscript panel), find the **Pro license** box, paste the token and press
-**Activate**. It is verified on your device, offline, and never leaves it.
+<!-- PRO_CHECKOUT_URL: single placeholder. When the Stripe Payment Link exists,
+replace this comment with: **[Buy Pro for US$9.99](https://buy.stripe.com/...)** -->
+
+**Activation:** open the extension (or the userscript panel), find the **Pro
+license** box, paste your Pro token and press **Activate**. The token is
+verified on your device, works offline, does not expire and never leaves the
+device. Refunds: full refund on request within 14 days, by email to
+[hi@sylphx.com](mailto:hi@sylphx.com). Terms and privacy:
+[terms](https://sylphxai.github.io/Google-Photos-Delete-Tool/terms.html),
+[privacy](https://sylphxai.github.io/Google-Photos-Delete-Tool/privacy.html).
 Seller tooling and key custody: [`docs/PRO.md`](docs/PRO.md).
 
 ## Development

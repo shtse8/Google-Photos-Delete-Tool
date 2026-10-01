@@ -95,5 +95,7 @@ date.
 
 For questions, open an issue at
 <https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues> or email
-<contact@sylphx.com>. Security reports go through the repository's
+<hi@sylphx.com>. Security reports go through the repository's
 [security advisories](https://github.com/SylphxAI/Google-Photos-Delete-Tool/security/advisories/new).
+
+The website and Pro purchases are covered by the site privacy notice: https://sylphxai.github.io/Google-Photos-Delete-Tool/privacy.html

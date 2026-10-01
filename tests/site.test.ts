@@ -7,11 +7,12 @@ const tracking = read('tracking.js')
 
 type Call = unknown[]
 
-async function run(page: 'index' | 'thanks', config: object, search = '', initial: Record<string, string> = {}) {
+async function run(page: 'index' | 'thanks' | 'privacy' | 'terms', config: object, search = '', initial: Record<string, string> = {}) {
   const storage = new Map<string, string>(Object.entries(initial))
   const appended: { src?: string }[] = []
   const listeners: Record<string, () => void> = {}
   const link = { href: '', addEventListener: (_: string, f: () => void) => { listeners.click = f } }
+  const link2 = { href: '', addEventListener: (_: string, f: () => void) => { listeners.click2 = f } }
   const buttons: Record<string, () => void> = {}
   const pressed: Record<string, string> = {}
   const settings = { addEventListener: (_: string, f: () => void) => { listeners.settings = f } }
@@ -23,6 +24,7 @@ async function run(page: 'index' | 'thanks', config: object, search = '', initia
     document: {
       currentScript: { getAttribute: () => page },
       getElementById: (id: string) => (id === 'add-to-chrome' ? link : id === 'consent' ? banner : id === 'cookie-settings' ? settings : null),
+      querySelectorAll: (sel: string) => (sel === '[data-cta="add-to-chrome"]' ? [link, link2] : sel === '[data-cookie-settings]' ? [settings] : []),
       createElement: () => ({}),
       head: { appendChild: (e: { src?: string }) => appended.push(e) },
     },
@@ -40,7 +42,7 @@ async function run(page: 'index' | 'thanks', config: object, search = '', initia
   runInNewContext(tracking, ctx)
   await new Promise((r) => setTimeout(r, 10))
   const snapshot = () => ((ctx.dataLayer as unknown[]) ?? []).map((a) => Array.from(a as ArrayLike<unknown>)) as Call[]
-  return { calls: snapshot(), snapshot, appended, link, click: listeners.click, buttons, banner, storage, pressed, reopen: listeners.settings }
+  return { calls: snapshot(), snapshot, appended, link, link2, click: listeners.click, click2: listeners.click2, buttons, banner, storage, pressed, reopen: listeners.settings }
 }
 
 const real = {
@@ -50,14 +52,15 @@ const real = {
   purchaseSendTo: 'AW-123456/bbb',
 }
 
+const PAGES = ['index.html', 'thanks.html', 'privacy.html', 'terms.html']
 const SIGNALS = ['ad_storage', 'ad_user_data', 'ad_personalization', 'analytics_storage']
 const lastUpdate = (calls: Call[]) => calls.filter((c) => c[0] === 'consent' && c[1] === 'update').pop()?.[2] as Record<string, string> | undefined
 
 describe('site tracking', () => {
   it('ships placeholder ids and loads no tags with them', async () => {
-    expect(JSON.parse(read('config.json')).ga4MeasurementId).toBe('G-XXXX')
+    const placeholders = { ga4MeasurementId: 'G-XXXX', adsConversionId: 'AW-XXXX', addToChromeSendTo: 'AW-XXXX/LABEL', purchaseSendTo: 'AW-XXXX/LABEL' }
     for (const page of ['index', 'thanks'] as const) {
-      const r = await run(page, JSON.parse(read('config.json')), '?session_id=cs_live_abcdefgh12')
+      const r = await run(page, placeholders, '?session_id=cs_live_abcdefgh12')
       expect(r.appended).toHaveLength(0)
       expect(r.calls).toHaveLength(0)
     }
@@ -104,6 +107,7 @@ describe('site tracking', () => {
     const s = JSON.parse(read('stats.json'))
     expect(s.users).toBe('10,000+')
     expect(s.rating).toBe(4.7)
+    expect(s.ratingCount).toBe(134)
     expect(s.source).toBeTruthy()
     expect(read('index.html')).toContain('Google Photos is a trademark of Google LLC')
   })
@@ -138,13 +142,13 @@ describe('site tracking', () => {
   })
 
   it('banner markup has three equal buttons, no checkboxes, no false claim', () => {
-    for (const f of ['index.html', 'thanks.html']) {
+    for (const f of PAGES) {
       const html = read(f)
       const b = html.match(/<div id="consent".*?<\/div>/s)![0]
       expect(b).not.toMatch(/No personal data|checkbox|checked/)
       expect(b.match(/<button/g)).toHaveLength(3)
       for (const c of ['all', 'analytics', 'none']) expect(b).toContain(`data-consent="${c}"`)
-      expect(b).toContain('PRIVACY.md')
+      expect(b).toContain('privacy.html')
     }
   })
 
@@ -163,6 +167,33 @@ describe('site tracking', () => {
   })
 
   it('both pages have a Cookie settings link', () => {
-    for (const f of ['index.html', 'thanks.html']) expect(read(f)).toContain('id="cookie-settings"')
+    for (const f of PAGES) expect(read(f)).toContain('id="cookie-settings"')
+  })
+
+  it('every Add to Chrome CTA carries UTM and fires the event', async () => {
+    const r = await run('index', real, '?utm_source=google')
+    expect(r.link2.href).toContain('utm_source=google')
+    r.click2()
+    expect(r.snapshot().some((c) => c[0] === 'event' && c[1] === 'add_to_chrome_click')).toBe(true)
+  })
+
+  it('Cookie settings opens the banner even with placeholder ids', async () => {
+    const r = await run('index', { ga4MeasurementId: 'G-XXXX', adsConversionId: 'AW-XXXX' })
+    expect(r.banner.hidden).toBe(true)
+    r.reopen()
+    expect(r.banner.hidden).toBe(false)
+    expect(r.calls).toHaveLength(0)
+    expect(r.appended).toHaveLength(0)
+  })
+
+  it('legal pages carry company details', () => {
+    for (const f of PAGES) {
+      const html = read(f)
+      for (const v of ['16438428', '128 City Road', 'EC1V 2NX', '+44 333 335 7935', 'hi@sylphx.com', 'privacy.html', 'terms.html']) expect(html).toContain(v)
+    }
+  })
+
+  it('no placeholder checkout ships', () => {
+    expect(read('index.html')).not.toContain('PRO_CHECKOUT_URL')
   })
 })

@@ -26,18 +26,24 @@
 
   // UTM carry-through: the Add to Chrome link keeps this page's utm_* values.
   function carryUtm() {
-    var link = document.getElementById('add-to-chrome')
-    if (!link) return
-    var out = new URL(CWS)
+    var links = document.querySelectorAll ? document.querySelectorAll('[data-cta="add-to-chrome"]') : []
+    var params = []
     new URLSearchParams(location.search).forEach(function (val, key) {
-      if (/^utm_[a-z_]+$/.test(key)) out.searchParams.set(key, val.slice(0, 100))
+      if (/^utm_[a-z_]+$/.test(key)) params.push([key, val.slice(0, 100)])
     })
-    link.href = out.toString()
+    var all = Array.prototype.slice.call(links)
+    var hero = document.getElementById('add-to-chrome')
+    if (hero && all.indexOf(hero) < 0) all.push(hero)
+    all.forEach(function (link) {
+      var out = new URL(CWS)
+      params.forEach(function (p) { out.searchParams.set(p[0], p[1]) })
+      link.href = out.toString()
+    })
   }
 
   // The banner shows when no choice is stored, and reopens from the footer "Cookie settings" link.
   // Reopening marks the current choice (aria-pressed); a new choice updates consent at once.
-  function banner(update, current) {
+  function banner(update, current, autoOpen) {
     var el = document.getElementById('consent')
     if (!el) return
     var cur = current
@@ -52,9 +58,11 @@
       })
     })
     var open = function () { mark(); el.hidden = false }
-    var link = document.getElementById('cookie-settings')
-    if (link) link.addEventListener('click', function (e) { if (e && e.preventDefault) e.preventDefault(); open() })
-    if (!cur) open()
+    var links = document.querySelectorAll ? Array.prototype.slice.call(document.querySelectorAll('[data-cookie-settings]')) : []
+    var byId = document.getElementById('cookie-settings')
+    if (byId && links.indexOf(byId) < 0) links.push(byId)
+    links.forEach(function (l) { l.addEventListener('click', function (e) { if (e && e.preventDefault) e.preventDefault(); open() }) })
+    if (!cur && autoOpen !== false) open()
   }
 
   function start(cfg) {
@@ -62,7 +70,10 @@
     var ads = cfg.adsConversionId
     var useGa = !placeholder(ga4)
     var useAds = !placeholder(ads)
-    if (!useGa && !useAds) return // placeholders: load nothing at all
+    if (!useGa && !useAds) { // placeholders: load nothing; Cookie settings still records a choice
+      banner(function () {}, normalize(read()), false)
+      return
+    }
 
     window.dataLayer = window.dataLayer || []
     function gtag() { window.dataLayer.push(arguments) }
@@ -90,13 +101,17 @@
 
     banner(function (choice) { gtag('consent', 'update', state(choice)) }, saved)
 
-    var link = document.getElementById('add-to-chrome')
-    if (link) {
-      link.addEventListener('click', function () {
+    var ctas = document.querySelectorAll ? Array.prototype.slice.call(document.querySelectorAll('[data-cta="add-to-chrome"]')) : []
+    var heroCta = document.getElementById('add-to-chrome')
+    if (heroCta && ctas.indexOf(heroCta) < 0) ctas.push(heroCta)
+    ctas.forEach(function (el) {
+      el.addEventListener('click', function () {
         gtag('event', 'add_to_chrome_click', { transport_type: 'beacon' })
         if (!placeholder(cfg.addToChromeSendTo)) gtag('event', 'conversion', { send_to: cfg.addToChromeSendTo, transport_type: 'beacon' })
       })
-    }
+    })
+    var pros = document.querySelectorAll ? Array.prototype.slice.call(document.querySelectorAll('[data-cta="pro"]')) : []
+    pros.forEach(function (el) { el.addEventListener('click', function () { gtag('event', 'pro_click', { transport_type: 'beacon' }) }) })
 
     if (page === 'thanks') {
       var id = new URLSearchParams(location.search).get('session_id') || ''
