@@ -12,7 +12,7 @@
     "description": "Short name shown where space is tight (max 12 characters)."
   },
   "appDescription": {
-    "message": "Find duplicate photos and bulk delete in Google Photos. Dry run first, deleted photos go to Trash. Runs locally in your browser.",
+    "message": "Bulk delete Google Photos and find the duplicates it misses. Dry run first, batches of 500, 60-day Trash, runs in your browser.",
     "description": "One-sentence description (max 132 characters)."
   },
   "appActionTitle": {

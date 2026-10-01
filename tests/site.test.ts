@@ -7,11 +7,13 @@ const tracking = read('tracking.js')
 
 type Call = unknown[]
 
-async function run(page: 'index' | 'thanks', config: object, search = '', initial: Record<string, string> = {}) {
+async function run(page: 'index' | 'thanks' | 'privacy' | 'terms', config: object, search = '', initial: Record<string, string> = {}) {
   const storage = new Map<string, string>(Object.entries(initial))
   const appended: { src?: string }[] = []
   const listeners: Record<string, () => void> = {}
   const link = { href: '', addEventListener: (_: string, f: () => void) => { listeners.click = f } }
+  const link2 = { href: '', addEventListener: (_: string, f: () => void) => { listeners.click2 = f } }
+  const stripe = { href: 'https://buy.stripe.com/test_abc', addEventListener: () => {} }
   const buttons: Record<string, () => void> = {}
   const pressed: Record<string, string> = {}
   const settings = { addEventListener: (_: string, f: () => void) => { listeners.settings = f } }
@@ -23,6 +25,7 @@ async function run(page: 'index' | 'thanks', config: object, search = '', initia
     document: {
       currentScript: { getAttribute: () => page },
       getElementById: (id: string) => (id === 'add-to-chrome' ? link : id === 'consent' ? banner : id === 'cookie-settings' ? settings : null),
+      querySelectorAll: (sel: string) => (sel === '[data-cta="add-to-chrome"]' ? [link, link2] : sel === '[data-cookie-settings]' ? [settings] : sel === 'a[href^="https://buy.stripe.com/"]' ? [stripe] : []),
       createElement: () => ({}),
       head: { appendChild: (e: { src?: string }) => appended.push(e) },
     },
@@ -40,7 +43,7 @@ async function run(page: 'index' | 'thanks', config: object, search = '', initia
   runInNewContext(tracking, ctx)
   await new Promise((r) => setTimeout(r, 10))
   const snapshot = () => ((ctx.dataLayer as unknown[]) ?? []).map((a) => Array.from(a as ArrayLike<unknown>)) as Call[]
-  return { calls: snapshot(), snapshot, appended, link, click: listeners.click, buttons, banner, storage, pressed, reopen: listeners.settings }
+  return { calls: snapshot(), snapshot, appended, link, link2, stripe, click: listeners.click, click2: listeners.click2, buttons, banner, storage, pressed, reopen: listeners.settings }
 }
 
 const real = {
@@ -50,14 +53,15 @@ const real = {
   purchaseSendTo: 'AW-123456/bbb',
 }
 
+const PAGES = ['index.html', 'thanks.html', 'privacy.html', 'terms.html']
 const SIGNALS = ['ad_storage', 'ad_user_data', 'ad_personalization', 'analytics_storage']
 const lastUpdate = (calls: Call[]) => calls.filter((c) => c[0] === 'consent' && c[1] === 'update').pop()?.[2] as Record<string, string> | undefined
 
 describe('site tracking', () => {
   it('ships placeholder ids and loads no tags with them', async () => {
-    expect(JSON.parse(read('config.json')).ga4MeasurementId).toBe('G-XXXX')
+    const placeholders = { ga4MeasurementId: 'G-XXXX', adsConversionId: 'AW-XXXX', addToChromeSendTo: 'AW-XXXX/LABEL', purchaseSendTo: 'AW-XXXX/LABEL' }
     for (const page of ['index', 'thanks'] as const) {
-      const r = await run(page, JSON.parse(read('config.json')), '?session_id=cs_live_abcdefgh12')
+      const r = await run(page, placeholders, '?session_id=cs_live_abcdefgh12')
       expect(r.appended).toHaveLength(0)
       expect(r.calls).toHaveLength(0)
     }
@@ -90,7 +94,7 @@ describe('site tracking', () => {
   it('thanks page sends purchase once with transaction_id and no personal data', async () => {
     const r = await run('thanks', real, '?session_id=cs_live_abcdefgh12')
     const purchase = r.calls.find((c) => c[0] === 'event' && c[1] === 'purchase')
-    expect(purchase?.[2]).toEqual({ transaction_id: 'cs_live_abcdefgh12', value: 9.99, currency: 'USD' })
+    expect(purchase?.[2]).toEqual({ page_location: 'https://x.test/thanks.html', transaction_id: 'cs_live_abcdefgh12', value: 9.99, currency: 'USD' })
   })
 
   it('does not fire purchase for the unreplaced template or a missing id', async () => {
@@ -104,6 +108,7 @@ describe('site tracking', () => {
     const s = JSON.parse(read('stats.json'))
     expect(s.users).toBe('10,000+')
     expect(s.rating).toBe(4.7)
+    expect(s.ratingCount).toBe(134)
     expect(s.source).toBeTruthy()
     expect(read('index.html')).toContain('Google Photos is a trademark of Google LLC')
   })
@@ -138,13 +143,13 @@ describe('site tracking', () => {
   })
 
   it('banner markup has three equal buttons, no checkboxes, no false claim', () => {
-    for (const f of ['index.html', 'thanks.html']) {
+    for (const f of PAGES) {
       const html = read(f)
       const b = html.match(/<div id="consent".*?<\/div>/s)![0]
       expect(b).not.toMatch(/No personal data|checkbox|checked/)
       expect(b.match(/<button/g)).toHaveLength(3)
       for (const c of ['all', 'analytics', 'none']) expect(b).toContain(`data-consent="${c}"`)
-      expect(b).toContain('PRIVACY.md')
+      expect(b).toContain('privacy.html')
     }
   })
 
@@ -163,6 +168,64 @@ describe('site tracking', () => {
   })
 
   it('both pages have a Cookie settings link', () => {
-    for (const f of ['index.html', 'thanks.html']) expect(read(f)).toContain('id="cookie-settings"')
+    for (const f of PAGES) expect(read(f)).toContain('id="cookie-settings"')
+  })
+
+  it('every Add to Chrome CTA carries UTM and fires the event', async () => {
+    const r = await run('index', real, '?utm_source=google')
+    expect(r.link2.href).toContain('utm_source=google')
+    r.click2()
+    expect(r.snapshot().some((c) => c[0] === 'event' && c[1] === 'add_to_chrome_click')).toBe(true)
+  })
+
+  it('Cookie settings opens the banner even with placeholder ids', async () => {
+    const r = await run('index', { ga4MeasurementId: 'G-XXXX', adsConversionId: 'AW-XXXX' })
+    expect(r.banner.hidden).toBe(true)
+    r.reopen()
+    expect(r.banner.hidden).toBe(false)
+    expect(r.calls).toHaveLength(0)
+    expect(r.appended).toHaveLength(0)
+  })
+
+  it('legal pages carry company details', () => {
+    for (const f of PAGES) {
+      const html = read(f)
+      for (const v of ['16438428', '128 City Road', 'EC1V 2NX', '+44 333 335 7935', 'hi@sylphx.com', 'privacy.html', 'terms.html']) expect(html).toContain(v)
+    }
+  })
+
+  it('no placeholder checkout ships', () => {
+    expect(read('index.html')).not.toContain('PRO_CHECKOUT_URL')
+  })
+
+  it('purchase fires once per session id, never for a bad id, and Google never gets session_id', async () => {
+    const r = await run('thanks', real, '?session_id=cs_live_abcdefgh12')
+    expect(r.calls.filter((c) => c[1] === 'purchase')).toHaveLength(1)
+    const again = await run('thanks', real, '?session_id=cs_live_abcdefgh12', { gpdt_purchase_cs_live_abcdefgh12: '1' })
+    expect(again.calls.find((c) => c[1] === 'purchase')).toBeUndefined()
+    for (const q of ['?session_id=abc', '?session_id=cs_live_<x>', '?session_id=cs_']) {
+      expect((await run('thanks', real, q)).calls.find((c) => c[1] === 'purchase')).toBeUndefined()
+    }
+    for (const c of r.calls.filter((c) => c[0] === 'config')) expect((c[2] as { page_location: string }).page_location).toBe('https://x.test/thanks.html')
+    expect(JSON.stringify(r.calls)).not.toContain('?session_id')
+  })
+
+  it('gclid rides on Stripe links only after Accept all, and only when well formed', async () => {
+    const none = await run('index', real, '?gclid=Cj0KCQ_abc-1')
+    expect(none.stripe.href).not.toContain('client_reference_id')
+    none.buttons.analytics()
+    expect(none.stripe.href).not.toContain('client_reference_id')
+    none.buttons.all()
+    expect(none.stripe.href).toContain('client_reference_id=Cj0KCQ_abc-1')
+    none.buttons.none()
+    expect(none.stripe.href).not.toContain('client_reference_id')
+    const saved = await run('index', real, '?gclid=Cj0KCQ_abc-1', { gpdt_consent: 'all' })
+    expect(saved.stripe.href).toContain('client_reference_id=Cj0KCQ_abc-1')
+    const bad = await run('index', real, '?gclid=a%20b%26x', { gpdt_consent: 'all' })
+    expect(bad.stripe.href).not.toContain('client_reference_id')
+  })
+
+  it('banner names the controller and links the site privacy page', () => {
+    for (const f of PAGES) expect(read(f).match(/<div id="consent".*?<\/div>/s)![0]).toMatch(/Sylphx Limited, the controller.*privacy\.html/)
   })
 })

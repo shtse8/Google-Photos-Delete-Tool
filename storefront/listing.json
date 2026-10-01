@@ -4,9 +4,9 @@
   "shared": {
     "name": "Google Photos Delete Tool",
     "tagline": "Find duplicate photos and bulk delete in Google Photos",
-    "homepageUrl": "https://github.com/SylphxAI/Google-Photos-Delete-Tool",
+    "homepageUrl": "https://sylphxai.github.io/Google-Photos-Delete-Tool/",
     "supportUrl": "https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues",
-    "privacyUrl": "https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/PRIVACY.md"
+    "privacyUrl": "https://sylphxai.github.io/Google-Photos-Delete-Tool/privacy.html"
   },
   "screenshots": [
     {
@@ -32,38 +32,25 @@
   ],
   "cws": {
     "title": "Google Photos Delete Tool \u2013 Duplicate Finder & Bulk Delete",
-    "summary": "Find and delete duplicate photos in Google Photos. Bulk delete safely: dry run, batches, empty trash. Private, open source.",
+    "summary": "Bulk delete Google Photos and find the duplicates it misses. Dry run first, batches of 500, 60-day Trash, runs in your browser.",
     "category": "Productivity",
     "locale": "en",
     "description": [
-      "Find duplicates: Google Photos only removes exact copies of the same file. This extension also finds look-alike copies (resized, re-saved, slightly edited, or uploaded twice) in the view you choose. It scrolls the view, compares small thumbnails on your computer, and shows look-alikes in groups. The best copy is kept, the rest are marked for Trash, and you can switch any photo. A similarity slider sets how strict the match is. Nothing is uploaded.",
-      "Google Photos has no \u201cdelete all\u201d. This extension automates the tedious select \u2192 trash \u2192 confirm loop in safe batches of up to 500, so you can reclaim storage in minutes. Everything runs in your browser: it clicks the same UI elements a human would click, and it stops the moment it cannot positively identify a button.",
-      "Safety model (non-negotiable)",
-      "Fail-closed matching: the delete, confirm, and empty-trash buttons are matched by multilingual keywords against aria-labels and tooltips. An unknown UI means stop and error, never a guess.",
-      "Consent gate: the first real (non-dry) run requires you to confirm what you are about to do. Nothing is ever scheduled or unattended.",
-      "60-day Trash: deleted photos go to the Google Photos Trash, where they stay for 60 days. \u201cEmpty trash afterwards\u201d is opt-in, permanent, and only reported done after the trash is verified empty.",
-      "Instant stop: pause, resume, or stop anytime; a stopped run never reports a false error.",
-      "Features",
-      "Batch delete: up to 500 per batch (Google's selection cap), auto-scroll, and the final partial batch is flushed.",
-      "Dry run: scroll-and-count mode that never clicks anything; Pro adds a per-type breakdown.",
-      "Empty trash (opt-in): navigates to /trash, empties it, and verifies the postcondition.",
-      "Type filters (Pro): delete only screenshots, videos, animations, collages, or photos.",
-      "Date filter (Pro): delete only items before a date, after a date, or between two dates; combines with the type filter.",
-      "9-language extension UI, compile-time-complete translations.",
-      "Self-diagnosing reports: the Report issue button opens a pre-filled GitHub issue with a structured diagnostic blob, so UI drift becomes actionable data.",
-      "Free vs Pro",
-      "The delete engine, dry run, and empty trash are free forever. A one-time Pro license unlocks the analysis layer: type and date filters and the dry-run report/export. Verification is local (Ed25519) \u2014 no account, no backend, no telemetry.",
-      "Privacy",
-      "Zero data collection, zero servers, zero telemetry. Open source (MIT). Versioned selector packs make a UI-drift fix a data patch, not code surgery. Full statement: PRIVACY.md",
-      "Also available",
-      "Userscript for Tampermonkey / Violentmonkey (same engine, same safety model) and a Firefox add-on. Support: GitHub issues.",
-      "Google Photos is a trademark of Google LLC.",
+      "Delete thousands of Google Photos in one run, and find the look-alike duplicates Google Photos keeps. Preview exactly what will go before anything is touched. Free, open source, and everything runs in your browser.",
+      "WHY PEOPLE USE IT\n\u2022 Google Photos has no \"delete all\". This extension does the select, trash and confirm loop for you, in batches of up to 500, until the view you chose is empty.\n\u2022 Google Photos removes only exact copies. Find duplicates also catches resized, re-saved, lightly edited and twice-uploaded copies, keeps the best one and marks the rest for Trash.",
+      "HOW IT WORKS\n1. Open the view you want to clean: your library, an album or a search.\n2. Run a dry run. It scrolls and counts what matches without clicking anything.\n3. Confirm once and watch it delete in batches. Pause, resume or stop at any time.",
+      "SAFE BY DESIGN\n\u2022 Nothing runs until you confirm, and nothing is ever scheduled or unattended.\n\u2022 Deleted photos go to Google Photos Trash, where you can restore them for 60 days.\n\u2022 \"Empty trash afterwards\" is optional, asks you first, and is reported done only after the Trash is checked empty.\n\u2022 If Google changes a button the tool cannot positively identify, it stops instead of guessing.",
+      "FREE FOREVER\n\u2022 Bulk delete in batches of up to 500\n\u2022 Dry run that clicks nothing\n\u2022 Find duplicates with a similarity slider; every group keeps at least one photo\n\u2022 Optional, verified Empty trash\n\u2022 Pause, resume and stop\n\u2022 Interface in 9 languages",
+      "PRO, US$9.99 ONCE (no subscription, no account)\n\u2022 Type filters: delete only screenshots, videos, photos, animations or collages\n\u2022 Date filter: before, after or between two dates (reads dates shown in English or French)\n\u2022 Up to 20 saved presets for cleanups you repeat\n\u2022 Duplicate tools: keep the newest or oldest in every group, auto-accept groups 98% or more alike, CSV export\n\u2022 Dry-run report with CSV export\nPro is a token you paste into the extension. It is checked on your device and works offline.",
+      "PRIVATE\nThe extension collects nothing: no analytics, no telemetry, no server. Your photos, thumbnails and fingerprints never leave your browser. Open source under the MIT licence.",
+      "Help: hi@sylphx.com or GitHub issues. Also available as a userscript for Tampermonkey and Violentmonkey.",
+      "Google Photos is a trademark of Google LLC. This extension is independent and not affiliated with or endorsed by Google.",
       "by Sylphx \u00b7 https://sylphx.com"
     ],
     "localized": {
       "en": {
         "title": "Google Photos Delete Tool \u2013 Duplicate Finder & Bulk Delete",
-        "summary": "Find duplicate photos and bulk delete in Google Photos. Dry run first, deleted photos go to Trash. Runs locally in your browser."
+        "summary": "Bulk delete Google Photos and find the duplicates it misses. Dry run first, batches of 500, 60-day Trash, runs in your browser."
       },
       "de": {
         "title": "Google Fotos L\u00f6schtool \u2013 Duplikate finden & Massenl\u00f6schen",
@@ -250,13 +237,15 @@
       "duplicate finder"
     ],
     "description": [
-      "Find duplicates: Google Photos only removes exact copies of the same file. This extension also finds look-alike copies (resized, re-saved, slightly edited, or uploaded twice) in the view you choose. It scrolls the view, compares small thumbnails on your computer, and shows look-alikes in groups. The best copy is kept, the rest are marked for Trash, and you can switch any photo. A similarity slider sets how strict the match is. Nothing is uploaded.",
-      "Google Photos has no \u201cdelete all\u201d. This extension automates the select \u2192 trash \u2192 confirm loop in safe batches of up to 500, so you can reclaim storage in minutes. Everything runs in your browser and stops the moment it cannot positively identify a button.",
-      "Safety: fail-closed multilingual button matching (unknown UI = stop, never guess), a consent gate on the first real run, deleted photos go to the 60-day Trash, empty-trash afterwards is opt-in and verified, and stop is instant.",
-      "Features: batch delete up to 500 per batch with auto-scroll, dry run that counts without clicking, verified empty trash (opt-in), pause/resume/stop, 9-language UI, and self-diagnosing issue reports.",
-      "Free vs Pro: the delete engine, dry run, and empty trash are free forever. A one-time Pro license adds type and date filters (screenshots, videos, animations, collages, photos) and the dry-run report/export. Verification is local \u2014 no account, no backend.",
-      "Privacy: zero data collection, zero servers, zero telemetry. Open source (MIT). Support: GitHub issues.",
-      "Google Photos is a trademark of Google LLC.",
+      "Delete thousands of Google Photos in one run, and find the look-alike duplicates Google Photos keeps. Preview exactly what will go before anything is touched. Free, open source, and everything runs in your browser.",
+      "WHY PEOPLE USE IT\n\u2022 Google Photos has no \"delete all\". This extension does the select, trash and confirm loop for you, in batches of up to 500, until the view you chose is empty.\n\u2022 Google Photos removes only exact copies. Find duplicates also catches resized, re-saved, lightly edited and twice-uploaded copies, keeps the best one and marks the rest for Trash.",
+      "HOW IT WORKS\n1. Open the view you want to clean: your library, an album or a search.\n2. Run a dry run. It scrolls and counts what matches without clicking anything.\n3. Confirm once and watch it delete in batches. Pause, resume or stop at any time.",
+      "SAFE BY DESIGN\n\u2022 Nothing runs until you confirm, and nothing is ever scheduled or unattended.\n\u2022 Deleted photos go to Google Photos Trash, where you can restore them for 60 days.\n\u2022 \"Empty trash afterwards\" is optional, asks you first, and is reported done only after the Trash is checked empty.\n\u2022 If Google changes a button the tool cannot positively identify, it stops instead of guessing.",
+      "FREE FOREVER\n\u2022 Bulk delete in batches of up to 500\n\u2022 Dry run that clicks nothing\n\u2022 Find duplicates with a similarity slider; every group keeps at least one photo\n\u2022 Optional, verified Empty trash\n\u2022 Pause, resume and stop\n\u2022 Interface in 9 languages",
+      "PRO, US$9.99 ONCE (no subscription, no account)\n\u2022 Type filters: delete only screenshots, videos, photos, animations or collages\n\u2022 Date filter: before, after or between two dates (reads dates shown in English or French)\n\u2022 Up to 20 saved presets for cleanups you repeat\n\u2022 Duplicate tools: keep the newest or oldest in every group, auto-accept groups 98% or more alike, CSV export\n\u2022 Dry-run report with CSV export\nPro is a token you paste into the extension. It is checked on your device and works offline.",
+      "PRIVATE\nThe extension collects nothing: no analytics, no telemetry, no server. Your photos, thumbnails and fingerprints never leave your browser. Open source under the MIT licence.",
+      "Help: hi@sylphx.com or GitHub issues. Also available as a userscript for Tampermonkey and Violentmonkey.",
+      "Google Photos is a trademark of Google LLC. This extension is independent and not affiliated with or endorsed by Google.",
       "by Sylphx \u00b7 https://sylphx.com"
     ]
   },
@@ -276,13 +265,15 @@
     ],
     "license": "MIT",
     "description": [
-      "Find duplicates: Google Photos only removes exact copies of the same file. This add-on also finds look-alike copies (resized, re-saved, slightly edited, or uploaded twice) in the view you choose. It scrolls the view, compares small thumbnails on your computer, and shows look-alikes in groups. The best copy is kept, the rest are marked for Trash, and you can switch any photo. A similarity slider sets how strict the match is. Nothing is uploaded.",
-      "Google Photos has no \u201cdelete all\u201d. This add-on automates the select \u2192 trash \u2192 confirm loop in safe batches of up to 500, so you can reclaim storage in minutes. Everything runs in your browser and stops the moment it cannot positively identify a button.",
-      "Safety: fail-closed multilingual button matching (unknown UI = stop, never guess), a consent gate on the first real run, deleted photos go to the 60-day Trash, empty-trash afterwards is opt-in and verified, and stop is instant.",
-      "Features: batch delete up to 500 per batch with auto-scroll, dry run that counts without clicking, verified empty trash (opt-in), pause/resume/stop, 9-language UI, and self-diagnosing issue reports.",
-      "Free vs Pro: the delete engine, dry run, and empty trash are free forever. A one-time Pro license adds type and date filters (screenshots, videos, animations, collages, photos) and the dry-run report/export. Verification is local (Ed25519) \u2014 no account, no backend, no telemetry.",
-      "Privacy: zero data collection, zero servers, zero telemetry. Open source (MIT). Support: GitHub issues.",
-      "Google Photos is a trademark of Google LLC.",
+      "Delete thousands of Google Photos in one run, and find the look-alike duplicates Google Photos keeps. Preview exactly what will go before anything is touched. Free, open source, and everything runs in your browser.",
+      "WHY PEOPLE USE IT\n\u2022 Google Photos has no \"delete all\". This add-on does the select, trash and confirm loop for you, in batches of up to 500, until the view you chose is empty.\n\u2022 Google Photos removes only exact copies. Find duplicates also catches resized, re-saved, lightly edited and twice-uploaded copies, keeps the best one and marks the rest for Trash.",
+      "HOW IT WORKS\n1. Open the view you want to clean: your library, an album or a search.\n2. Run a dry run. It scrolls and counts what matches without clicking anything.\n3. Confirm once and watch it delete in batches. Pause, resume or stop at any time.",
+      "SAFE BY DESIGN\n\u2022 Nothing runs until you confirm, and nothing is ever scheduled or unattended.\n\u2022 Deleted photos go to Google Photos Trash, where you can restore them for 60 days.\n\u2022 \"Empty trash afterwards\" is optional, asks you first, and is reported done only after the Trash is checked empty.\n\u2022 If Google changes a button the tool cannot positively identify, it stops instead of guessing.",
+      "FREE FOREVER\n\u2022 Bulk delete in batches of up to 500\n\u2022 Dry run that clicks nothing\n\u2022 Find duplicates with a similarity slider; every group keeps at least one photo\n\u2022 Optional, verified Empty trash\n\u2022 Pause, resume and stop\n\u2022 Interface in 9 languages",
+      "PRO, US$9.99 ONCE (no subscription, no account)\n\u2022 Type filters: delete only screenshots, videos, photos, animations or collages\n\u2022 Date filter: before, after or between two dates (reads dates shown in English or French)\n\u2022 Up to 20 saved presets for cleanups you repeat\n\u2022 Duplicate tools: keep the newest or oldest in every group, auto-accept groups 98% or more alike, CSV export\n\u2022 Dry-run report with CSV export\nPro is a token you paste into the add-on. It is checked on your device and works offline.",
+      "PRIVATE\nThe add-on collects nothing: no analytics, no telemetry, no server. Your photos, thumbnails and fingerprints never leave your browser. Open source under the MIT licence.",
+      "Help: hi@sylphx.com or GitHub issues. Also available as a userscript for Tampermonkey and Violentmonkey.",
+      "Google Photos is a trademark of Google LLC. This add-on is independent and not affiliated with or endorsed by Google.",
       "by Sylphx \u00b7 https://sylphx.com"
     ]
   }

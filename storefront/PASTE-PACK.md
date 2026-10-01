@@ -5,8 +5,8 @@ For whoever has dashboard access. The Chrome Web Store API has no listing-metada
 Shared values:
 
 - Support URL: https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues
-- Privacy URL: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/PRIVACY.md
-- Homepage: https://github.com/SylphxAI/Google-Photos-Delete-Tool
+- Privacy URL: https://sylphxai.github.io/Google-Photos-Delete-Tool/privacy.html
+- Homepage: https://sylphxai.github.io/Google-Photos-Delete-Tool/
 - Screenshots: see [Screenshots](#screenshots).
 
 ## Translation review status
@@ -37,6 +37,68 @@ Do once per language below.
 7. Save draft; submit for review once all languages are done (one submission covers them all).
 
 CWS limits: summary 132 characters ([Prepare your extension](https://developer.chrome.com/docs/webstore/prepare)). The public CWS docs ([Complete your listing information](https://developer.chrome.com/docs/webstore/cws-dashboard-listing)) state no description length; the repo's working cap is 16,000 characters (listing:check), and every description below is about 2,500 or less, so it is well under any plausible limit. If the dashboard shows a counter or error, report it.
+
+### English (en)
+
+Review: source copy. Description length: 2411 characters.
+
+Title:
+
+```text
+Google Photos Delete Tool – Duplicate Finder & Bulk Delete
+```
+
+Summary:
+
+```text
+Bulk delete Google Photos and find the duplicates it misses. Dry run first, batches of 500, 60-day Trash, runs in your browser.
+```
+
+Description:
+
+```text
+Delete thousands of Google Photos in one run, and find the look-alike duplicates Google Photos keeps. Preview exactly what will go before anything is touched. Free, open source, and everything runs in your browser.
+
+WHY PEOPLE USE IT
+• Google Photos has no "delete all". This extension does the select, trash and confirm loop for you, in batches of up to 500, until the view you chose is empty.
+• Google Photos removes only exact copies. Find duplicates also catches resized, re-saved, lightly edited and twice-uploaded copies, keeps the best one and marks the rest for Trash.
+
+HOW IT WORKS
+1. Open the view you want to clean: your library, an album or a search.
+2. Run a dry run. It scrolls and counts what matches without clicking anything.
+3. Confirm once and watch it delete in batches. Pause, resume or stop at any time.
+
+SAFE BY DESIGN
+• Nothing runs until you confirm, and nothing is ever scheduled or unattended.
+• Deleted photos go to Google Photos Trash, where you can restore them for 60 days.
+• "Empty trash afterwards" is optional, asks you first, and is reported done only after the Trash is checked empty.
+• If Google changes a button the tool cannot positively identify, it stops instead of guessing.
+
+FREE FOREVER
+• Bulk delete in batches of up to 500
+• Dry run that clicks nothing
+• Find duplicates with a similarity slider; every group keeps at least one photo
+• Optional, verified Empty trash
+• Pause, resume and stop
+• Interface in 9 languages
+
+PRO, US$9.99 ONCE (no subscription, no account)
+• Type filters: delete only screenshots, videos, photos, animations or collages
+• Date filter: before, after or between two dates (reads dates shown in English or French)
+• Up to 20 saved presets for cleanups you repeat
+• Duplicate tools: keep the newest or oldest in every group, auto-accept groups 98% or more alike, CSV export
+• Dry-run report with CSV export
+Pro is a token you paste into the extension. It is checked on your device and works offline.
+
+PRIVATE
+The extension collects nothing: no analytics, no telemetry, no server. Your photos, thumbnails and fingerprints never leave your browser. Open source under the MIT licence.
+
+Help: hi@sylphx.com or GitHub issues. Also available as a userscript for Tampermonkey and Violentmonkey.
+
+Google Photos is a trademark of Google LLC. This extension is independent and not affiliated with or endorsed by Google.
+
+by Sylphx · https://sylphx.com
+```
 
 ### German (de)
 
@@ -465,8 +527,8 @@ Partner Center, Edge program, Microsoft Edge Add-ons, Create new extension. Valu
 | Search terms | duplicate photos, google photos, bulk delete, photo cleaner, duplicate finder (enter one per line; max 7 terms) |
 | Category | Productivity |
 | Logo (300x300) | `storefront/edge-logo-300.png`, raw URL https://raw.githubusercontent.com/SylphxAI/Google-Photos-Delete-Tool/master/storefront/edge-logo-300.png |
-| Privacy policy URL | https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/PRIVACY.md |
-| Support / website URL | https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues |
+| Privacy policy URL | https://sylphxai.github.io/Google-Photos-Delete-Tool/privacy.html |
+| Support / website URL | https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues (website: https://sylphxai.github.io/Google-Photos-Delete-Tool/) |
 | Screenshots | see [Screenshots](#screenshots) |
 
 Short description:
