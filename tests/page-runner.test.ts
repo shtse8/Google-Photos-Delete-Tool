@@ -294,6 +294,16 @@ describe('PageRunner — empty-trash chain', () => {
 })
 
 describe('PageRunner — dry-run summary', () => {
+  it('has no summary after a real run, so no Pro teaser is built', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(['Screenshot - shot'])
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    runner.acknowledgeConsent()
+    await runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
+    expect(runner.getSummary()).toBeNull()
+  })
+
   it('builds a type-count summary from a dry-run', async () => {
     stubWindow()
     const dom = new RunnerFakeDom()
@@ -323,6 +333,61 @@ describe('PageRunner — dry-run summary', () => {
     })
     expect(runner.getSummary()?.total).toBe(1)
     expect(runner.getSummary()?.counts.screenshot).toBe(1)
+  })
+})
+
+describe('PageRunner — date filter (Pro)', () => {
+  const dateFilter = { kind: 'date', range: { mode: 'before', date: '2016-01-01' } } as const
+  const labels = [
+    'Screenshot - 10 Mar 2012, 10:19:24',
+    'Photo - 2 Jan 2020, 09:00:00',
+    'Photo - Landscape',
+    'Video - clip',
+  ]
+
+  it('refuses a free user before touching the page', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(labels)
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    vi.spyOn(runner, 'isPro').mockResolvedValue(false)
+    await expect(runner.start({ maxCount: 500, dryRun: true, emptyTrashAfter: false, filter: dateFilter }))
+      .rejects.toThrow(/needs Pro/)
+    expect(dom.clicks).toHaveLength(0)
+    expect(runner.getSummary()).toBeNull()
+  })
+
+  it('dry run reports matched, skipped-unreadable and total for Pro', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(labels)
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    vi.spyOn(runner, 'isPro').mockResolvedValue(true)
+    await runner.start({ maxCount: 500, dryRun: true, emptyTrashAfter: false, filter: dateFilter })
+    expect(runner.getSummary()?.dateReport).toEqual({ matched: 1, skippedUnreadable: 2, total: 4 })
+    expect(dom.clicks).toHaveLength(0)
+  })
+
+  it('counts skipped only among tiles of the chosen type', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(labels)
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    vi.spyOn(runner, 'isPro').mockResolvedValue(true)
+    await runner.start({
+      maxCount: 500, dryRun: true, emptyTrashAfter: false,
+      filter: { kind: 'date', range: { mode: 'before', date: '2016-01-01' }, type: 'photo' },
+    })
+    expect(runner.getSummary()?.dateReport).toEqual({ matched: 0, skippedUnreadable: 1, total: 4 })
+  })
+
+  it('has no date report for an unfiltered dry run', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(labels)
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    await runner.start({ maxCount: 500, dryRun: true, emptyTrashAfter: false, filter: { kind: 'all' } })
+    expect(runner.getSummary()?.dateReport).toBeUndefined()
   })
 })
 

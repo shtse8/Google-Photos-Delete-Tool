@@ -17,7 +17,7 @@
  * use the raw API — they are callback-based in both browsers.
  */
 import { DEFAULT_CONFIG, DeleteEngine, type Progress } from '../core'
-import { describeFilter, type PhotoFilter } from '../core/photo-filter'
+import { PRO_FILTER_ERROR, describeFilter, filterRequiresPro, type PhotoFilter } from '../core/photo-filter'
 import { openDuplicateFinder } from '../ui/dupes/finder'
 import { browserDom } from '../core/browser-dom'
 import { findConfirmButton, findConfirmDialog, findEmptyTrashButton, isTrashEmpty } from '../core/selectors'
@@ -43,6 +43,8 @@ import {
   waitUntilAbortable,
 } from '../core/run-occupancy'
 import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../core/post-run-prompt'
+import { PRO_TOKEN_KEY } from '../core/pro-moments'
+import { verifyLicense } from '../core/license'
 import { showPostRunPrompt } from '../ui/post-run/prompt'
 import { createChromeBaton, runtimeSendMessage, storageGet, storageRemove, storageSet } from './api'
 
@@ -93,6 +95,9 @@ const start = async (opts: StartOptions): Promise<{ ok: boolean; error?: string 
     const dryRun = opts.dryRun ?? false
     const emptyTrashAfter = opts.emptyTrashAfter ?? false
     const filter = opts.filter ?? { kind: 'all' as const }
+    if (filterRequiresPro(filter) && !(await isProActive())) {
+      return { ok: false, error: PRO_FILTER_ERROR }
+    }
 
     let consent: Acknowledgement = { readable: true, acknowledged: false }
     let emptyTrashAck: Acknowledgement = { readable: true, acknowledged: false }
@@ -165,6 +170,16 @@ const isRunning = (): boolean =>
 
 // ─── One-time rate/share prompt (after a successful real run) ───
 
+/** Pro state for the post-run card: the popup stores the token, verified locally. */
+async function isProActive(): Promise<boolean> {
+  try {
+    const token = (await storageGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
+    return typeof token === 'string' && (await verifyLicense(token)).ok
+  } catch {
+    return false
+  }
+}
+
 async function maybeShowPostRunPrompt(
   local: DeleteEngine,
   dryRun: boolean,
@@ -188,7 +203,7 @@ async function maybeShowPostRunPrompt(
   }, {
     isShown: async () => Boolean((await storageGet([POST_RUN_PROMPT_KEY]))[POST_RUN_PROMPT_KEY]),
     markShown: () => storageSet({ [POST_RUN_PROMPT_KEY]: true }),
-  }, detectBrowser(navigator.userAgent))
+  }, detectBrowser(navigator.userAgent), await isProActive())
   if (prompt) showPostRunPrompt(prompt)
 }
 
@@ -393,7 +408,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const dryRunLabels = engine ? engine.getDryRunLabels() : []
       const labels = dryRunLabels.length > 0 ? [...dryRunLabels] : undefined
       const total = lastProgress?.total ?? (labels ? labels.length : undefined)
-      sendResponse({ summary: labels ? { total: total ?? labels.length, labels } : null })
+      sendResponse({
+        summary: labels ? { total: total ?? labels.length, labels } : null,
+        dateReport: engine ? engine.getDateReport() : null,
+      })
       break
     }
     default:

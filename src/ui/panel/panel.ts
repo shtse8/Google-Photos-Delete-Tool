@@ -10,10 +10,12 @@ import { admitSurface, describePhotosView } from '../../core/surface'
 import { formatElapsed, formatEta } from '../../core/utils'
 import { ACTIVE_STATUSES } from '../../core/status'
 import type { Progress, RunStatus } from '../../core'
-import { PHOTO_TYPES, type PhotoFilter, type PhotoType } from '../../core/photo-filter'
+import { PHOTO_TYPES, buildFilterFromControls, type PhotoType } from '../../core/photo-filter'
 import { openDuplicateFinder } from '../dupes/finder'
 import { sleep } from '../../core/utils'
 import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../../core/post-run-prompt'
+import { buildDryRunTeaser, dateReportLine, proUrl } from '../../core/pro-moments'
+import { renderProTeaser } from '../pro-teaser/teaser'
 import { showPostRunPrompt } from '../post-run/prompt'
 
 const ROOT_ID = 'gpdt-panel-root'
@@ -127,11 +129,28 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
       </select>
     </div>
     <div class="gpdt-row">
+      <label for="gpdt-date-mode">Date filter (Pro)</label>
+      <select id="gpdt-date-mode" style="width:150px" disabled>
+        <option value="off">Any date</option>
+        <option value="before">Before a date</option>
+        <option value="after">After a date</option>
+        <option value="between">Between two dates</option>
+      </select>
+    </div>
+    <div class="gpdt-row" id="gpdt-date-row" style="display:none">
+      <input type="date" id="gpdt-date-a" style="width:120px" disabled aria-label="Date" />
+      <input type="date" id="gpdt-date-b" style="width:120px; display:none" disabled aria-label="End date" />
+    </div>
+    <div class="gpdt-row" id="gpdt-date-pro" style="display:none">
+      <a id="gpdt-date-pro-link" href="" target="_blank" rel="noopener" style="font-size:11px; color:#8b8b95; white-space:nowrap">Pro: Get Pro</a>
+    </div>
+    <div class="gpdt-row">
       <label for="gpdt-license">Pro license</label>
       <span style="display:flex; gap:6px; width:100%">
         <input type="text" id="gpdt-license" placeholder="paste token" style="flex:1" />
         <button class="gpdt-ghost" id="gpdt-license-btn" style="padding:6px 8px">Activate</button>
       </span>
+      <a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro" target="_blank" rel="noopener" style="font-size:11px; color:#8b8b95; white-space:nowrap">Get Pro — US$9.99 once</a>
     </div>
     <div id="gpdt-license-status" class="gpdt-note"></div>
     <div class="gpdt-stats">
@@ -159,6 +178,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
       </div>
     </div>
     <button class="gpdt-ghost" id="gpdt-dupes" style="width:100%;margin-top:8px">Find duplicates</button>
+    <div id="gpdt-pro-teaser" style="display:none"></div>
     <div class="gpdt-footer">
       <button class="gpdt-ghost" id="gpdt-report">Report issue</button>
       <button class="gpdt-ghost" id="gpdt-copy" style="display:none">Copy summary</button>
@@ -174,6 +194,22 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const emptyInput = $<HTMLInputElement>('gpdt-empty')
   const emptyWarning = $<HTMLElement>('gpdt-empty-warning')
   const filterSelect = $<HTMLSelectElement>('gpdt-filter')
+  const dateModeSelect = $<HTMLSelectElement>('gpdt-date-mode')
+  const dateRow = $<HTMLElement>('gpdt-date-row')
+  const dateA = $<HTMLInputElement>('gpdt-date-a')
+  const dateB = $<HTMLInputElement>('gpdt-date-b')
+  const datePro = $<HTMLElement>('gpdt-date-pro')
+  $<HTMLAnchorElement>('gpdt-date-pro-link').href = proUrl('date_filter')
+  const syncDateControls = (locked: boolean): void => {
+    const off = locked || !pro
+    dateModeSelect.disabled = off
+    dateA.disabled = off
+    dateB.disabled = off
+    datePro.style.display = pro ? 'none' : 'flex'
+    dateRow.style.display = dateModeSelect.value === 'off' ? 'none' : 'flex'
+    dateB.style.display = dateModeSelect.value === 'between' ? 'block' : 'none'
+  }
+  dateModeSelect.addEventListener('change', () => syncDateControls(runningNow()))
   const licenseInput = $<HTMLInputElement>('gpdt-license')
   const licenseStatus = $<HTMLElement>('gpdt-license-status')
   const deletedEl = $<HTMLElement>('gpdt-deleted')
@@ -192,6 +228,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const consentPermanent = $<HTMLElement>('gpdt-consent-permanent')
   const copyBtn = $<HTMLButtonElement>('gpdt-copy')
   const exportBtn = $<HTMLButtonElement>('gpdt-export')
+  const proTeaserEl = $<HTMLElement>('gpdt-pro-teaser')
   const scopeEl = $<HTMLElement>('gpdt-scope')
 
   const admission = admitSurface(window.location.href)
@@ -200,6 +237,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     : 'Open photos.google.com first.'
 
   let pro = false
+  let teaserFor: unknown = null
   let pendingStart: PanelRunOptions | null = null
 
   // ─── Pro license ──────────────────────────────────────────────
@@ -207,6 +245,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const refreshProState = async (): Promise<void> => {
     pro = await runner.isPro()
     if (!runningNow()) filterSelect.disabled = !pro
+    syncDateControls(runningNow())
     licenseStatus.textContent = pro
       ? 'Pro active — filters enabled.'
       : 'Free: unfiltered cleanup + dry-run counts. Filters require Pro.'
@@ -234,11 +273,15 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     emptyWarning.style.display = emptyInput.checked ? 'block' : 'none'
   })
 
-  const readOptions = (): PanelRunOptions => {
+  const readOptions = (): PanelRunOptions | null => {
     const parsed = parseInt(maxInput.value, 10)
-    const kind = filterSelect.value
-    const filter: PhotoFilter =
-      kind === 'all' ? { kind: 'all' } : { kind: 'type', type: kind as Exclude<PhotoType, 'unknown'> }
+    const built = buildFilterFromControls(filterSelect.value, pro ? dateModeSelect.value : 'off', dateA.value, dateB.value)
+    if (!built.ok) {
+      errEl.textContent = built.error
+      errEl.style.display = 'block'
+      return null
+    }
+    const filter = built.filter
     return {
       maxCount: Number.isFinite(parsed) && parsed > 0 ? parsed : 500,
       dryRun: dryRunInput.checked,
@@ -251,6 +294,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
 
   startBtn.addEventListener('click', () => {
     const opts = readOptions()
+    if (!opts) return
     const admission = admitDestructiveRun({
       dryRun: opts.dryRun,
       emptyTrashAfter: opts.emptyTrashAfter,
@@ -364,6 +408,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     dryRunInput.disabled = running
     emptyInput.disabled = running
     filterSelect.disabled = running || !pro
+    syncDateControls(running)
 
     if (!p) {
       statusEl.textContent = STATUS_TEXT.idle
@@ -410,13 +455,23 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     const summary = runner.getSummary()
     copyBtn.style.display = summary ? 'block' : 'none'
     exportBtn.style.display = summary && pro ? 'block' : 'none'
+    if (!summary && teaserFor) {
+      teaserFor = null
+      renderProTeaser(proTeaserEl, null)
+    }
     if (summary) {
       const counts = PHOTO_TYPES
         .map((t) => ({ t, n: summary.counts[t] }))
         .filter(c => c.n > 0)
         .map(c => `${FILTER_LABELS[c.t]}: ${c.n.toLocaleString()}`)
         .join(' · ')
-      statusEl.textContent = `Counted ${summary.total.toLocaleString()} · ${counts || 'all items'}`
+      if (teaserFor !== summary) {
+        teaserFor = summary
+        renderProTeaser(proTeaserEl, buildDryRunTeaser(summary.counts, summary.total, pro))
+      }
+      statusEl.textContent = summary.dateReport
+        ? dateReportLine(summary.dateReport)
+        : `Counted ${summary.total.toLocaleString()} · ${counts || 'all items'}`
     }
   }
 
@@ -428,7 +483,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     void claimPostRunPrompt(result, {
       isShown: async () => window.localStorage.getItem(POST_RUN_PROMPT_KEY) === '1',
       markShown: async () => window.localStorage.setItem(POST_RUN_PROMPT_KEY, '1'),
-    }, detectBrowser(navigator.userAgent)).then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
+    }, detectBrowser(navigator.userAgent), pro).then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
   })
   void refreshProState()
 }

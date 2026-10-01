@@ -11,6 +11,7 @@
  * parameters on the links: the Chrome Web Store developer dashboard reports
  * installs by UTM source.
  */
+import { proUrl } from './pro-moments'
 import type { RunStatus } from './status'
 
 export const POST_RUN_PROMPT_KEY = 'gpdt_postRunPrompt_v1'
@@ -27,7 +28,7 @@ export interface PostRunResult {
   status: RunStatus
   deleted: number
   /** Engine filter kind: 'ids' is a duplicate cleanup. */
-  filterKind: 'all' | 'type' | 'ids'
+  filterKind: 'all' | 'type' | 'date' | 'ids'
   /** The run is about to navigate to /trash, which reloads the page. */
   navigatingToTrash?: boolean
 }
@@ -45,6 +46,8 @@ export interface PostRunPrompt {
   ratingUrl: string | null
   shareUrl: string
   shareText: string
+  /** Pro page link for free users; null for Pro users (button hidden). */
+  proUrl: string | null
 }
 
 export function shouldShowPostRunPrompt(r: PostRunResult, alreadyShown: boolean): boolean {
@@ -101,6 +104,7 @@ export async function claimPostRunPrompt(
   result: PostRunResult,
   storage: PromptStorage,
   browser: PromptBrowser,
+  isPro: boolean,
 ): Promise<PostRunPrompt | null> {
   if (!shouldShowPostRunPrompt(result, false)) return null
   try {
@@ -117,5 +121,6 @@ export async function claimPostRunPrompt(
     ratingUrl: ratingUrlFor(browser),
     shareUrl,
     shareText: buildShareText(kind, result.deleted, shareUrl),
+    proUrl: isPro ? null : proUrl('post_run'),
   }
 }

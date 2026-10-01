@@ -95,6 +95,8 @@ Google Photos Library API has no delete endpoint.
 - **Empty trash (opt-in):** opens `/trash`, empties it and verifies the result.
 - **Type filters (Pro):** delete only screenshots, videos, animations, collages
   or photos.
+- **Date filter (Pro):** delete only items before a date, after a date, or
+  between two dates, optionally combined with a type.
 - **Versioned selector packs:** Google Photos selectors and keyword lists live
   in a versioned JSON pack, so a UI change ships as a data patch.
 - **Report issue:** one click opens a pre-filled GitHub issue with pack version,
@@ -130,7 +132,8 @@ developer mode, and **Load unpacked**.
    current view).
 2. **Dry run** first to see the count without touching anything.
 3. Configure: photos per batch (default 500), empty-trash toggle, optional
-   type filter (Pro).
+   type filter and date filter (Pro). To clean one album, open that album
+   first: the tool acts on the current view, so albums work for free.
 4. **Start**, and use **Pause / Resume / Stop** freely. Stop is immediate.
 5. Watch the progress: deleted count, rate, elapsed; ETA only when a
    dry-run total is known.
@@ -142,10 +145,27 @@ Zero data collection, zero servers, zero telemetry. Full statement in
 
 ## Pro
 
-The delete engine, dry-run, and empty-trash are free forever. A one-time
-**Pro** license unlocks the analysis layer: type filters and the dry-run
-report/export. Pro is a locally-verified Ed25519 token — no account, no
-backend. Seller tooling and key management: see [`docs/PRO.md`](docs/PRO.md).
+Deleting stays free forever: the delete engine, dry-run and empty-trash cost
+nothing. **Pro** adds the analysis layer on top:
+
+- **Type filters** - clean up only screenshots, videos, photos, animations or
+  collages.
+- **Date filter** - delete only items before a date, after a date, or between
+  two dates (the end days are included). It reads each tile's date from its
+  label ("2 Jan 2020", "Mar 3, 2024", "10 mars 2012", "2020-01-01"; English and
+  French month names) and never guesses: a tile whose date cannot be read is
+  skipped, and the dry run says how many ("N items skipped: date not
+  readable"). "Before" and "after" exclude the date you pick. It combines with
+  the type filter: both must match.
+- **Dry-run report and export** - see exactly what a run would remove, and
+  export it as CSV before you commit.
+
+**US$9.99, one time, lifetime.** No subscription, no account.
+
+Your token arrives by email right after checkout. Open the extension (or the
+userscript panel), find the **Pro license** box, paste the token and press
+**Activate**. It is verified on your device, offline, and never leaves it.
+Seller tooling and key custody: [`docs/PRO.md`](docs/PRO.md).
 
 ## Development
 

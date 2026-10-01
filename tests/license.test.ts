@@ -94,3 +94,25 @@ describe('verifyLicense', () => {
     expect(decodeBase64Url(PRO_PUBLIC_KEY_BASE64URL).length).toBe(32)
   })
 })
+
+describe('verifyLicense with the embedded key list', () => {
+  it('lists the original key first, then the current key', async () => {
+    const { PRO_PUBLIC_KEYS_BASE64URL } = await import('../src/core/license')
+    expect(PRO_PUBLIC_KEYS_BASE64URL).toEqual([
+      'BkfyaOx0U3p8-KeUbF2WE924czXvfAoBdQ-trkO_3Vk',
+      '-LFAzRTKamgPJ57qEW8-XdOpzFZ50JhT6b7thTQe8GQ',
+    ])
+    expect(PRO_PUBLIC_KEY_BASE64URL).toBe(PRO_PUBLIC_KEYS_BASE64URL[1])
+  })
+
+  it('rejects a token from an unknown key when no key is passed', async () => {
+    const token = await signPayload({ plan: 'pro', issuedAt: 1 })
+    expect(await verifyLicense(token)).toEqual({ ok: false, reason: 'bad-signature' })
+  })
+
+  it('an explicitly passed key verifies against only that key', async () => {
+    const token = await signPayload({ plan: 'pro', issuedAt: 1 })
+    const other = encodeBase64Url(new Uint8Array(32).fill(7))
+    expect(await verifyLicense(token, other)).toEqual({ ok: false, reason: 'bad-signature' })
+  })
+})

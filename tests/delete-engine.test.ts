@@ -197,7 +197,7 @@ const FAST_CONFIG = {
 const makeEngine = (
   dom: FakeDom,
   overrides: Record<string, unknown> = {},
-  filter?: { kind: 'all' } | { kind: 'type'; type: string } | { kind: 'ids'; ids: string[] },
+  filter?: { kind: 'all' } | { kind: 'type'; type: string } | { kind: 'date'; range: unknown; type?: string } | { kind: 'ids'; ids: string[] },
 ) => {
   const onProgress = vi.fn()
   const engine = new DeleteEngine({
@@ -580,6 +580,31 @@ describe('DeleteEngine — checkbox flap & counter fallback', () => {
     expect(result.deleted).toBe(3)
     const snapshot = diagnostics.blob().engine
     expect(snapshot?.counterFallbackUsed).toBe(true)
+  })
+})
+
+describe('DeleteEngine — date filter', () => {
+  it('a real run clicks only tiles whose date matches; unreadable dates are never clicked', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - 10 Mar 2012, 10:19:24', 'Photo - 2 Jan 2020, 09:00:00', 'Photo - Landscape'])
+    const { engine } = makeEngine(dom, { maxCount: 500 }, { kind: 'date', range: { mode: 'before', date: '2016-01-01' } })
+
+    const result = await engine.run()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(1)
+    expect(dom.clicks).toContain('tile:Photo - 10 Mar 2012, 10:19:24')
+    expect(dom.clicks).not.toContain('tile:Photo - 2 Jan 2020, 09:00:00')
+    expect(dom.clicks).not.toContain('tile:Photo - Landscape')
+  })
+
+  it('dry run reports matched, skipped-unreadable and total without clicking', async () => {
+    const dom = new FakeDom()
+    dom.setTiles(['Photo - 10 Mar 2012, 10:19:24', 'Photo - 2 Jan 2020, 09:00:00', 'Photo - Landscape'])
+    const { engine } = makeEngine(dom, { maxCount: 500, dryRun: true }, { kind: 'date', range: { mode: 'before', date: '2016-01-01' } })
+
+    await engine.run()
+    expect(engine.getDateReport()).toEqual({ matched: 1, skippedUnreadable: 1, total: 3 })
+    expect(dom.clicks.some((c) => c.startsWith('tile:'))).toBe(false)
   })
 })
 

@@ -891,3 +891,13 @@ body {
   padding: 7px 8px;
   font-size: 11px;
 }
+.license-get {
+  display: inline-block;
+  font-size: 11px;
+  margin-top: 4px;
+  color: var(--text-secondary, #a1a1aa);
+  text-decoration: underline;
+}
+.license-get:hover { color: inherit; }
+
+.date-input { width: 130px; text-align: left; appearance: auto; -moz-appearance: auto; }

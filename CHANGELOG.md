@@ -4,6 +4,59 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-10-01
+
+### Added
+- Pro date filter: delete only items before a date, after a date, or between
+  two dates (end days included, local calendar days), combined with the type
+  filter when one is chosen. Controls sit next to the type filter in the popup
+  and the userscript panel; free users see them disabled with a Get Pro link
+  (`utm_medium=date_filter`).
+- Dates are read from the tile labels the scan already uses ("2 Jan 2020",
+  "10 mars 2012", "Mar 3, 2024", "2020-01-01"). A tile whose date cannot be
+  read is never selected, and a date-filtered dry run reports matched,
+  skipped and total counts ("N items skipped: date not readable").
+- README notes that albums work by opening the album.
+
+### Release notes
+- Live gate waived for this release (CEO 2026-10-01): selection is extended only
+  through the existing filter path; unreadable dates are never selected, the dry
+  run shows matched and skipped counts first, and deletions go to Trash for 60
+  days. Unit and build checks only; a live dry run and small date-filtered
+  delete on a disposable account follow before 2026-10-10.
+- Nothing free changes: batch bounds, consent, postconditions and the dry run
+  are as before.
+
+## [3.3.0] - 2026-10-01
+
+### Added
+- Dry-run teaser for free users: after a dry run the popup and userscript
+  panel show the per-type counts the scan already saw ("This view has 12
+  screenshots, 40 videos.") with one line about Pro and a dismissable Get
+  Pro link. Pro users do not see it, and a real run never does.
+- "Get Pro" button on the one-time post-run rate/share card, free users
+  only. The card still shows once with the same rules.
+- Both links open the README `#pro` section with UTM parameters
+  (`utm_medium=dryrun_teaser` / `post_run`). No network call, no telemetry;
+  deleting, dry run, duplicates and empty trash stay free.
+
+## [3.2.1] - 2026-10-01
+
+### Added
+- "Get Pro - US$9.99 once" link next to the Pro license box in the popup and
+  the userscript panel. It opens the README `#pro` section in a new tab, so
+  the purchase link can change without a store release; no network call.
+- README "Pro" section: what Pro unlocks, price, how the token arrives and
+  where to paste it.
+
+### Changed
+- Pro licence verification accepts two public keys: the original and a new
+  one. Tokens issued under the original key stay valid.
+
+### Fixed
+- `GPDT_PRO_PRIVATE_KEY` now means the same for `license:keygen` and
+  `license:issue`: a path to a key file, or the key content itself.
+
 ## [3.2.0] - 2026-10-01
 
 ### Changed

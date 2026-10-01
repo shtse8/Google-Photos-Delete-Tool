@@ -36,8 +36,9 @@ export interface Translations {
     maxCount: { label: string; hint: string }
     dryRun: { label: string; hint: string }
     emptyTrash: { label: string; hint: string }
+    dateFilter: { label: string; hint: string; off: string; before: string; after: string; between: string; pro: string }
     filter: { label: string; hint: string; all: string; screenshot: string; video: string; photo: string; animation: string; collage: string }
-    license: { label: string; hint: string; placeholder: string; activate: string; active: string; invalid: string }
+    license: { label: string; hint: string; placeholder: string; activate: string; getPro: string; active: string; invalid: string }
     language: { label: string; trigger: string }
   }
   actions: {

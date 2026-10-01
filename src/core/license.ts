@@ -4,7 +4,7 @@
  * A Pro token is `${base64url(payload)}.${base64url(signature)}` where
  * payload is JSON `{ plan: "pro", email?, issuedAt }` and the signature
  * is an Ed25519 signature over the payload bytes, made with the seller's
- * private key. The public key is embedded below; verification happens
+ * private key. The public keys are embedded below; verification happens
  * entirely on the user's device (WebCrypto SubtleCrypto). No license
  * data ever leaves the browser.
  *
@@ -22,15 +22,25 @@ export type LicenseResult =
   | { ok: false; reason: 'malformed' | 'bad-signature' | 'wrong-plan' }
 
 /**
- * Ed25519 public key (raw, base64url) embedded at build time.
- * The matching private key is held by the seller OUTSIDE this repo at
- * `$GPDT_PRO_PRIVATE_KEY` (default `~/.gpdt/gpdt-license-private.pem`;
- * see docs/PRO.md). Losing it invalidates every issued token — never
- * commit the private key. Regenerate with `bun run license:keygen`,
- * replace this constant, and release.
+ * Accepted Ed25519 public keys (raw, base64url), embedded at build time.
+ * A token verifies if ANY of them verifies it. Order: oldest first.
+ *
+ *  1. The original key. Its private key is lost, but every token ever
+ *     issued under it must stay valid, so it is never removed.
+ *  2. The current key (1Password item "GPDT Pro license private key",
+ *     Sylphx vault). New tokens are signed with it.
+ *
+ * The private key is held OUTSIDE this repo (see docs/PRO.md); never
+ * commit it. To rotate, append the new public key and release.
  */
-export const PRO_PUBLIC_KEY_BASE64URL =
-  'BkfyaOx0U3p8-KeUbF2WE924czXvfAoBdQ-trkO_3Vk'
+export const PRO_PUBLIC_KEYS_BASE64URL: readonly string[] = [
+  'BkfyaOx0U3p8-KeUbF2WE924czXvfAoBdQ-trkO_3Vk',
+  '-LFAzRTKamgPJ57qEW8-XdOpzFZ50JhT6b7thTQe8GQ',
+]
+
+/** The current (newest) public key; the one `license:issue` tokens verify under. */
+export const PRO_PUBLIC_KEY_BASE64URL: string =
+  PRO_PUBLIC_KEYS_BASE64URL[PRO_PUBLIC_KEYS_BASE64URL.length - 1]!
 
 
 export function encodeBase64Url(bytes: Uint8Array): string {
@@ -51,8 +61,8 @@ export function decodeBase64Url(s: string): Uint8Array {
 /**
  * Import the Pro public key for verification.
  *
- * `publicKeyBase64Url` is injectable for tests and future key rotation;
- * production always uses the embedded {@link PRO_PUBLIC_KEY_BASE64URL}.
+ * `publicKeyBase64Url` is injectable for tests; the default is the current
+ * embedded {@link PRO_PUBLIC_KEY_BASE64URL}.
  */
 export async function importProPublicKey(
   publicKeyBase64Url: string = PRO_PUBLIC_KEY_BASE64URL,
@@ -63,11 +73,13 @@ export async function importProPublicKey(
 
 /**
  * Verify a Pro license token locally. Returns the payload when valid.
- * `publicKeyBase64Url` is injectable for tests / rotation.
+ * By default the token may be signed by any key in
+ * {@link PRO_PUBLIC_KEYS_BASE64URL}. An explicitly passed
+ * `publicKeyBase64Url` (tests) verifies against only that key.
  */
 export async function verifyLicense(
   token: string,
-  publicKeyBase64Url: string = PRO_PUBLIC_KEY_BASE64URL,
+  publicKeyBase64Url?: string,
 ): Promise<LicenseResult> {
   const trimmed = token.trim()
   const dot = trimmed.lastIndexOf('.')
@@ -93,19 +105,20 @@ export async function verifyLicense(
     return { ok: false, reason: 'wrong-plan' }
   }
 
-  let key: CryptoKey
-  try {
-    key = await importProPublicKey(publicKeyBase64Url)
-  } catch {
-    return { ok: false, reason: 'bad-signature' }
+  const keys = publicKeyBase64Url === undefined ? PRO_PUBLIC_KEYS_BASE64URL : [publicKeyBase64Url]
+  for (const k of keys) {
+    try {
+      const key = await importProPublicKey(k)
+      const valid = await crypto.subtle.verify(
+        { name: 'Ed25519' },
+        key,
+        signatureBytes as unknown as ArrayBuffer,
+        payloadBytes as unknown as ArrayBuffer,
+      )
+      if (valid) return { ok: true, payload }
+    } catch {
+      // unusable key or signature shape: try the next key
+    }
   }
-
-  const valid = await crypto.subtle.verify(
-    { name: 'Ed25519' },
-    key,
-    signatureBytes as unknown as ArrayBuffer,
-    payloadBytes as unknown as ArrayBuffer,
-  )
-  return valid ? { ok: true, payload } : { ok: false, reason: 'bad-signature' }
+  return { ok: false, reason: 'bad-signature' }
 }
-

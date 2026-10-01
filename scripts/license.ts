@@ -5,22 +5,23 @@
  *                                     # key to ~/.gpdt/gpdt-license-private.pem
  *                                     # and prints the public key to embed.
  *   bun run license:issue --email=x   # sign a Pro license payload → token
- *   bun run license:verify <token>    # verify a token against the embedded key
+ *   bun run license:verify <token>    # verify a token against the embedded keys
  *
  * The private key NEVER enters this repository. Keep it out of git,
  * backups, and any machine that does not own the Pro business. Losing it
  * invalidates every issued token; regenerate and release a new key instead.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
+import { writeFileSync, mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { loadPrivateKey, privateKeyWritePath } from './license-keys'
 
 /**
- * Seller private key location. Override with $GPDT_PRO_PRIVATE_KEY;
- * defaults to ~/.gpdt/gpdt-license-private.pem (mode 600). The file may
- * be PEM ("-----BEGIN PRIVATE KEY-----") or a bare base64url PKCS8 DER.
+ * Seller private key. $GPDT_PRO_PRIVATE_KEY is either a file path or the
+ * key content (PEM, or bare base64url PKCS8 DER); an existing file wins.
+ * Defaults to ~/.gpdt/gpdt-license-private.pem (mode 600). `keygen` writes
+ * to the same location (the env value must then be a file path).
  */
-const PRIVATE_KEY_PATH = process.env.GPDT_PRO_PRIVATE_KEY ?? resolve(homedir(), '.gpdt', 'gpdt-license-private.pem')
+const PRIVATE_KEY_PATH = privateKeyWritePath()
 
 function usage(command: string): never {
   console.error(`Usage: bun run license:${command} ${command === 'issue' ? '[--email <email>]' : '<token>'}`)
@@ -42,7 +43,7 @@ async function keygen(): Promise<void> {
   const pkcs8 = new Uint8Array(await crypto.subtle.exportKey('pkcs8', kp.privateKey))
   const rawPub = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey))
 
-  mkdirSync(resolve(homedir(), '.gpdt'), { recursive: true })
+  mkdirSync(dirname(PRIVATE_KEY_PATH), { recursive: true })
   writeFileSync(PRIVATE_KEY_PATH, derToPem(pkcs8, 'PRIVATE KEY'), { mode: 0o600 })
 
   console.log(`Private key  -> ${PRIVATE_KEY_PATH} (mode 600, keep out of git)`)
@@ -52,29 +53,15 @@ async function keygen(): Promise<void> {
   console.log(`  export const PRO_PUBLIC_KEY_BASE64URL = '${b64url(rawPub)}'`)
 }
 
-async function loadPrivateKey(): Promise<CryptoKey> {
-  const fromEnv = process.env.GPDT_PRO_PRIVATE_KEY
-  let raw: string
-  if (fromEnv) {
-    raw = fromEnv
-  } else {
-    try {
-      raw = readFileSync(PRIVATE_KEY_PATH, 'utf-8')
-    } catch {
-      console.error(`No private key at ${PRIVATE_KEY_PATH} (set $GPDT_PRO_PRIVATE_KEY or run "bun run license:keygen").`)
-      process.exit(1)
-    }
-  }
-  // Accept PEM or bare base64url PKCS8 DER.
-  const body = raw.includes('-----')
-    ? raw.replace(/-----(BEGIN|END) [^-]+-----/g, '').replace(/\s+/g, '')
-    : raw.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/')
-  const der = Buffer.from(body, 'base64')
-  return crypto.subtle.importKey('pkcs8', der, { name: 'Ed25519' }, false, ['sign'])
-}
-
 async function issue(email?: string): Promise<void> {
-  const key = await loadPrivateKey()
+  let key: CryptoKey
+  try {
+    key = await loadPrivateKey()
+  } catch (err) {
+    // Never echo key material: report only the failure class.
+    console.error(err instanceof Error && err.message.startsWith('No private key') ? err.message : 'Could not load the private key (expected a file path, PEM, or base64url PKCS8).')
+    process.exit(1)
+  }
   const payload: { plan: 'pro'; email?: string; issuedAt: number } = {
     plan: 'pro',
     issuedAt: Date.now(),

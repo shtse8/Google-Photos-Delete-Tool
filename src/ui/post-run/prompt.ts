@@ -45,6 +45,10 @@ export function showPostRunPrompt(prompt: PostRunPrompt, container: HTMLElement 
     const url = prompt.ratingUrl
     row.appendChild(btn('Rate on Chrome Web Store', () => { window.open(url, '_blank', 'noopener') }))
   }
+  if (prompt.proUrl) {
+    const url = prompt.proUrl
+    row.appendChild(btn('Get Pro', () => { window.open(url, '_blank', 'noopener') }))
+  }
   row.appendChild(btn('Share', () => { void share(prompt, status) }))
   row.appendChild(btn('Dismiss', () => box.remove()))
   box.appendChild(row)

@@ -1,7 +1,17 @@
 import { DEFAULT_CONFIG, type Config } from './config'
 import { DeletionLog } from './deletion-log'
 import type { EngineDom, PhotoTile } from './dom-adapter'
-import { describeFilter, tileMatchesFilter, type PhotoFilter } from './photo-filter'
+import { dateFilterTypeMatches, describeFilter, parseLabelDay, tileMatchesFilter, type PhotoFilter } from './photo-filter'
+
+/** Dry-run counts for a date-filtered scan (browser observations, deduplicated). */
+export interface DateDryRunReport {
+  /** Tiles a real run with this filter would select. */
+  matched: number
+  /** Tiles of the chosen type whose date could not be read; a real run skips them. */
+  skippedUnreadable: number
+  /** Every distinct tile the scan saw. */
+  total: number
+}
 import { diagnostics } from './diagnostics'
 import type { RunStatus } from './status'
 import { describeButton } from './utils'
@@ -83,6 +93,8 @@ export class DeleteEngine {
   private counterFallbackUsed = false
   private flapRecoveries = 0
   private dryRunLabelsArr: string[] = []
+  private readonly dryObserved = new Set<string>()
+  private readonly dryUnreadable = new Set<string>()
   /** Checkbox clicks this run performed (drift evidence). */
   private clickedTiles = 0
   /** True once a run observed at least one selected photo. */
@@ -98,6 +110,16 @@ export class DeleteEngine {
    */
   getDryRunLabels(): readonly string[] {
     return this.dryRunLabelsArr
+  }
+
+  /** Matched / skipped-unreadable / total of the last dry run; null unless a date filter is active. */
+  getDateReport(): DateDryRunReport | null {
+    if (this.filter.kind !== 'date') return null
+    return {
+      matched: this.dryRunLabelsArr.length,
+      skippedUnreadable: this.dryUnreadable.size,
+      total: this.dryObserved.size,
+    }
   }
 
   constructor(options: EngineOptions) {
@@ -404,6 +426,8 @@ export class DeleteEngine {
 
     const seen = new Set<string>()
     this.dryRunLabelsArr = []
+    this.dryObserved.clear()
+    this.dryUnreadable.clear()
     let consecutiveNoProgress = 0
     let consecutiveEmptyWindows = 0
     let missingIdWarned = false
@@ -568,6 +592,13 @@ export class DeleteEngine {
       if (!label) {
         onWarn(true)
         continue
+      }
+      if (this.filter.kind === 'date') {
+        const key = tile.id?.() ?? label
+        this.dryObserved.add(key)
+        if (dateFilterTypeMatches(label, this.filter) && parseLabelDay(label) === null) {
+          this.dryUnreadable.add(key)
+        }
       }
       if (!tileMatchesFilter(tile, this.filter)) continue
       seen.add(label)

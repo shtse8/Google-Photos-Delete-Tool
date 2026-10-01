@@ -29,6 +29,7 @@ export {
   StopRequested,
   type Progress,
   type EngineOptions,
+  type DateDryRunReport,
 } from './delete-engine'
 export {
   RunInProgressError,
@@ -55,6 +56,12 @@ export {
   tileMatchesFilter,
   describeFilter,
   labelTypeToken,
+  parseLabelDay,
+  inputDayKey,
+  dayInRange,
+  filterRequiresPro,
+  buildFilterFromControls,
+  type DateRange,
   type PhotoType,
   type PhotoFilter,
 } from './photo-filter'
@@ -64,6 +71,7 @@ export {
   encodeBase64Url,
   decodeBase64Url,
   PRO_PUBLIC_KEY_BASE64URL,
+  PRO_PUBLIC_KEYS_BASE64URL,
   type ProLicensePayload,
   type LicenseResult,
 } from './license'
