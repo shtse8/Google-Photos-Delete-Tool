@@ -1,5 +1,5 @@
 /**
- * Store publish state — what is LIVE in each store (not what was pushed).
+ * Store publish state — accepted submissions, not live public-version proof.
  *
  * State lives in the `store-state` branch as state.json:
  *   { "cws": "v2.0.5", "edge": null, "amo": null }
@@ -7,7 +7,8 @@
  * A store's state is only advanced AFTER the platform API confirms a
  * publish succeeded. The scheduled retry loop compares the latest release
  * tag against this record, so it never re-publishes a version that is
- * already live, and never spams stores with duplicate-version errors.
+ * already recorded, and never spams stores with duplicate-version errors.
+ * Review may still be pending; a recorded tag does not prove public availability.
  *
  * Plain Node — no dependencies, runs on stock runners.
  *

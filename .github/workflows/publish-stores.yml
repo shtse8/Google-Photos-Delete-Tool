@@ -5,7 +5,7 @@ name: Publish Stores (manual)
 #   gh workflow run "Publish Stores (manual)" -f stores=cws -f tag=v3.0.1
 #   gh workflow run "Publish Stores (manual)" -f stores=auto
 #
-# Stores are only published when their recorded live state (store-state
+# Stores are only published when their recorded submission state (store-state
 # branch) is behind the target tag. Platform review blocks exit 0 with a
 # notice; real failures exit 1.
 
