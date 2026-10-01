@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "appliesTo": "3.1.1",
+  "appliesTo": "3.2.0",
   "shared": {
     "name": "Google Photos Delete Tool",
     "tagline": "Find duplicate photos and bulk delete in Google Photos",
@@ -31,7 +31,7 @@
     }
   ],
   "cws": {
-    "title": "Google Photos Delete Tool",
+    "title": "Google Photos Delete Tool – Duplicate Finder & Bulk Delete",
     "summary": "Find and delete duplicate photos in Google Photos. Bulk delete safely: dry run, batches, empty trash. Private, open source.",
     "category": "Productivity",
     "locale": "en",
@@ -55,7 +55,9 @@
       "Privacy",
       "Zero data collection, zero servers, zero telemetry. Open source (MIT). Versioned selector packs make a UI-drift fix a data patch, not code surgery. Full statement: PRIVACY.md",
       "Also available",
-      "Userscript for Tampermonkey / Violentmonkey (same engine, same safety model) and a Firefox add-on. Support: GitHub issues."
+      "Userscript for Tampermonkey / Violentmonkey (same engine, same safety model) and a Firefox add-on. Support: GitHub issues.",
+      "Google Photos is a trademark of Google LLC.",
+      "by Sylphx \u00b7 https://sylphx.com"
     ]
   },
   "edge": {
@@ -68,7 +70,9 @@
       "Safety: fail-closed multilingual button matching (unknown UI = stop, never guess), a consent gate on the first real run, deleted photos go to the 60-day Trash, empty-trash afterwards is opt-in and verified, and stop is instant.",
       "Features: batch delete up to 500 per batch with auto-scroll, dry run that counts without clicking, verified empty trash (opt-in), pause/resume/stop, 9-language UI, and self-diagnosing issue reports.",
       "Free vs Pro: the delete engine, dry run, and empty trash are free forever. A one-time Pro license adds type filters (screenshots, videos, animations, collages, photos) and the dry-run report/export. Verification is local \u2014 no account, no backend.",
-      "Privacy: zero data collection, zero servers, zero telemetry. Open source (MIT). Support: GitHub issues."
+      "Privacy: zero data collection, zero servers, zero telemetry. Open source (MIT). Support: GitHub issues.",
+      "Google Photos is a trademark of Google LLC.",
+      "by Sylphx \u00b7 https://sylphx.com"
     ]
   },
   "amo": {
@@ -81,7 +85,9 @@
       "Safety: fail-closed multilingual button matching (unknown UI = stop, never guess), a consent gate on the first real run, deleted photos go to the 60-day Trash, empty-trash afterwards is opt-in and verified, and stop is instant.",
       "Features: batch delete up to 500 per batch with auto-scroll, dry run that counts without clicking, verified empty trash (opt-in), pause/resume/stop, 9-language UI, and self-diagnosing issue reports.",
       "Free vs Pro: the delete engine, dry run, and empty trash are free forever. A one-time Pro license adds type filters (screenshots, videos, animations, collages, photos) and the dry-run report/export. Verification is local (Ed25519) \u2014 no account, no backend, no telemetry.",
-      "Privacy: zero data collection, zero servers, zero telemetry. Open source (MIT). Support: GitHub issues."
+      "Privacy: zero data collection, zero servers, zero telemetry. Open source (MIT). Support: GitHub issues.",
+      "Google Photos is a trademark of Google LLC.",
+      "by Sylphx \u00b7 https://sylphx.com"
     ]
   }
 }

@@ -42,6 +42,8 @@ import {
   StopRequested,
   waitUntilAbortable,
 } from '../core/run-occupancy'
+import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../core/post-run-prompt'
+import { showPostRunPrompt } from '../ui/post-run/prompt'
 import { createChromeBaton, runtimeSendMessage, storageGet, storageRemove, storageSet } from './api'
 
 const LOG = '[gpdt:content]'
@@ -128,6 +130,7 @@ const start = async (opts: StartOptions): Promise<{ ok: boolean; error?: string 
     runPromise = (async () => {
       try {
         const result = await local.run()
+        void maybeShowPostRunPrompt(local, dryRun, filter, emptyTrashAfter, result)
         await maybeChainEmptyTrash(local, dryRun, result)
       } finally {
         if (engine === local) engine = null
@@ -159,6 +162,35 @@ const stop = (): void => {
 
 const isRunning = (): boolean =>
   emptying || (engine !== null && !engine.isStopped)
+
+// ─── One-time rate/share prompt (after a successful real run) ───
+
+async function maybeShowPostRunPrompt(
+  local: DeleteEngine,
+  dryRun: boolean,
+  filter: PhotoFilter,
+  emptyTrashAfter: boolean,
+  result: Progress,
+): Promise<void> {
+  const prompt = await claimPostRunPrompt({
+    dryRun,
+    stopped: local.isStopped,
+    status: result.status,
+    deleted: result.deleted,
+    filterKind: filter.kind,
+    navigatingToTrash: shouldNavigateToEmptyTrash({
+      dryRun,
+      emptyTrashAfter,
+      stopped: local.isStopped,
+      status: result.status,
+      deleted: result.deleted,
+    }),
+  }, {
+    isShown: async () => Boolean((await storageGet([POST_RUN_PROMPT_KEY]))[POST_RUN_PROMPT_KEY]),
+    markShown: () => storageSet({ [POST_RUN_PROMPT_KEY]: true }),
+  }, detectBrowser(navigator.userAgent))
+  if (prompt) showPostRunPrompt(prompt)
+}
 
 // ─── Empty-trash chain (after a clean real run) ─────────────────
 

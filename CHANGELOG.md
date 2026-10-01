@@ -4,16 +4,35 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-10-01
+
+### Changed
+- Product name is now "Google Photos Delete Tool – Duplicate Finder & Bulk
+  Delete" (Chrome manifest, popup and panel headings, README, Chrome Web
+  Store title), with `short_name` "Photo Delete". The Firefox and Edge builds
+  keep the original name because AMO limits names to 50 characters and Edge
+  to 45; Edge now ships its own package, `google-photos-delete-tool-edge.zip`. Install identities
+  (Firefox add-on id, userscript `@namespace`/`@name`, store ids, file names)
+  are unchanged.
+- Store descriptions end with the Google LLC trademark attribution and
+  "by Sylphx · https://sylphx.com".
+
+### Added
+- A one-time prompt after a successful real run (at least one item observed
+  deleted; never after a dry run, failure, stop or zero deleted) offering
+  "Rate on Chrome Web Store" (hidden in Firefox and Edge) and "Share" with the
+  real count. It is dismissable, shown once per install, and makes no network
+  call; its links carry UTM parameters that the Chrome Web Store developer
+  dashboard reports.
+
+## [3.1.1] - 2026-09-28
+
 ### Fixed
 - Photo selection (issue #20): checkboxes are now clicked with the full
   pointer sequence (pointer/mouse down, up, click) instead of a bare
   synthetic click, and selector pack v5 recognises a selected checkbox by
   ARIA state (`aria-checked`, `aria-pressed`, `aria-selected`) on
   `role="checkbox"` elements, so a Google Photos class-name change no longer hides a selection.
-
-## [3.1.1] - 2026-09-28
-
-### Fixed
 - A run that clicked photo checkboxes but never saw Google Photos report a
   single one of them as selected used to finish with "Done. 0 photos moved
   to Trash." — indistinguishable from an empty gallery, and a false success

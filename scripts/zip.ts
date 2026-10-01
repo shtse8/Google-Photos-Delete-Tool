@@ -1,6 +1,7 @@
 /**
  * Cross-platform zip script — replaces the Unix `zip` command in package.json.
  * Bundles dist/extension/* → google-photos-delete-tool.zip and
+ * dist/extension-edge/* → google-photos-delete-tool-edge.zip and
  * dist/extension-firefox/* → google-photos-delete-tool-firefox.zip at the
  * repo root.
  *
@@ -15,6 +16,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 
 const targets: Array<{ dir: string; zip: string }> = [
   { dir: 'dist/extension', zip: 'google-photos-delete-tool.zip' },
+  { dir: 'dist/extension-edge', zip: 'google-photos-delete-tool-edge.zip' },
   { dir: 'dist/extension-firefox', zip: 'google-photos-delete-tool-firefox.zip' },
 ]
 

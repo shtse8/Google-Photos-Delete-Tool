@@ -19,6 +19,7 @@ import {
   writeFileSync,
   mkdirSync,
   copyFileSync,
+  cpSync,
   existsSync,
   rmSync,
   renameSync,
@@ -110,6 +111,9 @@ function firefoxManifest(): Record<string, unknown> {
   const m: Record<string, unknown> = { ...baseManifest, version: pkg.version }
   delete (m.background as { service_worker?: string })?.service_worker
   m.background = { scripts: ['background.js'] }
+  // AMO limits add-on names to 50 characters; the shared 58-character store
+  // title would be rejected, so Firefox keeps its original name.
+  m.name = 'Google Photos Delete Tool'
   m.browser_specific_settings = {
     gecko: {
       id: 'google-photos-delete-tool@shtse8.github.io',
@@ -131,6 +135,18 @@ writeFileSync(
   JSON.stringify(chromeManifest(), null, 2),
 )
 console.log('✅ Chrome extension → dist/extension/')
+
+// ─── Edge extension ─────────────────────────────────────────────
+// Edge reads the extension name from the manifest and caps it at 45
+// characters, so the Edge package is the Chrome build with the short name.
+const edgeDir = resolve(root, 'dist/extension-edge')
+rmSync(edgeDir, { recursive: true, force: true })
+cpSync(chromeDir, edgeDir, { recursive: true })
+writeFileSync(
+  resolve(edgeDir, 'manifest.json'),
+  JSON.stringify({ ...chromeManifest(), name: 'Google Photos Delete Tool' }, null, 2),
+)
+console.log('✅ Edge extension → dist/extension-edge/')
 
 // ─── Firefox extension ──────────────────────────────────────────
 

@@ -139,6 +139,7 @@ jobs:
           name: store-zips
           path: |
             google-photos-delete-tool.zip
+            google-photos-delete-tool-edge.zip
             google-photos-delete-tool-firefox.zip
           retention-days: 7
 
@@ -324,7 +325,7 @@ jobs:
             -H "Authorization: ApiKey $EDGE_API_KEY" \
             -H "X-ClientID: $EDGE_CLIENT_ID" \
             -H "Content-Type: application/zip" \
-            --data-binary @zips/google-photos-delete-tool.zip \
+            --data-binary @zips/google-photos-delete-tool-edge.zip \
             https://api.addons.microsoftedge.microsoft.com/v1/products/$EDGE_PRODUCT_ID/submissions/draft/package || true)"
           CODE="$(printf '%s' "$RESP" | head -1 | awk '{print $2}')"
           printf '%s\n' "$RESP" | tail -20

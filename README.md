@@ -1,7 +1,8 @@
-# Google Photos Delete Tool
+# Google Photos Delete Tool – Duplicate Finder & Bulk Delete
 
-Find and delete duplicate photos in Google Photos, and bulk delete safely:
-dry run first, batches of up to 500, optional empty trash.
+Google Photos Delete Tool finds and deletes duplicate photos in Google Photos,
+and bulk deletes safely: dry run first, batches of up to 500, optional empty
+trash. Made by [Sylphx](https://sylphx.com).
 
 Get it on the [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
 or as a userscript. It runs in your browser; nothing is uploaded.
