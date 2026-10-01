@@ -13,6 +13,7 @@ async function run(page: 'index' | 'thanks' | 'privacy' | 'terms', config: objec
   const listeners: Record<string, () => void> = {}
   const link = { href: '', addEventListener: (_: string, f: () => void) => { listeners.click = f } }
   const link2 = { href: '', addEventListener: (_: string, f: () => void) => { listeners.click2 = f } }
+  const stripe = { href: 'https://buy.stripe.com/test_abc', addEventListener: () => {} }
   const buttons: Record<string, () => void> = {}
   const pressed: Record<string, string> = {}
   const settings = { addEventListener: (_: string, f: () => void) => { listeners.settings = f } }
@@ -24,7 +25,7 @@ async function run(page: 'index' | 'thanks' | 'privacy' | 'terms', config: objec
     document: {
       currentScript: { getAttribute: () => page },
       getElementById: (id: string) => (id === 'add-to-chrome' ? link : id === 'consent' ? banner : id === 'cookie-settings' ? settings : null),
-      querySelectorAll: (sel: string) => (sel === '[data-cta="add-to-chrome"]' ? [link, link2] : sel === '[data-cookie-settings]' ? [settings] : []),
+      querySelectorAll: (sel: string) => (sel === '[data-cta="add-to-chrome"]' ? [link, link2] : sel === '[data-cookie-settings]' ? [settings] : sel === 'a[href^="https://buy.stripe.com/"]' ? [stripe] : []),
       createElement: () => ({}),
       head: { appendChild: (e: { src?: string }) => appended.push(e) },
     },
@@ -42,7 +43,7 @@ async function run(page: 'index' | 'thanks' | 'privacy' | 'terms', config: objec
   runInNewContext(tracking, ctx)
   await new Promise((r) => setTimeout(r, 10))
   const snapshot = () => ((ctx.dataLayer as unknown[]) ?? []).map((a) => Array.from(a as ArrayLike<unknown>)) as Call[]
-  return { calls: snapshot(), snapshot, appended, link, link2, click: listeners.click, click2: listeners.click2, buttons, banner, storage, pressed, reopen: listeners.settings }
+  return { calls: snapshot(), snapshot, appended, link, link2, stripe, click: listeners.click, click2: listeners.click2, buttons, banner, storage, pressed, reopen: listeners.settings }
 }
 
 const real = {
@@ -93,7 +94,7 @@ describe('site tracking', () => {
   it('thanks page sends purchase once with transaction_id and no personal data', async () => {
     const r = await run('thanks', real, '?session_id=cs_live_abcdefgh12')
     const purchase = r.calls.find((c) => c[0] === 'event' && c[1] === 'purchase')
-    expect(purchase?.[2]).toEqual({ transaction_id: 'cs_live_abcdefgh12', value: 9.99, currency: 'USD' })
+    expect(purchase?.[2]).toEqual({ page_location: 'https://x.test/thanks.html', transaction_id: 'cs_live_abcdefgh12', value: 9.99, currency: 'USD' })
   })
 
   it('does not fire purchase for the unreplaced template or a missing id', async () => {
@@ -195,5 +196,36 @@ describe('site tracking', () => {
 
   it('no placeholder checkout ships', () => {
     expect(read('index.html')).not.toContain('PRO_CHECKOUT_URL')
+  })
+
+  it('purchase fires once per session id, never for a bad id, and Google never gets session_id', async () => {
+    const r = await run('thanks', real, '?session_id=cs_live_abcdefgh12')
+    expect(r.calls.filter((c) => c[1] === 'purchase')).toHaveLength(1)
+    const again = await run('thanks', real, '?session_id=cs_live_abcdefgh12', { gpdt_purchase_cs_live_abcdefgh12: '1' })
+    expect(again.calls.find((c) => c[1] === 'purchase')).toBeUndefined()
+    for (const q of ['?session_id=abc', '?session_id=cs_live_<x>', '?session_id=cs_']) {
+      expect((await run('thanks', real, q)).calls.find((c) => c[1] === 'purchase')).toBeUndefined()
+    }
+    for (const c of r.calls.filter((c) => c[0] === 'config')) expect((c[2] as { page_location: string }).page_location).toBe('https://x.test/thanks.html')
+    expect(JSON.stringify(r.calls)).not.toContain('?session_id')
+  })
+
+  it('gclid rides on Stripe links only after Accept all, and only when well formed', async () => {
+    const none = await run('index', real, '?gclid=Cj0KCQ_abc-1')
+    expect(none.stripe.href).not.toContain('client_reference_id')
+    none.buttons.analytics()
+    expect(none.stripe.href).not.toContain('client_reference_id')
+    none.buttons.all()
+    expect(none.stripe.href).toContain('client_reference_id=Cj0KCQ_abc-1')
+    none.buttons.none()
+    expect(none.stripe.href).not.toContain('client_reference_id')
+    const saved = await run('index', real, '?gclid=Cj0KCQ_abc-1', { gpdt_consent: 'all' })
+    expect(saved.stripe.href).toContain('client_reference_id=Cj0KCQ_abc-1')
+    const bad = await run('index', real, '?gclid=a%20b%26x', { gpdt_consent: 'all' })
+    expect(bad.stripe.href).not.toContain('client_reference_id')
+  })
+
+  it('banner names the controller and links the site privacy page', () => {
+    for (const f of PAGES) expect(read(f).match(/<div id="consent".*?<\/div>/s)![0]).toMatch(/Sylphx Limited, the controller.*privacy\.html/)
   })
 })

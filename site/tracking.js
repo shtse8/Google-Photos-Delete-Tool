@@ -41,6 +41,20 @@
     })
   }
 
+  // Paid-click attribution for Stripe: with "Accept all" only, the Google click id from this page's URL
+  // rides on buy.stripe.com links as client_reference_id. Hrefs only; no listeners are added.
+  function stripeRef(choice) {
+    var links = document.querySelectorAll ? Array.prototype.slice.call(document.querySelectorAll('a[href^="https://buy.stripe.com/"]')) : []
+    var gclid = new URLSearchParams(location.search).get('gclid') || ''
+    var ok = /^[A-Za-z0-9_-]{1,200}$/.test(gclid)
+    links.forEach(function (l) {
+      var out = new URL(l.href)
+      if (choice === 'all' && ok) out.searchParams.set('client_reference_id', gclid)
+      else out.searchParams.delete('client_reference_id')
+      l.href = out.toString()
+    })
+  }
+
   // The banner shows when no choice is stored, and reopens from the footer "Cookie settings" link.
   // Reopening marks the current choice (aria-pressed); a new choice updates consent at once.
   function banner(update, current, autoOpen) {
@@ -92,14 +106,15 @@
     var params = { send_page_view: true }
     if (page === 'thanks') params.page_location = location.origin + location.pathname
     if (useGa) gtag('config', ga4, params)
-    if (useAds) gtag('config', ads)
+    if (useAds) gtag('config', ads, page === 'thanks' ? { page_location: params.page_location } : {})
 
     var s = document.createElement('script')
     s.async = true
     s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(useGa ? ga4 : ads)
     document.head.appendChild(s)
 
-    banner(function (choice) { gtag('consent', 'update', state(choice)) }, saved)
+    stripeRef(saved)
+    banner(function (choice) { gtag('consent', 'update', state(choice)); stripeRef(choice) }, saved)
 
     var ctas = document.querySelectorAll ? Array.prototype.slice.call(document.querySelectorAll('[data-cta="add-to-chrome"]')) : []
     var heroCta = document.getElementById('add-to-chrome')
@@ -116,11 +131,11 @@
     if (page === 'thanks') {
       var id = new URLSearchParams(location.search).get('session_id') || ''
       // Stripe session ids look like cs_live_...; the unreplaced template is not an id.
-      if (/^cs_[A-Za-z0-9_]{8,200}$/.test(id)) {
+      if (/^cs_[A-Za-z0-9_]+$/.test(id) && id.length <= 200) {
         var seen = 'gpdt_purchase_' + id
         if (!read2(seen)) {
           write(seen, '1')
-          gtag('event', 'purchase', { transaction_id: id, value: PRO_VALUE, currency: 'USD' })
+          gtag('event', 'purchase', { page_location: location.origin + location.pathname, transaction_id: id, value: PRO_VALUE, currency: 'USD' })
           if (!placeholder(cfg.purchaseSendTo)) gtag('event', 'conversion', { send_to: cfg.purchaseSendTo, transaction_id: id, value: PRO_VALUE, currency: 'USD' })
         }
       }
