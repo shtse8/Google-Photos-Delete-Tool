@@ -27,7 +27,7 @@ constraints that make it safe.
    - One tag → GitHub release; stores published by a stateful retry loop
      that treats review queues as expected states (store-state branch).
 5. Numbers so far
-   - 10k+ CWS installs, 9 languages, 100% issue reports with diagnostic
+   - 10k+ CWS installs, 10 languages, 100% issue reports with diagnostic
      blobs (use the current figures at publish time).
 
 ## Where to publish
