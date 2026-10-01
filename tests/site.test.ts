@@ -7,19 +7,22 @@ const tracking = read('tracking.js')
 
 type Call = unknown[]
 
-async function run(page: 'index' | 'thanks', config: object, search = '') {
-  const storage = new Map<string, string>()
+async function run(page: 'index' | 'thanks', config: object, search = '', initial: Record<string, string> = {}) {
+  const storage = new Map<string, string>(Object.entries(initial))
   const appended: { src?: string }[] = []
   const listeners: Record<string, () => void> = {}
   const link = { href: '', addEventListener: (_: string, f: () => void) => { listeners.click = f } }
+  const buttons: Record<string, () => void> = {}
+  const pressed: Record<string, string> = {}
+  const settings = { addEventListener: (_: string, f: () => void) => { listeners.settings = f } }
   const banner = {
     hidden: true,
-    querySelector: () => ({ addEventListener: () => {} }),
+    querySelector: (sel: string) => ({ setAttribute: (k: string, v: string) => { if (k === 'aria-pressed') pressed[sel.match(/"(.+)"/)![1]] = v }, addEventListener: (_: string, f: () => void) => { buttons[sel.match(/"(.+)"/)![1]] = f } }),
   }
   const ctx: Record<string, unknown> = {
     document: {
       currentScript: { getAttribute: () => page },
-      getElementById: (id: string) => (id === 'add-to-chrome' ? link : id === 'consent' ? banner : null),
+      getElementById: (id: string) => (id === 'add-to-chrome' ? link : id === 'consent' ? banner : id === 'cookie-settings' ? settings : null),
       createElement: () => ({}),
       head: { appendChild: (e: { src?: string }) => appended.push(e) },
     },
@@ -37,7 +40,7 @@ async function run(page: 'index' | 'thanks', config: object, search = '') {
   runInNewContext(tracking, ctx)
   await new Promise((r) => setTimeout(r, 10))
   const snapshot = () => ((ctx.dataLayer as unknown[]) ?? []).map((a) => Array.from(a as ArrayLike<unknown>)) as Call[]
-  return { calls: snapshot(), snapshot, appended, link, click: listeners.click }
+  return { calls: snapshot(), snapshot, appended, link, click: listeners.click, buttons, banner, storage, pressed, reopen: listeners.settings }
 }
 
 const real = {
@@ -46,6 +49,9 @@ const real = {
   addToChromeSendTo: 'AW-123456/aaa',
   purchaseSendTo: 'AW-123456/bbb',
 }
+
+const SIGNALS = ['ad_storage', 'ad_user_data', 'ad_personalization', 'analytics_storage']
+const lastUpdate = (calls: Call[]) => calls.filter((c) => c[0] === 'consent' && c[1] === 'update').pop()?.[2] as Record<string, string> | undefined
 
 describe('site tracking', () => {
   it('ships placeholder ids and loads no tags with them', async () => {
@@ -100,5 +106,63 @@ describe('site tracking', () => {
     expect(s.rating).toBe(4.7)
     expect(s.source).toBeTruthy()
     expect(read('index.html')).toContain('Google Photos is a trademark of Google LLC')
+  })
+
+  it.each([
+    ['all', { ad_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted', analytics_storage: 'granted' }],
+    ['analytics', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted' }],
+    ['none', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied' }],
+  ])('button %s sets the right consent update and stores the choice', async (choice, expected) => {
+    const r = await run('index', real)
+    expect(r.banner.hidden).toBe(false)
+    expect(Object.keys(r.buttons).sort()).toEqual(['all', 'analytics', 'none'])
+    r.buttons[choice]()
+    expect(lastUpdate(r.snapshot())).toEqual(expected)
+    expect(r.storage.get('gpdt_consent')).toBe(choice)
+    expect(r.banner.hidden).toBe(true)
+  })
+
+  it('re-applies a stored choice on load without showing the banner', async () => {
+    const r = await run('index', real, '', { gpdt_consent: 'analytics' })
+    expect(lastUpdate(r.calls)).toEqual({ ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'granted' })
+    expect(r.banner.hidden).toBe(true)
+  })
+
+  it('migrates old granted/denied values', async () => {
+    const g = await run('index', real, '', { gpdt_consent: 'granted' })
+    expect(g.storage.get('gpdt_consent')).toBe('all')
+    for (const k of SIGNALS) expect(lastUpdate(g.calls)?.[k]).toBe('granted')
+    const d = await run('index', real, '', { gpdt_consent: 'denied' })
+    expect(d.storage.get('gpdt_consent')).toBe('none')
+    for (const k of SIGNALS) expect(lastUpdate(d.calls)?.[k]).toBe('denied')
+  })
+
+  it('banner markup has three equal buttons, no checkboxes, no false claim', () => {
+    for (const f of ['index.html', 'thanks.html']) {
+      const html = read(f)
+      const b = html.match(/<div id="consent".*?<\/div>/s)![0]
+      expect(b).not.toMatch(/No personal data|checkbox|checked/)
+      expect(b.match(/<button/g)).toHaveLength(3)
+      for (const c of ['all', 'analytics', 'none']) expect(b).toContain(`data-consent="${c}"`)
+      expect(b).toContain('PRIVACY.md')
+    }
+  })
+
+  it('Cookie settings reopens the banner with the current choice and a new choice applies at once', async () => {
+    const r = await run('index', real, '', { gpdt_consent: 'all' })
+    expect(r.banner.hidden).toBe(true)
+    r.reopen()
+    expect(r.banner.hidden).toBe(false)
+    expect(r.pressed).toEqual({ all: 'true', analytics: 'false', none: 'false' })
+    r.buttons.none()
+    expect(lastUpdate(r.snapshot())).toEqual({ ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied' })
+    expect(r.storage.get('gpdt_consent')).toBe('none')
+    expect(r.banner.hidden).toBe(true)
+    r.reopen()
+    expect(r.pressed.none).toBe('true')
+  })
+
+  it('both pages have a Cookie settings link', () => {
+    for (const f of ['index.html', 'thanks.html']) expect(read(f)).toContain('id="cookie-settings"')
   })
 })
