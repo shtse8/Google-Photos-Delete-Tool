@@ -65,6 +65,8 @@ rule, and the key is never printed.
 throwaway keypair plus the embedded-key list, and
 `tests/license-scripts.test.ts` checks that the path and content forms of
 `$GPDT_PRO_PRIVATE_KEY` both issue verifiable tokens, without the seller key.
+`tests/license-buyer.test.ts` covers `verify-buyer` (old/new key, email match,
+wrong plan, foreign signature) with throwaway keys.
 
 ## Sales
 
@@ -78,6 +80,14 @@ throwaway keypair plus the embedded-key list, and
    issuer's runbook lives outside this repository.
 3. **Support:** the order record (email, date) lives in Stripe; reissue with
    `bun run license:issue --email=<buyer email>`.
+4. **First-purchase readback:** after the first paid order, check the emailed
+   token without printing it back:
+   `bun run scripts/license.ts verify-buyer <token> --email=<buyer email>`.
+   It prints `valid`, which embedded key verified it (`old` or `new`; new
+   orders must say `new`), `plan`, `email match` and `issuedAt` as an ISO time.
+   Exit code 0 only when the token is valid, the plan is `pro` and the email
+   matches (case-insensitive); anything else exits 1. The token is never
+   echoed.
 
 ## Chrome Web Store compliance
 

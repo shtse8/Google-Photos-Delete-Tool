@@ -62,6 +62,12 @@ console.log('verify: package version =', pkg.version)
   const m = JSON.parse(read('dist/extension-edge/manifest.json'))
   check(m.version === pkg.version, `edge manifest version == ${pkg.version}`)
   check(typeof m.name === 'string' && m.name.length > 0 && m.name.length <= 45, `edge manifest name ≤ 45 chars (${m.name?.length})`)
+  check(m.manifest_version === 3, 'edge manifest_version == 3')
+  check(m.permissions?.length === 1 && m.permissions[0] === 'storage', 'edge permissions == ["storage"]')
+  check(typeof m.background?.service_worker === 'string', 'edge background.service_worker present')
+  for (const size of [16, 32, 48, 128]) {
+    check(m.icons?.[String(size)] === `icons/icon-${size}.png`, `edge manifest icons[${size}] declared`)
+  }
 }
 
 // ─── Firefox manifest ───────────────────────────────────────────
@@ -72,6 +78,12 @@ console.log('verify: package version =', pkg.version)
   check(!m.background?.service_worker, 'firefox background has NO service_worker (unsupported in Firefox MV3)')
   check(Array.isArray(m.background?.scripts) && m.background.scripts.includes('background.js'), 'firefox background.scripts includes background.js')
   check(!!m.browser_specific_settings?.gecko?.id, 'firefox browser_specific_settings.gecko.id present')
+  // Mozilla's linter warns (AMO review) when a used manifest key is newer than
+  // strict_min_version; data_collection_permissions needs 140 / Android 142.
+  const geckoMin = parseFloat(m.browser_specific_settings?.gecko?.strict_min_version ?? '0')
+  const androidMin = parseFloat(m.browser_specific_settings?.gecko_android?.strict_min_version ?? '0')
+  check(geckoMin >= 140, `firefox gecko.strict_min_version >= 140 (${geckoMin}): data_collection_permissions support`)
+  check(androidMin >= 142, `firefox gecko_android.strict_min_version >= 142 (${androidMin}): data_collection_permissions support`)
   check(
     m.browser_specific_settings?.gecko?.data_collection_permissions?.required?.[0] === 'none',
     'firefox gecko.data_collection_permissions declares none (AMO requires it)',
@@ -101,7 +113,7 @@ const RAW_CHROME_MAX: Array<[RegExp, string, number]> = [
   [/chrome\.action\.setBadgeBackgroundColor\(/, 'raw chrome.action.setBadgeBackgroundColor calls (wrapper only)', 1],
 ]
 
-for (const dir of ['extension', 'extension-firefox']) {
+for (const dir of ['extension', 'extension-edge', 'extension-firefox']) {
   for (const file of EXTENSION_JS) {
     const rel = `dist/${dir}/${file}`
     if (!existsSync(resolve(root, rel))) {
@@ -112,6 +124,9 @@ for (const dir of ['extension', 'extension-firefox']) {
     check(!/\bimport\s*\(/.test(code), `${rel} has no dynamic import()`)
     check(!/\bimport\s+/.test(code), `${rel} has no import statements (IIFE self-contained)`)
     check(!/\bexport\s+/.test(code), `${rel} has no export statements (IIFE self-contained)`)
+    // AMO review (Mozilla linter UNSAFE_VAR_ASSIGNMENT) rejects dynamic
+    // innerHTML/outerHTML assignments; markup goes through setMarkup().
+    check(!/\.(?:innerHTML|outerHTML)\s*=(?!=)/.test(code), `${rel} has no innerHTML/outerHTML assignment`)
     for (const [re, label, max] of RAW_CHROME_MAX) {
       const count = (code.match(re) ?? []).length
       check(count <= max, `${rel}: ${label} (${count} <= ${max})`)

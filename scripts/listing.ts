@@ -9,7 +9,7 @@
  *   bun run listing:check          # validate (CI)
  *   bun run listing:cws            # emit CWS metadata payload
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
@@ -66,6 +66,31 @@ for (const store of ['cws', 'edge', 'amo'] as const) {
     `${store}: free-forever + Pro disclosure present`,
   )
 }
+
+// ─── Required store fields ───────────────────────────────────────
+const isHttps = (u: unknown): boolean => typeof u === 'string' && /^https:\/\/\S+$/.test(u)
+check(isHttps(listing.shared.supportUrl), 'shared.supportUrl is an https URL (CWS/Edge/AMO support)')
+check(isHttps(listing.shared.privacyUrl), 'shared.privacyUrl is an https URL (Edge and CWS require a privacy policy)')
+check(existsSync(resolve(root, 'PRIVACY.md')), 'PRIVACY.md exists (target of shared.privacyUrl)')
+// Edge Partner Center: description 250-10000 chars, up to 7 search terms of
+// at most 30 characters, 21 words in total.
+check(listing.edge.description.join('\n\n').length >= 250, 'edge.description is at least 250 chars')
+const terms: unknown = listing.edge.searchTerms
+check(
+  Array.isArray(terms) &&
+    terms.length >= 1 &&
+    terms.length <= 7 &&
+    terms.every((t) => typeof t === 'string' && t.length > 0 && t.length <= 30) &&
+    terms.join(' ').split(/\s+/).length <= 21,
+  'edge.searchTerms: 1-7 terms, each at most 30 chars, at most 21 words',
+)
+check(typeof listing.edge.category === 'string' && listing.edge.category.length > 0, 'edge.category present')
+// AMO: 1-2 category slugs, up to 10 tags, a licence slug.
+const cats: unknown = listing.amo.categories
+check(Array.isArray(cats) && cats.length >= 1 && cats.length <= 2 && cats.every((c) => typeof c === 'string' && /^[a-z-]+$/.test(c)), 'amo.categories: 1-2 slugs')
+const tags: unknown = listing.amo.tags
+check(Array.isArray(tags) && tags.length <= 10 && tags.every((t) => typeof t === 'string' && t.length > 0 && t.length <= 20), 'amo.tags: at most 10, each at most 20 chars')
+check(listing.amo.license === 'MIT', 'amo.license == MIT (matches LICENSE)')
 
 // ─── Screenshot manifest present ─────────────────────────────────
 check(Array.isArray(listing.screenshots) && listing.screenshots.length >= 3, `screenshots listed (${listing.screenshots.length})`)
