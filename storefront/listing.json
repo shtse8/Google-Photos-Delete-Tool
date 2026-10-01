@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "appliesTo": "3.4.0",
+  "appliesTo": "3.5.0",
   "shared": {
     "name": "Google Photos Delete Tool",
     "tagline": "Find duplicate photos and bulk delete in Google Photos",
@@ -31,7 +31,7 @@
     }
   ],
   "cws": {
-    "title": "Google Photos Delete Tool – Duplicate Finder & Bulk Delete",
+    "title": "Google Photos Delete Tool \u2013 Duplicate Finder & Bulk Delete",
     "summary": "Find and delete duplicate photos in Google Photos. Bulk delete safely: dry run, batches, empty trash. Private, open source.",
     "category": "Productivity",
     "locale": "en",
@@ -65,6 +65,13 @@
     "name": "Google Photos Delete Tool",
     "shortDescription": "Find and delete duplicate photos in Google Photos. Bulk delete safely: dry run, batches, empty trash.",
     "category": "Productivity",
+    "searchTerms": [
+      "duplicate photos",
+      "google photos",
+      "bulk delete",
+      "photo cleaner",
+      "duplicate finder"
+    ],
     "description": [
       "Find duplicates: Google Photos only removes exact copies of the same file. This extension also finds look-alike copies (resized, re-saved, slightly edited, or uploaded twice) in the view you choose. It scrolls the view, compares small thumbnails on your computer, and shows look-alikes in groups. The best copy is kept, the rest are marked for Trash, and you can switch any photo. A similarity slider sets how strict the match is. Nothing is uploaded.",
       "Google Photos has no \u201cdelete all\u201d. This extension automates the select \u2192 trash \u2192 confirm loop in safe batches of up to 500, so you can reclaim storage in minutes. Everything runs in your browser and stops the moment it cannot positively identify a button.",
@@ -80,6 +87,17 @@
     "name": "Google Photos Delete Tool",
     "summary": "Find and delete duplicate photos in Google Photos, and bulk-delete in safe batches of up to 500: dry-run first, empty trash optionally, stop anytime. Consent-gated, zero telemetry. Free forever; one-time Pro adds type and date filters. Open source.",
     "category": "Photos, Music & Videos",
+    "categories": [
+      "photos-music-videos"
+    ],
+    "tags": [
+      "google photos",
+      "duplicate photos",
+      "bulk delete",
+      "photo cleaner",
+      "privacy"
+    ],
+    "license": "MIT",
     "description": [
       "Find duplicates: Google Photos only removes exact copies of the same file. This add-on also finds look-alike copies (resized, re-saved, slightly edited, or uploaded twice) in the view you choose. It scrolls the view, compares small thumbnails on your computer, and shows look-alikes in groups. The best copy is kept, the rest are marked for Trash, and you can switch any photo. A similarity slider sets how strict the match is. Nothing is uploaded.",
       "Google Photos has no \u201cdelete all\u201d. This add-on automates the select \u2192 trash \u2192 confirm loop in safe batches of up to 500, so you can reclaim storage in minutes. Everything runs in your browser and stops the moment it cannot positively identify a button.",

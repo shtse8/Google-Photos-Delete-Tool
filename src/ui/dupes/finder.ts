@@ -14,6 +14,11 @@ import { groupChoices, planDeletion, toggleChoice, type Overrides } from '../../
 import { harvestGridTiles, hashThumbnail, sizedThumbUrl } from '../../core/dedup/browser-grid'
 import { browserDom } from '../../core/browser-dom'
 import { sleep } from '../../core/utils'
+import { proUrl, type ProVariant } from '../../core/pro-moments'
+import {
+  CONFIDENT_SIMILARITY, applyKeepRule, groupKey, groupsToCsv, planWithAutoAccept, splitByConfidence, trashedIds,
+  type KeepRule,
+} from '../../core/dedup/pro'
 
 export interface FinderHost {
   /** Hand ids to the delete flow. The host enforces consent again. */
@@ -23,6 +28,10 @@ export interface FinderHost {
   acknowledgeConsent(): Promise<void>
   /** Subscribe to delete-run progress; returns an unsubscribe function. */
   onRunProgress(cb: (p: Progress) => void): () => void
+  /** Pro state, verified on the device. Missing means free. */
+  isPro?(): Promise<boolean>
+  /** The install's copy A/B variant, carried as utm_content on Pro links. Missing means "a". */
+  proVariant?(): Promise<ProVariant>
   scanDeps?: ScanDeps
 }
 
@@ -78,6 +87,11 @@ input[type=range] { flex: 1; accent-color: #3b82f6; }
 .item .meta { display: flex; justify-content: space-between; gap: 4px; padding: 4px 6px; font-size: 11px; color: #9a9aa5; }
 .item .meta a { color: #93c5fd; text-decoration: none; }
 .consent { display: flex; gap: 6px; align-items: flex-start; font-size: 12px; }
+.tools { display: grid; gap: 8px; margin: 10px 0; padding: 10px; border-radius: 10px; background: rgba(255,255,255,.04); }
+.tools select { flex: 1; background: #0d0e11; color: inherit; border: 1px solid rgba(255,255,255,.15); border-radius: 6px; padding: 5px; font: inherit; }
+.tools select:disabled { opacity: .45; }
+.tools label.opt { display: flex; gap: 6px; align-items: center; }
+.pro-tag { color: #93c5fd; font-size: 11px; font-weight: 700; text-decoration: none; border: 1px solid rgba(147,197,253,.5); border-radius: 6px; padding: 1px 6px; }
 .hidden { display: none !important; }
 `
 
@@ -115,6 +129,13 @@ export function openDuplicateFinder(host: FinderHost): void {
   let consented = false
   let runActive = false
   let runIsDryRun = false
+  let pro = false
+  let variant: ProVariant = 'a'
+  let keepRule: KeepRule = 'default'
+  let autoAccept = false
+  let showConfident = false
+  let toolsNote = ''
+  const approved = new Set<string>()
   const overrides: Overrides = new Map()
 
   const main = h('main')
@@ -196,6 +217,9 @@ export function openDuplicateFinder(host: FinderHost): void {
     }
     shown = PAGE
     consented = await host.consentAcknowledged()
+    pro = await Promise.resolve(host.isPro?.()).then((v) => v === true, () => false)
+    variant = await Promise.resolve(host.proVariant?.()).then((v) => (v === 'b' ? 'b' : 'a'), () => 'a' as ProVariant)
+    if (!pro) { keepRule = 'default'; autoAccept = false }
     renderReview()
   }
 
@@ -210,18 +234,25 @@ export function openDuplicateFinder(host: FinderHost): void {
       debounce = setTimeout(() => void regroup(), 300)
     })
 
-    const plan = planDeletion(groups, overrides)
+    const auto = pro && autoAccept
+    const split = splitByConfidence(groups)
+    const autoPlan = auto ? planWithAutoAccept(groups, overrides, approved) : null
+    const plan = autoPlan ?? planDeletion(groups, overrides)
+    const pending = autoPlan?.pending ?? 0
+    // Free: every group, as before. Auto-accept: one combined list of the rest.
+    const visible = auto ? (showConfident ? groups : split.review) : groups
     const list = h('div')
-    for (const group of groups.slice(0, shown)) list.append(renderGroup(group))
-    const more = h('button', { class: 'ghost' }, `Show more groups (${Math.max(0, groups.length - shown)} left)`)
-    more.classList.toggle('hidden', shown >= groups.length)
+    for (const group of visible.slice(0, shown)) list.append(renderGroup(group, auto && !split.confident.includes(group)))
+    const more = h('button', { class: 'ghost' }, `Show more groups (${Math.max(0, visible.length - shown)} left)`)
+    more.classList.toggle('hidden', shown >= visible.length)
     more.addEventListener('click', () => { shown += PAGE; renderReview() })
 
     main.replaceChildren(
       h('div', { class: 'row' }, h('span', {}, 'Similarity'), slider, sliderValue),
       h('p', { class: 'muted' }, 'Higher finds only near-identical copies. Lower also groups edits, bursts and similar shots, so check them.'),
+      renderTools(split.confident.length, split.review.length, pending),
       h('div', { class: 'stats' },
-        h('div', { class: 'stat' }, h('b', {}, plan.groups.toLocaleString()), h('span', {}, 'Groups')),
+        h('div', { class: 'stat' }, h('b', {}, groups.length.toLocaleString()), h('span', {}, 'Groups')),
         h('div', { class: 'stat' }, h('b', {}, plan.kept.toLocaleString()), h('span', {}, 'Keep')),
         h('div', { class: 'stat' }, h('b', {}, plan.ids.length.toLocaleString()), h('span', {}, 'To Trash'))),
       groups.length === 0
@@ -233,7 +264,78 @@ export function openDuplicateFinder(host: FinderHost): void {
     renderReviewFooter(plan.ids)
   }
 
-  function renderGroup(group: DupGroup): HTMLElement {
+  /** Pro review tools. Free users see them disabled with a Get Pro link. */
+  function renderTools(confidentCount: number, reviewCount: number, pending: number): HTMLElement {
+    const select = h('select', { 'aria-label': 'Which copy to keep in every group' })
+    const labels: Record<KeepRule, string> = { default: 'Best copy (default)', newest: 'Newest', oldest: 'Oldest' }
+    for (const rule of Object.keys(labels) as KeepRule[]) select.append(h('option', { value: rule }, labels[rule]))
+    select.value = keepRule
+    select.disabled = !pro
+    select.addEventListener('change', () => {
+      if (!pro) return
+      keepRule = select.value as KeepRule
+      const res = applyKeepRule(groups, (id) => byId.get(id), keepRule, overrides)
+      toolsNote = keepRule === 'default' ? 'Back to the default pick.'
+        : res.fellBack > 0
+          ? `Applied to ${res.applied.toLocaleString()} groups. ${res.fellBack.toLocaleString()} had no date data and kept the default pick.`
+          : `Applied to ${res.applied.toLocaleString()} groups.`
+      renderReview()
+    })
+
+    const accept = h('input', { type: 'checkbox' })
+    accept.checked = autoAccept
+    accept.disabled = !pro
+    accept.addEventListener('change', () => {
+      if (!pro) return
+      autoAccept = accept.checked
+      shown = PAGE
+      renderReview()
+    })
+
+    const exportBtn = h('button', { class: 'ghost' }, 'Export CSV')
+    exportBtn.disabled = !pro || groups.length === 0
+    exportBtn.addEventListener('click', () => {
+      if (!pro) return
+      const trashed = autoAccept
+        ? new Set(planWithAutoAccept(groups, overrides, approved).ids)
+        : trashedIds(groups, overrides)
+      downloadCsv(groupsToCsv(groups, trashed))
+    })
+
+    const tag = (): HTMLElement => h('a', { class: 'pro-tag', href: proUrl('dupes', variant), target: '_blank', rel: 'noopener' }, 'Pro')
+    const rows: HTMLElement[] = [
+      h('div', { class: 'row' }, h('span', {}, 'Keep'), select, ...(pro ? [] : [tag()])),
+      h('div', { class: 'row' },
+        h('label', { class: 'opt' }, accept, h('span', {}, `Auto-accept groups at ${Math.round(CONFIDENT_SIMILARITY * 100)}%+ similarity`)),
+        ...(pro ? [] : [tag()])),
+      h('div', { class: 'row' }, exportBtn, ...(pro ? [] : [tag()])),
+    ]
+    if (pro && autoAccept) {
+      const toggle = h('button', { class: 'ghost' }, showConfident ? 'Hide auto-accepted groups' : 'Show auto-accepted groups too')
+      toggle.addEventListener('click', () => { showConfident = !showConfident; shown = PAGE; renderReview() })
+      const approveAll = h('button', { class: 'ghost' }, `Approve the ${pending.toLocaleString()} left to review`)
+      approveAll.disabled = pending === 0
+      approveAll.addEventListener('click', () => {
+        for (const g of splitByConfidence(groups).review) approved.add(groupKey(g))
+        renderReview()
+      })
+      rows.push(
+        h('p', { class: 'muted' }, `${confidentCount.toLocaleString()} groups auto-accepted. ${reviewCount.toLocaleString()} need your review: approve each group below, or all at once. Nothing moves until you press Move to Trash and confirm.`),
+        h('div', { class: 'row' }, toggle, approveAll))
+    }
+    if (pro && toolsNote) rows.push(h('p', { class: 'muted' }, toolsNote))
+    if (!pro) rows.push(h('p', { class: 'muted' }, 'Pro review tools: keep rules, auto-accept and CSV export. Free review stays as it is.'))
+    return h('div', { class: 'tools' }, ...rows)
+  }
+
+  function downloadCsv(csv: string): void {
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = h('a', { href: url, download: `gpdt-duplicate-groups-${new Date().toISOString().slice(0, 10)}.csv` })
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
+
+  function renderGroup(group: DupGroup, needsApproval = false): HTMLElement {
     const choices = groupChoices(group, overrides)
     const thumbs = h('div', { class: 'thumbs' })
     group.itemIds.forEach((id, i) => {
@@ -260,6 +362,13 @@ export function openDuplicateFinder(host: FinderHost): void {
     const card = h('section', { class: 'group' },
       h('h2', {}, `${group.itemIds.length} photos · ${pct(group.averageSimilarity)} similar`),
       thumbs)
+    if (needsApproval) {
+      const key = groupKey(group)
+      const ok = approved.has(key)
+      const btn = h('button', { class: ok ? 'primary' : 'ghost' }, ok ? 'Approved' : 'Approve this group')
+      btn.addEventListener('click', () => { if (ok) approved.delete(key); else approved.add(key); renderReview() })
+      card.append(h('div', { class: 'row', style: 'margin-top:8px' }, btn))
+    }
     return card
   }
 
@@ -337,7 +446,7 @@ export function openDuplicateFinder(host: FinderHost): void {
 
   function renderRestart(): void {
     const again = h('button', { class: 'primary' }, 'Scan again')
-    again.addEventListener('click', () => { overrides.clear(); void runScan() })
+    again.addEventListener('click', () => { overrides.clear(); approved.clear(); toolsNote = ''; keepRule = 'default'; void runScan() })
     const back = h('button', { class: 'ghost' }, 'Back to review')
     back.classList.toggle('hidden', groups.length === 0)
     back.addEventListener('click', () => renderReview())

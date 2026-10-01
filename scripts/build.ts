@@ -117,11 +117,15 @@ function firefoxManifest(): Record<string, unknown> {
   m.browser_specific_settings = {
     gecko: {
       id: 'google-photos-delete-tool@shtse8.github.io',
-      strict_min_version: '121.0',
+      // data_collection_permissions is only understood from Firefox 140
+      // (desktop) and 142 (Android); AMO's linter warns when the minimum is
+      // lower than the version that introduced a manifest key we use.
+      strict_min_version: '140.0',
       // AMO rejects new add-ons without this key. The extension collects and
       // transmits nothing.
       data_collection_permissions: { required: ['none'] },
     },
+    gecko_android: { strict_min_version: '142.0' },
   }
   return m
 }

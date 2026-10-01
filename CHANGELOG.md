@@ -4,6 +4,49 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-01
+
+### Added
+- `scripts/license.ts verify-buyer <token> --email=<expected>`: first-purchase
+  readback (valid, embedded key old/new, plan, email match, issuedAt as ISO);
+  exit 0 only for a valid pro token with a matching email. Never prints the
+  token. Documented in docs/PRO.md.
+- `listing:check` now enforces the required store fields: support and privacy
+  URLs, Edge search terms and 250-character minimum description, AMO
+  categories, tags and licence. The AMO bootstrap reads categories and licence
+  from `storefront/listing.json`.
+- `verify` now checks the Edge package (manifest v3, permissions, background,
+  icons) and fails any extension build that assigns `innerHTML`/`outerHTML`.
+- Pro saved cleanup presets: save the current filter setup (type, date mode,
+  dates and an optional note of the view URL) under a name, up to 20, then
+  apply, rename or delete it, in the popup and the userscript panel. Applying
+  only fills the controls; the run, the dry run and the consent step are
+  unchanged, and presets never run on their own (no timers or background
+  runs). A saved view that differs from the current page is shown as a hint
+  and never opened. Free users see the row disabled with a Get Pro link
+  (`utm_medium=presets`). Stored in `chrome.storage.local` (extension) or
+  `localStorage` (userscript); corrupt data is ignored.
+- Pro duplicate review tools: a keep rule for all groups at once (newest or
+  oldest; groups without the needed data or with a tie
+  keep the default pick), auto-accept for groups at 98% or more similarity with
+  one combined review list for the rest, and a CSV export of the groups
+  (`group_id,item_id,decision,similarity`, local download). Free users see the
+  controls disabled with a Get Pro link (`utm_medium=dupes`) and keep today's
+  review unchanged. Every group still keeps at least one photo and nothing
+  moves without your confirmation. No network calls, no telemetry.
+- Pro paywall copy A/B test, measured without telemetry: each install picks
+  variant "a" or "b" once at random (local storage only, "a" if storage fails)
+  and every Pro link carries `utm_content=<variant>` next to the existing UTM
+  parameters. Variant "b" words the dry-run teaser and the Get Pro button
+  value-first. `PRO_URL` stays the single place the target URL lives. See the
+  "Conversion test" section of docs/PRO.md.
+
+### Changed
+- Firefox package passes `web-ext lint` with 0 warnings (was 5): popup markup
+  is inserted through DOMParser instead of `innerHTML`, and the minimum
+  Firefox version is 140 (Android 142), the first releases that understand
+  `data_collection_permissions`. The add-on id is unchanged.
+
 ## [3.4.0] - 2026-10-01
 
 ### Added

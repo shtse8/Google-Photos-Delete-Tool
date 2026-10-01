@@ -186,7 +186,32 @@
         <input type="date" id="date-b" class="field-input date-input hidden" disabled aria-label="End date" />
       </div>
       <div class="field" id="date-pro-row">
-        <a class="license-get hidden" id="date-pro" href="https://github.com/SylphxAI/Google-Photos-Delete-Tool?utm_source=extension&amp;utm_medium=date_filter&amp;utm_campaign=pro#pro" target="_blank" rel="noopener" data-i18n="settings.dateFilter.pro">Pro: Get Pro</a>
+        <a class="license-get hidden" id="date-pro" href="https://github.com/SylphxAI/Google-Photos-Delete-Tool?utm_source=extension&amp;utm_medium=date_filter&amp;utm_campaign=pro&amp;utm_content=a#pro" target="_blank" rel="noopener" data-i18n="settings.dateFilter.pro">Pro: Get Pro</a>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="preset-select">
+          <span class="field-icon" id="field-icon-presets" aria-hidden="true"></span>
+          <span class="field-text">
+            <span class="field-name" data-i18n="settings.presets.label">Saved presets</span>
+            <span class="field-hint" data-i18n="settings.presets.hint">Pro: re-apply a filter setup. Fills the controls only; you still start the run</span>
+          </span>
+        </label>
+        <select id="preset-select" class="field-input preset-input" disabled></select>
+      </div>
+      <div class="field preset-actions">
+        <button class="btn btn-ghost" id="preset-apply" disabled data-i18n="settings.presets.apply">Apply</button>
+        <button class="btn btn-ghost" id="preset-rename" disabled data-i18n="settings.presets.rename">Rename</button>
+        <button class="btn btn-ghost" id="preset-delete" disabled data-i18n="settings.presets.delete">Delete</button>
+      </div>
+      <div class="field preset-actions">
+        <input type="text" id="preset-name" class="field-input preset-input" maxlength="40" disabled autocomplete="off" spellcheck="false" data-i18n-attr="placeholder:settings.presets.namePlaceholder" placeholder="Preset name">
+        <button class="btn btn-ghost" id="preset-save" disabled data-i18n="settings.presets.save">Save current</button>
+      </div>
+      <p class="field-hint hidden" id="preset-view-hint" role="status"></p>
+      <p class="field-hint hidden" id="preset-error" role="alert"></p>
+      <div class="field">
+        <a class="license-get hidden" id="preset-pro" href="https://github.com/SylphxAI/Google-Photos-Delete-Tool?utm_source=extension&amp;utm_medium=presets&amp;utm_campaign=pro&amp;utm_content=a#pro" target="_blank" rel="noopener" data-i18n="settings.presets.pro">Pro: Get Pro</a>
       </div>
 
       <div class="field">
@@ -203,7 +228,7 @@
         <span class="btn-text" data-i18n="settings.license.activate">Activate</span>
       </button>
       <p class="license-status" id="license-status"></p>
-      <a class="license-get" id="license-get" href="https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro" target="_blank" rel="noopener" data-i18n="settings.license.getPro">Get Pro — US$9.99 once</a>
+      <a class="license-get" id="license-get" href="https://github.com/SylphxAI/Google-Photos-Delete-Tool?utm_source=extension&amp;utm_medium=license_box&amp;utm_campaign=pro&amp;utm_content=a#pro" target="_blank" rel="noopener" data-i18n="settings.license.getPro">Get Pro — US$9.99 once</a>
     </section>
 
     <!-- ─── Consent gate (destructive runs) ─────────────────────── -->

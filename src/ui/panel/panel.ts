@@ -14,7 +14,8 @@ import { PHOTO_TYPES, buildFilterFromControls, type PhotoType } from '../../core
 import { openDuplicateFinder } from '../dupes/finder'
 import { sleep } from '../../core/utils'
 import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../../core/post-run-prompt'
-import { buildDryRunTeaser, dateReportLine, proUrl } from '../../core/pro-moments'
+import { PRO_VARIANT_KEY, buildDryRunTeaser, dateReportLine, getProVariant, proUrl, type ProVariant } from '../../core/pro-moments'
+import { createLocalStoragePresetStore, createPresetManager, presetViewHint, type CleanupPreset } from '../../core/presets'
 import { renderProTeaser } from '../pro-teaser/teaser'
 import { showPostRunPrompt } from '../post-run/prompt'
 
@@ -145,12 +146,30 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
       <a id="gpdt-date-pro-link" href="" target="_blank" rel="noopener" style="font-size:11px; color:#8b8b95; white-space:nowrap">Pro: Get Pro</a>
     </div>
     <div class="gpdt-row">
+      <label for="gpdt-preset">Saved presets (Pro)</label>
+      <select id="gpdt-preset" style="width:150px" disabled></select>
+    </div>
+    <div class="gpdt-row">
+      <button class="gpdt-ghost" id="gpdt-preset-apply" style="padding:6px 8px" disabled>Apply</button>
+      <button class="gpdt-ghost" id="gpdt-preset-rename" style="padding:6px 8px" disabled>Rename</button>
+      <button class="gpdt-ghost" id="gpdt-preset-delete" style="padding:6px 8px" disabled>Delete</button>
+    </div>
+    <div class="gpdt-row">
+      <input type="text" id="gpdt-preset-name" placeholder="Preset name" maxlength="40" style="flex:1" disabled />
+      <button class="gpdt-ghost" id="gpdt-preset-save" style="padding:6px 8px" disabled>Save current</button>
+    </div>
+    <div id="gpdt-preset-hint" class="gpdt-note" style="display:none"></div>
+    <div id="gpdt-preset-err" class="gpdt-note" style="display:none"></div>
+    <div class="gpdt-row" id="gpdt-preset-pro" style="display:none">
+      <a id="gpdt-preset-pro-link" href="" target="_blank" rel="noopener" style="font-size:11px; color:#8b8b95; white-space:nowrap">Pro: Get Pro</a>
+    </div>
+    <div class="gpdt-row">
       <label for="gpdt-license">Pro license</label>
       <span style="display:flex; gap:6px; width:100%">
         <input type="text" id="gpdt-license" placeholder="paste token" style="flex:1" />
         <button class="gpdt-ghost" id="gpdt-license-btn" style="padding:6px 8px">Activate</button>
       </span>
-      <a href="https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro" target="_blank" rel="noopener" style="font-size:11px; color:#8b8b95; white-space:nowrap">Get Pro — US$9.99 once</a>
+      <a id="gpdt-license-get" href="" target="_blank" rel="noopener" style="font-size:11px; color:#8b8b95; white-space:nowrap">Get Pro — US$9.99 once</a>
     </div>
     <div id="gpdt-license-status" class="gpdt-note"></div>
     <div class="gpdt-stats">
@@ -199,7 +218,20 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const dateA = $<HTMLInputElement>('gpdt-date-a')
   const dateB = $<HTMLInputElement>('gpdt-date-b')
   const datePro = $<HTMLElement>('gpdt-date-pro')
-  $<HTMLAnchorElement>('gpdt-date-pro-link').href = proUrl('date_filter')
+  // Copy A/B variant: stable per install in localStorage, "a" on any failure.
+  let proVariant: ProVariant = 'a'
+  const dateProLink = $<HTMLAnchorElement>('gpdt-date-pro-link')
+  const licenseGetLink = $<HTMLAnchorElement>('gpdt-license-get')
+  const setProLinks = (): void => {
+    dateProLink.href = proUrl('date_filter', proVariant)
+    licenseGetLink.href = proUrl('license_box', proVariant)
+    $<HTMLAnchorElement>('gpdt-preset-pro-link').href = proUrl('presets', proVariant)
+  }
+  setProLinks()
+  const variantReady = getProVariant({
+    get: async () => window.localStorage.getItem(PRO_VARIANT_KEY),
+    set: async (v) => window.localStorage.setItem(PRO_VARIANT_KEY, v),
+  }).then((v) => { proVariant = v; setProLinks(); return v })
   const syncDateControls = (locked: boolean): void => {
     const off = locked || !pro
     dateModeSelect.disabled = off
@@ -240,12 +272,106 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   let teaserFor: unknown = null
   let pendingStart: PanelRunOptions | null = null
 
+  // ─── Saved presets (Pro) ──────────────────────────────────────
+  // Applying a preset only fills the controls; it never starts a run, so the
+  // consent gate and the dry run are untouched. Nothing here runs on a timer.
+  const presetSelect = $<HTMLSelectElement>('gpdt-preset')
+  const presetName = $<HTMLInputElement>('gpdt-preset-name')
+  const presetSave = $<HTMLButtonElement>('gpdt-preset-save')
+  const presetApply = $<HTMLButtonElement>('gpdt-preset-apply')
+  const presetRename = $<HTMLButtonElement>('gpdt-preset-rename')
+  const presetDelete = $<HTMLButtonElement>('gpdt-preset-delete')
+  const presetHint = $<HTMLElement>('gpdt-preset-hint')
+  const presetErr = $<HTMLElement>('gpdt-preset-err')
+  const presetPro = $<HTMLElement>('gpdt-preset-pro')
+  const presets = createPresetManager(createLocalStoragePresetStore(), () => pro)
+  let presetList: CleanupPreset[] = []
+  const showPresetErr = (msg: string | null): void => {
+    presetErr.textContent = msg ?? ''
+    presetErr.style.display = msg ? 'block' : 'none'
+  }
+  const syncPresetControls = (locked: boolean): void => {
+    const off = locked || !pro
+    presetSelect.disabled = off || presetList.length === 0
+    presetApply.disabled = presetRename.disabled = presetDelete.disabled = presetSelect.disabled
+    presetName.disabled = off
+    presetSave.disabled = off
+    presetPro.style.display = pro ? 'none' : 'flex'
+  }
+  const renderPresetHint = (): void => {
+    const p = presetList.find(x => x.id === presetSelect.value)
+    const url = p ? presetViewHint(p, window.location.href) : null
+    presetHint.textContent = url ? `Saved on ${url}. Open it yourself if you want that view.` : ''
+    presetHint.style.display = url ? 'block' : 'none'
+  }
+  const renderPresets = async (selectId?: string): Promise<void> => {
+    presetList = await presets.list()
+    presetSelect.replaceChildren()
+    if (presetList.length === 0) {
+      const none = document.createElement('option')
+      none.textContent = 'No saved presets'
+      presetSelect.append(none)
+    }
+    for (const p of presetList) {
+      const o = document.createElement('option')
+      o.value = p.id
+      o.textContent = p.name
+      presetSelect.append(o)
+    }
+    if (selectId && presetList.some(p => p.id === selectId)) presetSelect.value = selectId
+    syncPresetControls(runningNow())
+    renderPresetHint()
+  }
+  const presetFailed = (r: { ok: boolean; error?: string }): boolean => {
+    if (r.ok) return false
+    showPresetErr(r.error ?? null)
+    return true
+  }
+  presetSelect.addEventListener('change', () => {
+    presetName.value = presetList.find(x => x.id === presetSelect.value)?.name ?? ''
+    renderPresetHint()
+  })
+  presetSave.addEventListener('click', async () => {
+    showPresetErr(null)
+    const r = await presets.save(
+      presetName.value,
+      { type: filterSelect.value, dateMode: dateModeSelect.value, dateA: dateA.value, dateB: dateB.value },
+      window.location.href,
+    )
+    if (presetFailed(r)) return
+    presetName.value = ''
+    await renderPresets(r.ok ? r.preset.id : undefined)
+  })
+  presetApply.addEventListener('click', async () => {
+    showPresetErr(null)
+    const r = await presets.apply(presetSelect.value)
+    if (presetFailed(r) || !r.ok) return
+    filterSelect.value = r.preset.type
+    dateModeSelect.value = r.preset.dateMode
+    dateA.value = r.preset.dateA
+    dateB.value = r.preset.dateB
+    syncDateControls(runningNow())
+  })
+  presetRename.addEventListener('click', async () => {
+    showPresetErr(null)
+    const id = presetSelect.value
+    if (presetFailed(await presets.rename(id, presetName.value))) return
+    await renderPresets(id)
+  })
+  presetDelete.addEventListener('click', async () => {
+    showPresetErr(null)
+    if (presetFailed(await presets.remove(presetSelect.value))) return
+    presetName.value = ''
+    await renderPresets()
+  })
+
   // ─── Pro license ──────────────────────────────────────────────
 
   const refreshProState = async (): Promise<void> => {
     pro = await runner.isPro()
     if (!runningNow()) filterSelect.disabled = !pro
     syncDateControls(runningNow())
+    await renderPresets()
     licenseStatus.textContent = pro
       ? 'Pro active — filters enabled.'
       : 'Free: unfiltered cleanup + dry-run counts. Filters require Pro.'
@@ -354,6 +480,8 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
         return error ? { ok: false, error } : { ok: true }
       },
       stopRun: () => runner.stop(),
+      isPro: () => runner.isPro(),
+      proVariant: () => variantReady,
       consentAcknowledged: async () => runner.consentAcknowledged(),
       acknowledgeConsent: async () => runner.acknowledgeConsent(),
       onRunProgress: (cb) => runner.onUpdate((s) => { if (s.progress) cb(s.progress) }),
@@ -409,6 +537,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     emptyInput.disabled = running
     filterSelect.disabled = running || !pro
     syncDateControls(running)
+    syncPresetControls(running)
 
     if (!p) {
       statusEl.textContent = STATUS_TEXT.idle
@@ -467,7 +596,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
         .join(' · ')
       if (teaserFor !== summary) {
         teaserFor = summary
-        renderProTeaser(proTeaserEl, buildDryRunTeaser(summary.counts, summary.total, pro))
+        renderProTeaser(proTeaserEl, buildDryRunTeaser(summary.counts, summary.total, pro, proVariant))
       }
       statusEl.textContent = summary.dateReport
         ? dateReportLine(summary.dateReport)
@@ -483,7 +612,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     void claimPostRunPrompt(result, {
       isShown: async () => window.localStorage.getItem(POST_RUN_PROMPT_KEY) === '1',
       markShown: async () => window.localStorage.setItem(POST_RUN_PROMPT_KEY, '1'),
-    }, detectBrowser(navigator.userAgent), pro).then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
+    }, detectBrowser(navigator.userAgent), pro, proVariant).then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
   })
   void refreshProState()
 }

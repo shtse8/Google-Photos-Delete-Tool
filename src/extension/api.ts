@@ -8,6 +8,7 @@
  * no polyfill and no dual namespaces.
  */
 import type { EmptyTrashBaton } from '../core/empty-trash-baton'
+import { PRESETS_KEY, type PresetStore } from '../core/presets'
 
 export function storageGet(keys: string | string[]): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -132,6 +133,29 @@ export function createChromeBaton(): EmptyTrashBaton {
         await storageRemove([PENDING_KEY])
       } catch (err) {
         console.warn('[gpdt:baton] pending clear failed:', err)
+      }
+    },
+  }
+}
+
+/** Saved presets in chrome.storage.local; unreadable storage reads as empty. */
+export function createChromePresetStore(): PresetStore {
+  return {
+    async read() {
+      try {
+        return (await storageGet([PRESETS_KEY]))[PRESETS_KEY] ?? null
+      } catch (err) {
+        console.warn('[gpdt:presets] read failed:', err)
+        return null
+      }
+    },
+    async write(presets) {
+      try {
+        await storageSet({ [PRESETS_KEY]: presets })
+        return true
+      } catch (err) {
+        console.warn('[gpdt:presets] write failed:', err)
+        return false
       }
     },
   }

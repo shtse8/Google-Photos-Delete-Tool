@@ -58,6 +58,8 @@ describe('LOCALES', () => {
       'settings.dryRun.label', 'settings.dryRun.hint',
       'settings.emptyTrash.label', 'settings.emptyTrash.hint',
       'settings.language.label', 'settings.language.trigger',
+      'settings.presets.label', 'settings.presets.save', 'settings.presets.apply',
+      'settings.presets.rename', 'settings.presets.delete', 'settings.presets.viewHint',
       'actions.start', 'actions.pause', 'actions.resume', 'actions.stop',
       'notes.navigateFirst',
       'scope.actingOn', 'scope.library', 'scope.album', 'scope.trash',

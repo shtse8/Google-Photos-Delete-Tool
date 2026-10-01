@@ -47,7 +47,7 @@ export function showPostRunPrompt(prompt: PostRunPrompt, container: HTMLElement 
   }
   if (prompt.proUrl) {
     const url = prompt.proUrl
-    row.appendChild(btn('Get Pro', () => { window.open(url, '_blank', 'noopener') }))
+    row.appendChild(btn(prompt.proLabel, () => { window.open(url, '_blank', 'noopener') }))
   }
   row.appendChild(btn('Share', () => { void share(prompt, status) }))
   row.appendChild(btn('Dismiss', () => box.remove()))
