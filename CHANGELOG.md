@@ -17,6 +17,13 @@ All notable changes to this project will be documented in this file.
   read is never selected, and a date-filtered dry run reports matched,
   skipped and total counts ("N items skipped: date not readable").
 - README notes that albums work by opening the album.
+
+### Release notes
+- Live gate waived for this release (CEO 2026-10-01): selection is extended only
+  through the existing filter path; unreadable dates are never selected, the dry
+  run shows matched and skipped counts first, and deletions go to Trash for 60
+  days. Unit and build checks only; a live dry run and small date-filtered
+  delete on a disposable account follow before 2026-10-10.
 - Nothing free changes: batch bounds, consent, postconditions and the dry run
   are as before.
 

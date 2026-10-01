@@ -162,8 +162,6 @@ nothing. **Pro** adds the analysis layer on top:
 
 **US$9.99, one time, lifetime.** No subscription, no account.
 
-**[Buy Pro](PAYMENT_LINK_URL)**
-
 Your token arrives by email right after checkout. Open the extension (or the
 userscript panel), find the **Pro license** box, paste the token and press
 **Activate**. It is verified on your device, offline, and never leaves it.
