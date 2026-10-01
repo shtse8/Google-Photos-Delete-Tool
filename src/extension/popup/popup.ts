@@ -1,4 +1,5 @@
 import './popup.css'
+import { setMarkup } from './set-markup'
 import { formatElapsed } from '../../core/utils'
 import { buildDiagnosticIssueUrl, type DiagnosticBlob } from '../../core/diagnostics'
 import { verifyLicense } from '../../core/license'
@@ -408,7 +409,7 @@ const paramsFor = (key: string): I18nParams | undefined => I18N_HTML_PARAMS[key]
 const renderNote = (): void => {
   const key = noteEl.dataset.noteKey
   if (!key) return
-  noteEl.innerHTML = tHtml(key, paramsFor(key))
+  setMarkup(noteEl, tHtml(key, paramsFor(key)))
 }
 
 const showNote = (key: string): void => {

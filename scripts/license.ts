@@ -6,6 +6,9 @@
  *                                     # and prints the public key to embed.
  *   bun run license:issue --email=x   # sign a Pro license payload → token
  *   bun run license:verify <token>    # verify a token against the embedded keys
+ *   bun run scripts/license.ts verify-buyer <token> --email=<expected>
+ *                                     # first-purchase readback; exit 0 only if
+ *                                     # valid + pro + email match
  *
  * The private key NEVER enters this repository. Keep it out of git,
  * backups, and any machine that does not own the Pro business. Losing it
@@ -85,6 +88,14 @@ async function verify(token: string): Promise<void> {
   process.exit(1)
 }
 
+async function verifyBuyerCommand(token: string, email: string): Promise<void> {
+  const { PRO_PUBLIC_KEYS_BASE64URL } = await import('../src/core/license')
+  const { verifyBuyer, formatBuyerReport } = await import('./license-buyer')
+  const report = await verifyBuyer(token, email, PRO_PUBLIC_KEYS_BASE64URL)
+  console.log(formatBuyerReport(report))
+  process.exit(report.ok ? 0 : 1)
+}
+
 const [command, ...rest] = process.argv.slice(2)
 
 switch (command) {
@@ -101,7 +112,17 @@ switch (command) {
     await verify(rest[0])
     break
   }
+  case 'verify-buyer': {
+    const emailArg = rest.find((a) => a.startsWith('--email='))
+    const token = rest.find((a) => !a.startsWith('--'))
+    if (!token || !emailArg) {
+      console.error('Usage: bun run scripts/license.ts verify-buyer <token> --email=<expected>')
+      process.exit(1)
+    }
+    await verifyBuyerCommand(token, emailArg.slice('--email='.length))
+    break
+  }
   default:
-    console.error('Unknown command. Use: keygen | issue | verify')
+    console.error('Unknown command. Use: keygen | issue | verify | verify-buyer')
     process.exit(1)
 }

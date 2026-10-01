@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `scripts/license.ts verify-buyer <token> --email=<expected>`: first-purchase
+  readback (valid, embedded key old/new, plan, email match, issuedAt as ISO);
+  exit 0 only for a valid pro token with a matching email. Never prints the
+  token. Documented in docs/PRO.md.
+- `listing:check` now enforces the required store fields: support and privacy
+  URLs, Edge search terms and 250-character minimum description, AMO
+  categories, tags and licence. The AMO bootstrap reads categories and licence
+  from `storefront/listing.json`.
+- `verify` now checks the Edge package (manifest v3, permissions, background,
+  icons) and fails any extension build that assigns `innerHTML`/`outerHTML`.
+
+### Changed
+- Firefox package passes `web-ext lint` with 0 warnings (was 5): popup markup
+  is inserted through DOMParser instead of `innerHTML`, and the minimum
+  Firefox version is 140 (Android 142), the first releases that understand
+  `data_collection_permissions`. The add-on id is unchanged.
+
 ## [3.4.0] - 2026-10-01
 
 ### Added

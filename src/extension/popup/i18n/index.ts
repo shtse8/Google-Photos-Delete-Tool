@@ -53,6 +53,7 @@
  *   See `docs/translations.md`.
  */
 
+import { setMarkup } from '../set-markup'
 import type { LocaleCode, LocaleEntry, Translations } from './types'
 import en from './locales/en'
 import de from './locales/de'
@@ -225,7 +226,7 @@ export function applyTranslations(
 
   root.querySelectorAll<HTMLElement>('[data-i18n-html]').forEach((el) => {
     const key = el.dataset.i18nHtml
-    if (key) el.innerHTML = tHtml(key, paramsFor?.(key))
+    if (key) setMarkup(el, tHtml(key, paramsFor?.(key)))
   })
 
   root.querySelectorAll<HTMLElement>('[data-i18n-attr]').forEach((el) => {

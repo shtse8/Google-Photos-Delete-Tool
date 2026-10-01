@@ -1,3 +1,5 @@
+import { setMarkup } from './set-markup'
+
 /**
  * Inline SVG icons from Tabler Icons (MIT licensed — https://tabler.io/icons).
  * Each icon is exported as an HTML string so we can drop it into innerHTML.
@@ -119,5 +121,5 @@ export type IconName = keyof typeof icons
 /** Insert an icon's SVG markup into an element by id, replacing its children. */
 export function mountIcon(elementId: string, name: IconName): void {
   const el = document.getElementById(elementId)
-  if (el) el.innerHTML = icons[name]
+  if (el) setMarkup(el, icons[name])
 }

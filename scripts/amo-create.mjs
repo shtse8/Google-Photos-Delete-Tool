@@ -27,7 +27,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const listing = JSON.parse(await readFile(resolve(root, 'storefront/listing.json'), 'utf-8'))
 const amo = listing.amo
 const BASE = 'https://addons.mozilla.org/api/v5'
-const CATEGORY = 'photos-music-videos' // live slug for "Photos, Music & Videos"
+const CATEGORIES = amo.categories // AMO slugs, e.g. photos-music-videos for "Photos, Music & Videos"
 
 const zipArg = process.argv.indexOf('--zip')
 const zip = zipArg !== -1 ? process.argv[zipArg + 1] : null
@@ -76,9 +76,9 @@ async function main() {
     console.log('1) POST /addons/upload/  multipart: upload=<zip>, channel=listed')
     console.log(`   zip bytes: ${zipBytes.length}`)
     console.log(`2) POST /addons/addon/   ${JSON.stringify({
-      categories: { firefox: [CATEGORY] },
+      categories: { firefox: CATEGORIES },
       summary: { 'en-US': amo.summary },
-      version: { upload: '<uuid>', license: 'MIT' },
+      version: { upload: '<uuid>', license: amo.license },
     }, null, 2)}`)
     console.log(`3) PATCH /addons/addon/<id>/ description: ${amo.description.join('\n\n').length} chars (en-US)`)
     console.log('DRY RUN OK')
@@ -126,9 +126,9 @@ async function main() {
   console.log('amo-create: creating add-on…')
   const created = await api('POST', '/addons/addon/', {
     json: {
-      categories: { firefox: [CATEGORY] },
+      categories: { firefox: CATEGORIES },
       summary: { 'en-US': amo.summary },
-      version: { upload: uuid, license: 'MIT' },
+      version: { upload: uuid, license: amo.license },
     },
   })
   if (!created.ok) {
