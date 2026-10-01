@@ -54,7 +54,7 @@ the grid only as you scroll.
 
 **Why not the Google Photos API?** Since 31 March 2025 Google no longer lets
 apps read your whole library through the Photos API, so an external
-duplicate finder cannot see your photos. This tool works inside the Google
+duplicate finder cannot scan your whole library. This tool works inside the Google
 Photos page you already have open instead.
 
 ## Bulk delete
@@ -68,7 +68,7 @@ Google Photos Library API has no delete endpoint.
 
 | Surface | Get it | Includes |
 |---|---|---|
-| **Chrome / Firefox extension** | [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb); Firefox zip on each release | Popup UI, badge, 9 languages, empty-trash flow |
+| **Chrome / Firefox extension** | [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb); Firefox zip on each release | Popup UI, badge, 10 languages, empty-trash flow |
 | **Userscript** (Tampermonkey, Violentmonkey, Greasemonkey) | `google-photos-delete.user.js` from the latest release | Same engine, floating panel, same safety model |
 
 ## Built to be trusted
@@ -107,7 +107,7 @@ Google Photos Library API has no delete endpoint.
   in a versioned JSON pack, so a UI change ships as a data patch.
 - **Report issue:** one click opens a pre-filled GitHub issue with pack version,
   selector matches and observed labels.
-- **9 languages** in the extension UI, with compile-time-complete translations.
+- **10 languages** in the extension UI, with compile-time-complete translations.
 
 ## Installation
 
@@ -199,8 +199,10 @@ replace this comment with: **[Buy Pro for US$9.99](https://buy.stripe.com/...)**
 **Activation:** open the extension (or the userscript panel), find the **Pro
 license** box, paste your Pro token and press **Activate**. The token is
 verified on your device, works offline, does not expire and never leaves the
-device. Refunds: full refund on request within 14 days, by email to
-[hi@sylphx.com](mailto:hi@sylphx.com). Terms and privacy:
+device. Refunds: if you are not happy, email
+[hi@sylphx.com](mailto:hi@sylphx.com) within 14 days of purchase and we refund
+you in full, no questions asked. This includes your legal right as a UK or EU
+consumer to cancel within 14 days. Terms and privacy:
 [terms](https://sylphxai.github.io/Google-Photos-Delete-Tool/terms.html),
 [privacy](https://sylphxai.github.io/Google-Photos-Delete-Tool/privacy.html).
 Seller tooling and key custody: [`docs/PRO.md`](docs/PRO.md).
