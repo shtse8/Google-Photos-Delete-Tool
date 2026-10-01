@@ -1,0 +1,28 @@
+{
+  "slug": "google-photos-delete-tool",
+  "kind": "open-source",
+  "name": {
+    "en": "Google Photos Delete Tool",
+    "zh-Hant": "Google Photos Delete Tool"
+  },
+  "tagline": {
+    "en": "Find duplicate photos and bulk delete from Google Photos in minutes, with a dry run first, in your browser.",
+    "zh-Hant": "幾分鐘內找出重複相片並批量刪除 Google 相簿內容，先試行預覽，全程在瀏覽器內運作。"
+  },
+  "category": {
+    "en": "Browser extensions",
+    "zh-Hant": "瀏覽器擴充功能"
+  },
+  "url": "https://sylphxai.github.io/Google-Photos-Delete-Tool/",
+  "status": "available",
+  "image": {
+    "src": "card.webp",
+    "alt": {
+      "en": "Google Photos Delete Tool site: delete all your photos or find duplicates in bulk",
+      "zh-Hant": "Google Photos Delete Tool 網站：批量刪除所有相片或找出重複相片"
+    }
+  },
+  "repo": "SylphxAI/Google-Photos-Delete-Tool",
+  "licence": "MIT",
+  "docs": "https://github.com/SylphxAI/Google-Photos-Delete-Tool#readme"
+}
