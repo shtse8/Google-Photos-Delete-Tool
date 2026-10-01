@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-01
+
 ### Added
 - `scripts/license.ts verify-buyer <token> --email=<expected>`: first-purchase
   readback (valid, embedded key old/new, plan, email match, issuedAt as ISO);
@@ -24,8 +26,8 @@ All notable changes to this project will be documented in this file.
   and never opened. Free users see the row disabled with a Get Pro link
   (`utm_medium=presets`). Stored in `chrome.storage.local` (extension) or
   `localStorage` (userscript); corrupt data is ignored.
-- Pro duplicate review tools: a keep rule for all groups at once (highest
-  resolution, newest or oldest; groups without the needed data or with a tie
+- Pro duplicate review tools: a keep rule for all groups at once (newest or
+  oldest; groups without the needed data or with a tie
   keep the default pick), auto-accept for groups at 98% or more similarity with
   one combined review list for the rest, and a CSV export of the groups
   (`group_id,item_id,decision,similarity`, local download). Free users see the

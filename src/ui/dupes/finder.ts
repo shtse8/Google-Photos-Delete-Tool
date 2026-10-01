@@ -14,7 +14,7 @@ import { groupChoices, planDeletion, toggleChoice, type Overrides } from '../../
 import { harvestGridTiles, hashThumbnail, sizedThumbUrl } from '../../core/dedup/browser-grid'
 import { browserDom } from '../../core/browser-dom'
 import { sleep } from '../../core/utils'
-import { proUrl } from '../../core/pro-moments'
+import { proUrl, type ProVariant } from '../../core/pro-moments'
 import {
   CONFIDENT_SIMILARITY, applyKeepRule, groupKey, groupsToCsv, planWithAutoAccept, splitByConfidence, trashedIds,
   type KeepRule,
@@ -30,6 +30,8 @@ export interface FinderHost {
   onRunProgress(cb: (p: Progress) => void): () => void
   /** Pro state, verified on the device. Missing means free. */
   isPro?(): Promise<boolean>
+  /** The install's copy A/B variant, carried as utm_content on Pro links. Missing means "a". */
+  proVariant?(): Promise<ProVariant>
   scanDeps?: ScanDeps
 }
 
@@ -128,6 +130,7 @@ export function openDuplicateFinder(host: FinderHost): void {
   let runActive = false
   let runIsDryRun = false
   let pro = false
+  let variant: ProVariant = 'a'
   let keepRule: KeepRule = 'default'
   let autoAccept = false
   let showConfident = false
@@ -215,6 +218,7 @@ export function openDuplicateFinder(host: FinderHost): void {
     shown = PAGE
     consented = await host.consentAcknowledged()
     pro = await Promise.resolve(host.isPro?.()).then((v) => v === true, () => false)
+    variant = await Promise.resolve(host.proVariant?.()).then((v) => (v === 'b' ? 'b' : 'a'), () => 'a' as ProVariant)
     if (!pro) { keepRule = 'default'; autoAccept = false }
     renderReview()
   }
@@ -263,7 +267,7 @@ export function openDuplicateFinder(host: FinderHost): void {
   /** Pro review tools. Free users see them disabled with a Get Pro link. */
   function renderTools(confidentCount: number, reviewCount: number, pending: number): HTMLElement {
     const select = h('select', { 'aria-label': 'Which copy to keep in every group' })
-    const labels: Record<KeepRule, string> = { default: 'Best copy (default)', resolution: 'Highest resolution', newest: 'Newest', oldest: 'Oldest' }
+    const labels: Record<KeepRule, string> = { default: 'Best copy (default)', newest: 'Newest', oldest: 'Oldest' }
     for (const rule of Object.keys(labels) as KeepRule[]) select.append(h('option', { value: rule }, labels[rule]))
     select.value = keepRule
     select.disabled = !pro
@@ -273,7 +277,7 @@ export function openDuplicateFinder(host: FinderHost): void {
       const res = applyKeepRule(groups, (id) => byId.get(id), keepRule, overrides)
       toolsNote = keepRule === 'default' ? 'Back to the default pick.'
         : res.fellBack > 0
-          ? `Applied to ${res.applied.toLocaleString()} groups. ${res.fellBack.toLocaleString()} had no ${keepRule === 'resolution' ? 'size' : 'date'} data and kept the default pick.`
+          ? `Applied to ${res.applied.toLocaleString()} groups. ${res.fellBack.toLocaleString()} had no date data and kept the default pick.`
           : `Applied to ${res.applied.toLocaleString()} groups.`
       renderReview()
     })
@@ -298,7 +302,7 @@ export function openDuplicateFinder(host: FinderHost): void {
       downloadCsv(groupsToCsv(groups, trashed))
     })
 
-    const tag = (): HTMLElement => h('a', { class: 'pro-tag', href: proUrl('dupes'), target: '_blank', rel: 'noopener' }, 'Pro')
+    const tag = (): HTMLElement => h('a', { class: 'pro-tag', href: proUrl('dupes', variant), target: '_blank', rel: 'noopener' }, 'Pro')
     const rows: HTMLElement[] = [
       h('div', { class: 'row' }, h('span', {}, 'Keep'), select, ...(pro ? [] : [tag()])),
       h('div', { class: 'row' },

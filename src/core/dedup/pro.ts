@@ -10,16 +10,15 @@
 import type { DupGroup, DupItem } from './group'
 import { groupChoices, planDeletion, type DeletionPlan, type Overrides } from './selection'
 
-export type KeepRule = 'default' | 'resolution' | 'newest' | 'oldest'
+export type KeepRule = 'default' | 'newest' | 'oldest'
 
-export const KEEP_RULES: readonly KeepRule[] = ['default', 'resolution', 'newest', 'oldest']
+export const KEEP_RULES: readonly KeepRule[] = ['default', 'newest', 'oldest']
 
 /** Groups whose members are all at least this similar are pre-approved. */
 export const CONFIDENT_SIMILARITY = 0.98
 
 type Lookup = (id: string) => DupItem | undefined
 
-const pixels = (item: DupItem | undefined): number => (item?.width ?? 0) * (item?.height ?? 0)
 const time = (item: DupItem | undefined): number | null =>
   item?.takenAt != null && Number.isFinite(item.takenAt) ? item.takenAt : null
 
@@ -30,10 +29,9 @@ const time = (item: DupItem | undefined): number | null =>
  */
 export function keeperFor(group: DupGroup, lookup: Lookup, rule: KeepRule): string {
   if (rule === 'default') return group.bestItemId
-  const known = group.itemIds.filter((id) => (rule === 'resolution' ? pixels(lookup(id)) > 0 : time(lookup(id)) !== null))
+  const known = group.itemIds.filter((id) => time(lookup(id)) !== null)
   if (known.length === 0) return group.bestItemId
-  const score = (id: string): number =>
-    rule === 'resolution' ? pixels(lookup(id)) : rule === 'newest' ? time(lookup(id))! : -time(lookup(id))!
+  const score = (id: string): number => (rule === 'newest' ? time(lookup(id))! : -time(lookup(id))!)
   const top = Math.max(...known.map(score))
   const tied = known.filter((id) => score(id) === top)
   return tied.includes(group.bestItemId) ? group.bestItemId : tied[0]
@@ -58,14 +56,14 @@ export function applyKeepRule(groups: readonly DupGroup[], lookup: Lookup, rule:
     }
     const keeper = keeperFor(group, lookup, rule)
     for (const id of group.itemIds) overrides.set(id, id === keeper ? 'keep' : 'delete')
-    if (!hasData(group, lookup, rule)) fellBack++
+    if (!hasData(group, lookup)) fellBack++
     else applied++
   }
   return { applied, fellBack }
 }
 
-function hasData(group: DupGroup, lookup: Lookup, rule: KeepRule): boolean {
-  return group.itemIds.some((id) => (rule === 'resolution' ? pixels(lookup(id)) > 0 : time(lookup(id)) !== null))
+function hasData(group: DupGroup, lookup: Lookup): boolean {
+  return group.itemIds.some((id) => time(lookup(id)) !== null)
 }
 
 /** Stable key of a group across regrouping: its member ids. */

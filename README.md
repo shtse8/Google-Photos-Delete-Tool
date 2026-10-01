@@ -170,9 +170,9 @@ nothing. **Pro** adds the analysis layer on top:
   only shows the address as a hint; it never navigates. Presets live on your
   device (extension storage, or the userscript's local storage).
 - **Duplicate review tools** - for big libraries, in Find duplicates:
-  - **Keep rule** - keep the highest resolution, the newest or the oldest copy
+  - **Keep rule** - keep the newest or the oldest copy
     in every group at once (instead of the default best copy). A rule needs
-    the data it uses: where a group has no size or no readable date, that group
+    the data it uses: where a group has no readable date, that group
     keeps the default pick and the tool tells you how many did. Ties also fall
     back to the default pick. Every group still keeps exactly one photo you can
     change.

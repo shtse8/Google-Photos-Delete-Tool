@@ -161,7 +161,7 @@ describe('copy A/B variant', () => {
   it('keeps static popup links tagged with utm_content', async () => {
     const { readFileSync } = await import('node:fs')
     const html = readFileSync('src/extension/popup/popup.html', 'utf8')
-    for (const id of ['date-pro', 'license-get']) {
+    for (const id of ['date-pro', 'preset-pro', 'license-get']) {
       const tag = html.match(new RegExp(`<a[^>]*id="${id}"[^>]*>`))![0]
       expect(tag).toContain('utm_content=a')
     }

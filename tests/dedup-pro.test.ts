@@ -30,9 +30,6 @@ describe('keep rules', () => {
   it('default keeps the group best pick', () => {
     expect(keeperFor(g, look, 'default')).toBe('b')
   })
-  it('resolution keeps the most pixels', () => {
-    expect(keeperFor(group(['a', 'c', 'b'], 'a'), look, 'resolution')).toBe('b')
-  })
   it('newest and oldest use capture time', () => {
     expect(keeperFor(g, look, 'newest')).toBe('c')
     expect(keeperFor(g, look, 'oldest')).toBe('b')
@@ -40,8 +37,6 @@ describe('keep rules', () => {
   it('ties fall back to the current rule, then group order', () => {
     const tied = [item('x', { width: 10, height: 10, takenAt: day(2) }), item('y', { width: 10, height: 10, takenAt: day(2) }), item('z', { width: 5, height: 5, takenAt: day(2) })]
     const look2 = lookupOf(tied)
-    expect(keeperFor(group(['x', 'y', 'z'], 'y'), look2, 'resolution')).toBe('y')
-    expect(keeperFor(group(['x', 'y', 'z'], 'z'), look2, 'resolution')).toBe('x')
     expect(keeperFor(group(['x', 'y', 'z'], 'z'), look2, 'newest')).toBe('z')
     expect(keeperFor(group(['x', 'y', 'z'], 'w'), look2, 'newest')).toBe('x')
     expect(keeperFor(group(['x', 'y', 'z'], 'y'), look2, 'oldest')).toBe('y')
@@ -49,11 +44,10 @@ describe('keep rules', () => {
   it('missing data falls back to the current rule and never guesses', () => {
     const bare = [item('p'), item('q')]
     const gg = group(['p', 'q'], 'q')
-    for (const r of ['resolution', 'newest', 'oldest'] as const) expect(keeperFor(gg, lookupOf(bare), r)).toBe('q')
+    for (const r of ['newest', 'oldest'] as const) expect(keeperFor(gg, lookupOf(bare), r)).toBe('q')
     // Partial data: only the item with data can win.
     const partial = [item('p', { takenAt: day(3) }), item('q')]
     expect(keeperFor(gg, lookupOf(partial), 'oldest')).toBe('p')
-    expect(keeperFor(gg, lookupOf([item('p', { width: 0, height: 5 }), item('q')]), 'resolution')).toBe('q')
   })
   it('applies to every group at once, keeps exactly one each, and reports fallbacks', () => {
     const more = [...items, item('m'), item('n')]

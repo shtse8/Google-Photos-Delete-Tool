@@ -225,12 +225,13 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const setProLinks = (): void => {
     dateProLink.href = proUrl('date_filter', proVariant)
     licenseGetLink.href = proUrl('license_box', proVariant)
+    $<HTMLAnchorElement>('gpdt-preset-pro-link').href = proUrl('presets', proVariant)
   }
   setProLinks()
-  void getProVariant({
+  const variantReady = getProVariant({
     get: async () => window.localStorage.getItem(PRO_VARIANT_KEY),
     set: async (v) => window.localStorage.setItem(PRO_VARIANT_KEY, v),
-  }).then((v) => { proVariant = v; setProLinks() })
+  }).then((v) => { proVariant = v; setProLinks(); return v })
   const syncDateControls = (locked: boolean): void => {
     const off = locked || !pro
     dateModeSelect.disabled = off
@@ -283,7 +284,6 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const presetHint = $<HTMLElement>('gpdt-preset-hint')
   const presetErr = $<HTMLElement>('gpdt-preset-err')
   const presetPro = $<HTMLElement>('gpdt-preset-pro')
-  $<HTMLAnchorElement>('gpdt-preset-pro-link').href = proUrl('presets')
   const presets = createPresetManager(createLocalStoragePresetStore(), () => pro)
   let presetList: CleanupPreset[] = []
   const showPresetErr = (msg: string | null): void => {
@@ -481,6 +481,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
       },
       stopRun: () => runner.stop(),
       isPro: () => runner.isPro(),
+      proVariant: () => variantReady,
       consentAcknowledged: async () => runner.consentAcknowledged(),
       acknowledgeConsent: async () => runner.acknowledgeConsent(),
       onRunProgress: (cb) => runner.onUpdate((s) => { if (s.progress) cb(s.progress) }),

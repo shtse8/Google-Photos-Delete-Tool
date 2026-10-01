@@ -357,6 +357,7 @@ function openFinder(): void {
       await storageSet({ [STORAGE_KEYS.consent]: true })
     },
     isPro: isProActive,
+    proVariant: () => getProVariant(proVariantStore),
     onRunProgress: (cb) => {
       progressListeners.add(cb)
       return () => progressListeners.delete(cb)

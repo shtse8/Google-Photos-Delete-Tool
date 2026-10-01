@@ -918,6 +918,7 @@ void getProVariant({
   proVariant = v
   ;(dateProLink as HTMLAnchorElement).href = proUrl('date_filter', v)
   licenseGetLink.href = proUrl('license_box', v)
+  ;(presetProLink as HTMLAnchorElement).href = proUrl('presets', v)
 })
 
 void (async () => {
