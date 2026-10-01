@@ -36,11 +36,71 @@ export interface Translations {
     maxCount: { label: string; hint: string }
     dryRun: { label: string; hint: string }
     emptyTrash: { label: string; hint: string }
-    dateFilter: { label: string; hint: string; off: string; before: string; after: string; between: string; pro: string }
+    dateFilter: { label: string; hint: string; off: string; before: string; after: string; between: string; pro: string; report: string; reportSkipped: string }
     presets: { label: string; hint: string; pro: string; none: string; namePlaceholder: string; save: string; apply: string; rename: string; delete: string; viewHint: string }
     filter: { label: string; hint: string; all: string; screenshot: string; video: string; photo: string; animation: string; collage: string }
     license: { label: string; hint: string; placeholder: string; activate: string; getPro: string; active: string; invalid: string }
     language: { label: string; trigger: string }
+  }
+  /** Pro conversion copy: the dry-run teaser and its A/B variants. */
+  pro: {
+    teaser: {
+      /** "This view has {list}." */
+      counts: string
+      /** "This view has {n} items." */
+      total: string
+      /** Separator between per-type counts. */
+      sep: string
+      dismiss: string
+      ctaA: string
+      ctaB: string
+      linkA: string
+      linkB: string
+    }
+    /** "{n} photo" / "{n} photos"; locales without plural forms repeat one form. */
+    types: {
+      photoOne: string; photoMany: string
+      videoOne: string; videoMany: string
+      screenshotOne: string; screenshotMany: string
+      animationOne: string; animationMany: string
+      collageOne: string; collageMany: string
+    }
+  }
+  /** The one-time card after a successful real run. */
+  postRun: {
+    /** "Done: {count} photos moved to Trash. ..." */
+    donePhotos: string
+    doneDuplicates: string
+    rate: string
+    share: string
+    dismiss: string
+    copied: string
+    /** "... {url}" */
+    copyFailed: string
+  }
+  /** Pro review tools of the duplicate finder. */
+  finder: {
+    proTag: string
+    keep: string
+    keepAria: string
+    ruleDefault: string
+    ruleNewest: string
+    ruleOldest: string
+    /** "Auto-accept groups at {pct}%+ similarity" */
+    autoAccept: string
+    exportCsv: string
+    proNote: string
+    /** "{n} groups auto-accepted (show)" */
+    autoShow: string
+    autoHide: string
+    /** "{n} need your review: ..." */
+    reviewNote: string
+    approveAll: string
+    approveGroup: string
+    approved: string
+    appliedAll: string
+    appliedPartial: string
+    backDefault: string
   }
   actions: {
     start: string

@@ -4,6 +4,21 @@
  * control. Plain text and a link only; it never blocks or clicks anything.
  */
 import type { DryRunTeaser } from '../../core/pro-moments'
+import { getLocale, t } from '../../extension/popup/i18n'
+
+/** The teaser copy in the active locale (English where no locale is set, e.g. the userscript). */
+function localize(teaser: DryRunTeaser): { counts: string; cta: string; link: string } {
+  const fmt = (n: number): string => n.toLocaleString(getLocale())
+  const counts = teaser.parts.length > 0
+    ? t('pro.teaser.counts', {
+        list: teaser.parts
+          .map((p) => t(`pro.types.${p.type}${p.n === 1 ? 'One' : 'Many'}`, { n: fmt(p.n) }))
+          .join(t('pro.teaser.sep')),
+      })
+    : t('pro.teaser.total', { n: fmt(teaser.total) })
+  const v = teaser.variant === 'b' ? 'B' : 'A'
+  return { counts, cta: t(`pro.teaser.cta${v}`), link: t(`pro.teaser.link${v}`) }
+}
 
 export function renderProTeaser(host: HTMLElement, teaser: DryRunTeaser | null): void {
   host.replaceChildren()
@@ -14,20 +29,21 @@ export function renderProTeaser(host: HTMLElement, teaser: DryRunTeaser | null):
     return
   }
   host.style.cssText = 'display:block;margin-top:8px;font-size:12px;line-height:1.4;color:inherit'
+  const copy = localize(teaser)
   const counts = document.createElement('div')
-  counts.textContent = teaser.countsLine
+  counts.textContent = copy.counts
   const cta = document.createElement('div')
   cta.style.cssText = 'opacity:0.85;margin-top:2px'
-  cta.append(teaser.ctaLine + ' ')
+  cta.append(copy.cta + ' ')
   const link = document.createElement('a')
   link.href = teaser.url
   link.target = '_blank'
   link.rel = 'noopener'
-  link.textContent = teaser.linkLabel
+  link.textContent = copy.link
   link.style.cssText = 'font-weight:600;margin-right:10px'
   const dismiss = document.createElement('button')
   dismiss.type = 'button'
-  dismiss.textContent = 'Dismiss'
+  dismiss.textContent = t('pro.teaser.dismiss')
   dismiss.style.cssText = 'all:unset;cursor:pointer;opacity:0.6;text-decoration:underline'
   dismiss.addEventListener('click', () => {
     host.dataset.dismissed = teaser.countsLine

@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.5.1] - 2026-10-01
+
+### Changed
+- Pro and paywall copy is translated in German, Spanish, French, Italian,
+  Dutch, Portuguese, Chinese and Japanese: the Get Pro labels, date filter,
+  saved presets, the dry-run teaser (both A/B copy variants), the post-run
+  card and the duplicate-review Pro tools. These strings were English in the
+  non-English locales. The in-page cards use the language picked in the popup
+  (else the browser language). The userscript panel stays English.
+- With auto-accept on, the duplicate review shows "N groups auto-accepted
+  (show)" so it is clear those groups are included in "Move N to Trash".
+
+### Fixed
+- After the similarity slider regroups, the selected keep rule (Newest,
+  Oldest, Best copy) is applied to the new groups, so the dropdown and the
+  selection agree. Each group still keeps exactly one photo.
+
+### Added
+- A test that fails when a non-English locale's Pro key still holds the
+  English text (explicit exceptions for brand terms and same-spelling words).
+
 ## [3.5.0] - 2026-10-01
 
 ### Added

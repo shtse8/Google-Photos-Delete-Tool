@@ -139,3 +139,43 @@ describe('Pro users', () => {
     vi.unstubAllGlobals()
   })
 })
+
+describe('auto-accept count and keep rule after regroup', () => {
+  const slider = (root: ShadowRoot): HTMLInputElement => root.querySelector('input[type=range]')!
+  const setSlider = async (root: ShadowRoot, value: number, groupCount: number): Promise<void> => {
+    slider(root).value = String(value)
+    slider(root).dispatchEvent(new Event('input'))
+    // The debounce plus the async regroup replace the whole review.
+    await waitFor(() => root.querySelectorAll('.group').length === groupCount && !!root.querySelector('.danger'))
+  }
+  const keepers = (root: ShadowRoot): string[] =>
+    [...root.querySelectorAll('.group')].map((g) => g.querySelectorAll('.item.keep').length + ':' + g.querySelectorAll('.item').length)
+
+  it('shows the auto-accepted count next to the show control and counts them in the Trash total', async () => {
+    const root = await open(true)
+    autoBox(root).checked = true
+    autoBox(root).dispatchEvent(new Event('change'))
+    const show = btn(root, /auto-accepted/)
+    expect(show.textContent).toBe('1 groups auto-accepted (show)')
+    expect(trashLabel(root)).toBe('Move 1 to Trash') // the auto-accepted group is already in the total
+    show.click()
+    expect(btn(root, /auto-accepted/).textContent).toBe('1 groups auto-accepted (hide)')
+    expect(root.querySelectorAll('.group')).toHaveLength(2)
+  })
+
+  it('re-applies the selected keep rule to groups created by the similarity slider', async () => {
+    const root = await open(true)
+    await setSlider(root, 100, 1) // only the identical pair groups now (the other pair is not identical)
+    expect(root.querySelectorAll('.group')).toHaveLength(1)
+    select(root).value = 'newest'
+    select(root).dispatchEvent(new Event('change'))
+    await setSlider(root, 95, 2) // the 95.3% pair joins as a new group
+    expect(select(root).value).toBe('newest')
+    // One keeper per group, and it is the newest photo (a1, b1) in both.
+    expect(keepers(root)).toEqual(['1:2', '1:2'])
+    const keptIds = [...root.querySelectorAll('.item.keep a')].map((a) => (a as HTMLAnchorElement).href)
+    expect(keptIds.some((u) => u.endsWith('/a1'))).toBe(true)
+    expect(keptIds.some((u) => u.endsWith('/b1'))).toBe(true)
+    expect(trashLabel(root)).toBe('Move 2 to Trash')
+  })
+})

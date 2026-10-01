@@ -3,7 +3,7 @@ import { setMarkup } from './set-markup'
 import { formatElapsed } from '../../core/utils'
 import { buildDiagnosticIssueUrl, type DiagnosticBlob } from '../../core/diagnostics'
 import { verifyLicense } from '../../core/license'
-import { PRO_TOKEN_KEY, PRO_VARIANT_KEY, buildDryRunTeaser, countLabelTypes, dateReportLine, getProVariant, proUrl, type ProVariant } from '../../core/pro-moments'
+import { PRO_TOKEN_KEY, PRO_VARIANT_KEY, buildDryRunTeaser, countLabelTypes, getProVariant, proUrl, type ProVariant } from '../../core/pro-moments'
 import { renderProTeaser } from '../../ui/pro-teaser/teaser'
 import { TRASH_URL } from '../../core/empty-trash-baton'
 import {
@@ -884,11 +884,20 @@ function applyProgressUpdate(data: ProgressMessageData): void {
   else if (uiState !== 'running' && status !== 'idle') setUIState('running')
 }
 
+/** The date-filter result line in the popup's locale (core's dateReportLine stays English for the userscript). */
+function localDateReportLine(report: { matched: number; skippedUnreadable: number; total: number }): string {
+  const n = (v: number): number | string => v.toLocaleString(getLocale())
+  const base = t('settings.dateFilter.report', { matched: n(report.matched), total: n(report.total) })
+  return report.skippedUnreadable > 0
+    ? `${base} ${t('settings.dateFilter.reportSkipped', { skipped: n(report.skippedUnreadable) })}`
+    : base
+}
+
 async function refreshReport(): Promise<void> {
   const res = await sendToContent({ action: 'report' })
   if (!res || typeof res !== 'object') return
   const dateReport = (res as { dateReport?: { matched: number; skippedUnreadable: number; total: number } | null }).dateReport
-  showDateReport(dateReport ? dateReportLine(dateReport) : null)
+  showDateReport(dateReport ? localDateReportLine(dateReport) : null)
   const summary = (res as { summary?: { total: number; labels: string[] } | null }).summary
   if (summary && summary.labels.length > 0) {
     lastReport = summary

@@ -4,12 +4,12 @@
  * a run has settled.
  */
 import type { PostRunPrompt } from '../../core/post-run-prompt'
+import { getLocale, t, tHtml } from '../../extension/popup/i18n'
 
 const ID = 'gpdt-post-run-prompt'
 
 export function showPostRunPrompt(prompt: PostRunPrompt, container: HTMLElement = document.body): void {
   if (document.getElementById(ID)) return
-  const what = prompt.kind === 'duplicates' ? 'duplicates' : 'photos'
   const box = document.createElement('div')
   box.id = ID
   box.setAttribute('role', 'status')
@@ -20,9 +20,9 @@ export function showPostRunPrompt(prompt: PostRunPrompt, container: HTMLElement 
 
   const msg = document.createElement('p')
   msg.style.cssText = 'margin:0 0 10px'
-  msg.textContent =
-    `Done: ${prompt.count.toLocaleString()} ${what} moved to Trash. ` +
-    'A short review or a share helps others find it.'
+  msg.textContent = t(prompt.kind === 'duplicates' ? 'postRun.doneDuplicates' : 'postRun.donePhotos', {
+    count: prompt.count.toLocaleString(getLocale()),
+  })
   box.appendChild(msg)
 
   const status = document.createElement('div')
@@ -43,14 +43,14 @@ export function showPostRunPrompt(prompt: PostRunPrompt, container: HTMLElement 
 
   if (prompt.ratingUrl) {
     const url = prompt.ratingUrl
-    row.appendChild(btn('Rate on Chrome Web Store', () => { window.open(url, '_blank', 'noopener') }))
+    row.appendChild(btn(t('postRun.rate'), () => { window.open(url, '_blank', 'noopener') }))
   }
   if (prompt.proUrl) {
     const url = prompt.proUrl
-    row.appendChild(btn(prompt.proLabel, () => { window.open(url, '_blank', 'noopener') }))
+    row.appendChild(btn(t(prompt.variant === 'b' ? 'pro.teaser.linkB' : 'pro.teaser.linkA'), () => { window.open(url, '_blank', 'noopener') }))
   }
-  row.appendChild(btn('Share', () => { void share(prompt, status) }))
-  row.appendChild(btn('Dismiss', () => box.remove()))
+  row.appendChild(btn(t('postRun.share'), () => { void share(prompt, status) }))
+  row.appendChild(btn(t('postRun.dismiss'), () => box.remove()))
   box.appendChild(row)
   box.appendChild(status)
   container.appendChild(box)
@@ -67,8 +67,8 @@ async function share(prompt: PostRunPrompt, status: HTMLElement): Promise<void> 
   }
   try {
     await navigator.clipboard.writeText(prompt.shareText)
-    status.textContent = 'Copied. Paste it anywhere to share.'
+    status.textContent = t('postRun.copied')
   } catch {
-    status.textContent = 'Could not copy. Share this link: ' + prompt.shareUrl
+    status.textContent = tHtml('postRun.copyFailed', { url: prompt.shareUrl })
   }
 }

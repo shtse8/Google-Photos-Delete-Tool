@@ -15,6 +15,7 @@ import { harvestGridTiles, hashThumbnail, sizedThumbUrl } from '../../core/dedup
 import { browserDom } from '../../core/browser-dom'
 import { sleep } from '../../core/utils'
 import { proUrl, type ProVariant } from '../../core/pro-moments'
+import { getLocale, t } from '../../extension/popup/i18n'
 import {
   CONFIDENT_SIMILARITY, applyKeepRule, groupKey, groupsToCsv, planWithAutoAccept, splitByConfidence, trashedIds,
   type KeepRule,
@@ -220,7 +221,20 @@ export function openDuplicateFinder(host: FinderHost): void {
     pro = await Promise.resolve(host.isPro?.()).then((v) => v === true, () => false)
     variant = await Promise.resolve(host.proVariant?.()).then((v) => (v === 'b' ? 'b' : 'a'), () => 'a' as ProVariant)
     if (!pro) { keepRule = 'default'; autoAccept = false }
+    // The selected rule must govern the new groups too, so the dropdown and the
+    // selection never disagree after the slider regroups.
+    if (pro && keepRule !== 'default') applyRule()
     renderReview()
+  }
+
+  /** Apply the selected keep rule to the current groups (one keeper each) and set the note. */
+  function applyRule(): void {
+    const res = applyKeepRule(groups, (id) => byId.get(id), keepRule, overrides)
+    const n = res.applied.toLocaleString(getLocale())
+    toolsNote = keepRule === 'default' ? t('finder.backDefault')
+      : res.fellBack > 0
+        ? t('finder.appliedPartial', { n, fb: res.fellBack.toLocaleString(getLocale()) })
+        : t('finder.appliedAll', { n })
   }
 
   function renderReview(): void {
@@ -266,19 +280,15 @@ export function openDuplicateFinder(host: FinderHost): void {
 
   /** Pro review tools. Free users see them disabled with a Get Pro link. */
   function renderTools(confidentCount: number, reviewCount: number, pending: number): HTMLElement {
-    const select = h('select', { 'aria-label': 'Which copy to keep in every group' })
-    const labels: Record<KeepRule, string> = { default: 'Best copy (default)', newest: 'Newest', oldest: 'Oldest' }
+    const select = h('select', { 'aria-label': t('finder.keepAria') })
+    const labels: Record<KeepRule, string> = { default: t('finder.ruleDefault'), newest: t('finder.ruleNewest'), oldest: t('finder.ruleOldest') }
     for (const rule of Object.keys(labels) as KeepRule[]) select.append(h('option', { value: rule }, labels[rule]))
     select.value = keepRule
     select.disabled = !pro
     select.addEventListener('change', () => {
       if (!pro) return
       keepRule = select.value as KeepRule
-      const res = applyKeepRule(groups, (id) => byId.get(id), keepRule, overrides)
-      toolsNote = keepRule === 'default' ? 'Back to the default pick.'
-        : res.fellBack > 0
-          ? `Applied to ${res.applied.toLocaleString()} groups. ${res.fellBack.toLocaleString()} had no date data and kept the default pick.`
-          : `Applied to ${res.applied.toLocaleString()} groups.`
+      applyRule()
       renderReview()
     })
 
@@ -292,7 +302,7 @@ export function openDuplicateFinder(host: FinderHost): void {
       renderReview()
     })
 
-    const exportBtn = h('button', { class: 'ghost' }, 'Export CSV')
+    const exportBtn = h('button', { class: 'ghost' }, t('finder.exportCsv'))
     exportBtn.disabled = !pro || groups.length === 0
     exportBtn.addEventListener('click', () => {
       if (!pro) return
@@ -302,29 +312,29 @@ export function openDuplicateFinder(host: FinderHost): void {
       downloadCsv(groupsToCsv(groups, trashed))
     })
 
-    const tag = (): HTMLElement => h('a', { class: 'pro-tag', href: proUrl('dupes', variant), target: '_blank', rel: 'noopener' }, 'Pro')
+    const tag = (): HTMLElement => h('a', { class: 'pro-tag', href: proUrl('dupes', variant), target: '_blank', rel: 'noopener' }, t('finder.proTag'))
     const rows: HTMLElement[] = [
-      h('div', { class: 'row' }, h('span', {}, 'Keep'), select, ...(pro ? [] : [tag()])),
+      h('div', { class: 'row' }, h('span', {}, t('finder.keep')), select, ...(pro ? [] : [tag()])),
       h('div', { class: 'row' },
-        h('label', { class: 'opt' }, accept, h('span', {}, `Auto-accept groups at ${Math.round(CONFIDENT_SIMILARITY * 100)}%+ similarity`)),
+        h('label', { class: 'opt' }, accept, h('span', {}, t('finder.autoAccept', { pct: Math.round(CONFIDENT_SIMILARITY * 100) }))),
         ...(pro ? [] : [tag()])),
       h('div', { class: 'row' }, exportBtn, ...(pro ? [] : [tag()])),
     ]
     if (pro && autoAccept) {
-      const toggle = h('button', { class: 'ghost' }, showConfident ? 'Hide auto-accepted groups' : 'Show auto-accepted groups too')
+      const toggle = h('button', { class: 'ghost' }, t(showConfident ? 'finder.autoHide' : 'finder.autoShow', { n: confidentCount.toLocaleString(getLocale()) }))
       toggle.addEventListener('click', () => { showConfident = !showConfident; shown = PAGE; renderReview() })
-      const approveAll = h('button', { class: 'ghost' }, `Approve the ${pending.toLocaleString()} left to review`)
+      const approveAll = h('button', { class: 'ghost' }, t('finder.approveAll', { n: pending.toLocaleString(getLocale()) }))
       approveAll.disabled = pending === 0
       approveAll.addEventListener('click', () => {
         for (const g of splitByConfidence(groups).review) approved.add(groupKey(g))
         renderReview()
       })
       rows.push(
-        h('p', { class: 'muted' }, `${confidentCount.toLocaleString()} groups auto-accepted. ${reviewCount.toLocaleString()} need your review: approve each group below, or all at once. Nothing moves until you press Move to Trash and confirm.`),
+        h('p', { class: 'muted' }, t('finder.reviewNote', { n: reviewCount.toLocaleString(getLocale()) })),
         h('div', { class: 'row' }, toggle, approveAll))
     }
     if (pro && toolsNote) rows.push(h('p', { class: 'muted' }, toolsNote))
-    if (!pro) rows.push(h('p', { class: 'muted' }, 'Pro review tools: keep rules, auto-accept and CSV export. Free review stays as it is.'))
+    if (!pro) rows.push(h('p', { class: 'muted' }, t('finder.proNote')))
     return h('div', { class: 'tools' }, ...rows)
   }
 
@@ -365,7 +375,7 @@ export function openDuplicateFinder(host: FinderHost): void {
     if (needsApproval) {
       const key = groupKey(group)
       const ok = approved.has(key)
-      const btn = h('button', { class: ok ? 'primary' : 'ghost' }, ok ? 'Approved' : 'Approve this group')
+      const btn = h('button', { class: ok ? 'primary' : 'ghost' }, ok ? t('finder.approved') : t('finder.approveGroup'))
       btn.addEventListener('click', () => { if (ok) approved.delete(key); else approved.add(key); renderReview() })
       card.append(h('div', { class: 'row', style: 'margin-top:8px' }, btn))
     }
