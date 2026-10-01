@@ -62,7 +62,7 @@ for (const [field, [text, max]] of Object.entries(LIMITS)) {
 // One entry per shipped _locales code; title and summary are the same text as
 // the manifest's appName / appDescription, so store and manifest never drift.
 {
-  const localized: Record<string, { title?: string; summary?: string }> = listing.cws.localized ?? {}
+  const localized: Record<string, { title?: string; summary?: string; description?: string[] }> = listing.cws.localized ?? {}
   const codes = localeCodes()
   check(
     codes.join() === Object.keys(localized).sort().join(),
@@ -75,6 +75,15 @@ for (const [field, [text, max]] of Object.entries(LIMITS)) {
     const s = entry.summary ?? ''
     check(t.length > 0 && t.length <= MESSAGE_LIMITS.appName, `cws.localized.${code}.title: ${t.length} chars (max ${MESSAGE_LIMITS.appName})`)
     check(s.length > 0 && s.length <= MESSAGE_LIMITS.appDescription, `cws.localized.${code}.summary: ${s.length} chars (max ${MESSAGE_LIMITS.appDescription})`)
+    // Long description: en is cws.description; every other locale carries its own.
+    const d = (code === DEFAULT_LOCALE ? listing.cws.description : entry.description) as string[] | undefined
+    const dText = Array.isArray(d) && d.every((p) => typeof p === 'string' && p.length > 0) ? d.join('\n\n') : ''
+    // Working cap 16,000 chars (the public CWS listing docs state no description limit: developer.chrome.com/docs/webstore/cws-dashboard-listing); keep localized copy near 2,500.
+    check(dText.length >= 250 && dText.length <= 16000, `cws.localized.${code}.description: ${dText.length} chars (250-16000)`)
+    if (code !== DEFAULT_LOCALE) {
+      check(dText.includes('Sylphx') && dText.includes('https://sylphx.com'), `cws.localized.${code}.description carries the "by Sylphx" line`)
+      check(dText.includes('9.99') || dText.includes('9,99'), `cws.localized.${code}.description states the Pro price`)
+    }
     check(t === msgs.appName?.message && s === msgs.appDescription?.message, `cws.localized.${code} equals _locales/${code} appName/appDescription`)
   }
   check(listing.cws.locale === DEFAULT_LOCALE, `cws.locale == ${DEFAULT_LOCALE}`)
