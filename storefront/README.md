@@ -15,6 +15,7 @@ Screenshots and post drafts live here too.
    directly — the dashboard is a consumer of this file, not a source.
 2. Run `bun run listing:check` locally; CI enforces the same limits:
    - CWS summary ≤ 132 chars, CWS detailed description ≤ 16,000 chars
+     (also each `cws.localized.<code>.description`; keep those near 2,500)
    - Edge detailed description ≤ 10,000 chars
    - AMO summary ≤ 250 chars, AMO detailed description ≤ 10,000 chars
    - names: CWS ≤ 75, Edge ≤ 45, AMO ≤ 50
