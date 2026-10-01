@@ -53,6 +53,15 @@ const ja: Translations = {
       animation: "アニメーション",
       collage: "コラージュ",
     },
+    dateFilter: {
+      label: "Date filter",
+      hint: "Pro: only items from these days",
+      off: "Any date",
+      before: "Before a date",
+      after: "After a date",
+      between: "Between two dates",
+      pro: "Pro: Get Pro",
+    },
     license: {
       label: "Pro ライセンス",
       hint: "端末内で検証。外部に送信されません",

@@ -53,6 +53,15 @@ const de: Translations = {
       animation: "Animationen",
       collage: "Collagen",
     },
+    dateFilter: {
+      label: "Date filter",
+      hint: "Pro: only items from these days",
+      off: "Any date",
+      before: "Before a date",
+      after: "After a date",
+      between: "Between two dates",
+      pro: "Pro: Get Pro",
+    },
     license: {
       label: "Pro-Lizenz",
       hint: "Lokal geprüft; verlässt das Gerät nie",

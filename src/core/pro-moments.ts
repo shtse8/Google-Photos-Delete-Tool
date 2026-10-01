@@ -12,7 +12,7 @@ export const PRO_TOKEN_KEY = 'proToken'
 
 export const PRO_URL = 'https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro'
 
-export type ProMedium = 'dryrun_teaser' | 'post_run'
+export type ProMedium = 'dryrun_teaser' | 'post_run' | 'date_filter'
 
 /** The README #pro URL with UTM parameters (before the anchor). */
 export function proUrl(medium: ProMedium): string {
@@ -64,4 +64,13 @@ export function buildDryRunTeaser(counts: TypeCounts, total: number, isPro: bool
     linkLabel: 'Get Pro',
     url: proUrl('dryrun_teaser'),
   }
+}
+
+/** The date-filter wording shared by the popup and the userscript panel. */
+export function dateReportLine(report: { matched: number; skippedUnreadable: number; total: number }): string {
+  const n = (v: number): string => v.toLocaleString('en-US')
+  const base = `${n(report.matched)} of ${n(report.total)} items match the date filter.`
+  return report.skippedUnreadable > 0
+    ? `${base} ${n(report.skippedUnreadable)} items skipped: date not readable.`
+    : base
 }

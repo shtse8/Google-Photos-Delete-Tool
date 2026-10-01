@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-10-01
+
+### Added
+- Pro date filter: delete only items before a date, after a date, or between
+  two dates (end days included, local calendar days), combined with the type
+  filter when one is chosen. Controls sit next to the type filter in the popup
+  and the userscript panel; free users see them disabled with a Get Pro link
+  (`utm_medium=date_filter`).
+- Dates are read from the tile labels the scan already uses ("2 Jan 2020",
+  "10 mars 2012", "Mar 3, 2024", "2020-01-01"). A tile whose date cannot be
+  read is never selected, and a date-filtered dry run reports matched,
+  skipped and total counts ("N items skipped: date not readable").
+- README notes that albums work by opening the album.
+- Nothing free changes: batch bounds, consent, postconditions and the dry run
+  are as before.
+
 ## [3.3.0] - 2026-10-01
 
 ### Added

@@ -53,6 +53,15 @@ const zh: Translations = {
       animation: "动画",
       collage: "拼贴",
     },
+    dateFilter: {
+      label: "Date filter",
+      hint: "Pro: only items from these days",
+      off: "Any date",
+      before: "Before a date",
+      after: "After a date",
+      between: "Between two dates",
+      pro: "Pro: Get Pro",
+    },
     license: {
       label: "Pro 许可证",
       hint: "本地验证，绝不离开设备",

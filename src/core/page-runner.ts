@@ -15,7 +15,8 @@ import { findConfirmButton, findConfirmDialog, findEmptyTrashButton, isTrashEmpt
 import { sleep } from './utils'
 import { buildDiagnosticIssueUrl, diagnostics } from './diagnostics'
 import { verifyLicense } from './license'
-import { classifyLabel, type PhotoFilter, type PhotoType } from './photo-filter'
+import { PRO_FILTER_ERROR, classifyLabel, filterRequiresPro, type PhotoFilter, type PhotoType } from './photo-filter'
+import type { DateDryRunReport } from './delete-engine'
 import type { RunStatus } from './status'
 import {
   CONSENT_KEY,
@@ -32,6 +33,14 @@ import { RunInProgressError, StopRequested, waitUntilAbortable } from './run-occ
 
 export { ConsentRequiredError, PermanentActionRequiredError } from './consent'
 export { RunInProgressError }
+
+export { PRO_FILTER_ERROR }
+export class ProRequiredError extends Error {
+  constructor() {
+    super(PRO_FILTER_ERROR)
+    this.name = 'ProRequiredError'
+  }
+}
 
 export interface PanelRunOptions {
   maxCount: number
@@ -50,6 +59,8 @@ export interface RunnerStatus {
 export interface DryRunSummary {
   total: number
   counts: Record<PhotoType, number>
+  /** Matched / skipped-unreadable / total, only for a date-filtered dry run. */
+  dateReport?: DateDryRunReport
 }
 
 const LICENSE_KEY = 'gpdt_pro_token_v3'
@@ -191,6 +202,7 @@ export class PageRunner {
       emptyTrashAck: readLocalAcknowledgement(EMPTY_TRASH_ACK_KEY),
     })
     if (!admission.ok) throwForDestructiveRefusal(admission.reason)
+    if (filterRequiresPro(opts.filter) && !(await this.isPro())) throw new ProRequiredError()
     this.running = true
     this.summary = null
     this.progress = null
@@ -211,6 +223,8 @@ export class PageRunner {
       const result = await engine.run()
       if (opts.dryRun && !engine.isStopped && result.status === 'done') {
         this.summary = this.buildDryRunSummary(engine.getDryRunLabels())
+        const dateReport = engine.getDateReport()
+        if (dateReport) this.summary.dateReport = dateReport
       }
 
       // Empty-trash chain: only after a clean, real run that deleted ≥1.

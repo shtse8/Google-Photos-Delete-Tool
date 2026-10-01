@@ -167,6 +167,29 @@
       </div>
 
       <div class="field">
+        <label class="field-label" for="date-mode">
+          <span class="field-icon" id="field-icon-date" aria-hidden="true"></span>
+          <span class="field-text">
+            <span class="field-name" data-i18n="settings.dateFilter.label">Date filter</span>
+            <span class="field-hint" data-i18n="settings.dateFilter.hint">Pro: only items from these days</span>
+          </span>
+        </label>
+        <select id="date-mode" class="field-input" disabled>
+          <option value="off" data-i18n="settings.dateFilter.off">Any date</option>
+          <option value="before" data-i18n="settings.dateFilter.before">Before a date</option>
+          <option value="after" data-i18n="settings.dateFilter.after">After a date</option>
+          <option value="between" data-i18n="settings.dateFilter.between">Between two dates</option>
+        </select>
+      </div>
+      <div class="field hidden" id="date-row">
+        <input type="date" id="date-a" class="field-input date-input" disabled aria-label="Date" />
+        <input type="date" id="date-b" class="field-input date-input hidden" disabled aria-label="End date" />
+      </div>
+      <div class="field" id="date-pro-row">
+        <a class="license-get hidden" id="date-pro" href="https://github.com/SylphxAI/Google-Photos-Delete-Tool?utm_source=extension&amp;utm_medium=date_filter&amp;utm_campaign=pro#pro" target="_blank" rel="noopener" data-i18n="settings.dateFilter.pro">Pro: Get Pro</a>
+      </div>
+
+      <div class="field">
         <label class="field-label" for="license-token">
           <span class="field-icon" id="field-icon-license" aria-hidden="true"></span>
           <span class="field-text">
@@ -228,6 +251,7 @@
     </div>
 
     <div id="pro-teaser" style="display:none"></div>
+    <p class="license-status ok hidden" id="date-report" role="status"></p>
 
     <!-- ─── Utility row ─────────────────────────────────────────── -->
     <div class="utility hidden" id="utility">

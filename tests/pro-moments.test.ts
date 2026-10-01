@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest'
-import { buildDryRunTeaser, countLabelTypes, proUrl } from '../src/core/pro-moments'
+import { buildDryRunTeaser, countLabelTypes, dateReportLine, proUrl } from '../src/core/pro-moments'
 import { renderProTeaser } from '../src/ui/pro-teaser/teaser'
 import { showPostRunPrompt } from '../src/ui/post-run/prompt'
 import { claimPostRunPrompt } from '../src/core/post-run-prompt'
@@ -75,5 +75,18 @@ describe('teaser dismissal', () => {
     const other = buildDryRunTeaser(countLabelTypes([...labels, 'Video - 2 Jan 2020, 09:00:00']), labels.length + 1, false)!
     renderProTeaser(host, other)
     expect(host.style.display).toBe('block')
+  })
+})
+
+describe('date filter report line and link', () => {
+  it('names the skipped-unreadable count exactly', () => {
+    expect(dateReportLine({ matched: 3, skippedUnreadable: 2, total: 9 }))
+      .toBe('3 of 9 items match the date filter. 2 items skipped: date not readable.')
+    expect(dateReportLine({ matched: 3, skippedUnreadable: 0, total: 9 })).toBe('3 of 9 items match the date filter.')
+  })
+  it('the Get Pro link carries utm_medium=date_filter and the #pro anchor', () => {
+    const u = new URL(proUrl('date_filter'))
+    expect(u.searchParams.get('utm_medium')).toBe('date_filter')
+    expect(u.hash).toBe('#pro')
   })
 })

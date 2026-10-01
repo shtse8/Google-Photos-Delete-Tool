@@ -1,7 +1,7 @@
 # Pro — Local License Verification (zero-server)
 
-Pro unlocks the **analysis layer**: type filters and the dry-run
-report/export. The delete engine, dry-run, and empty-trash are free
+Pro unlocks the **analysis layer**: type filters, the date filter and
+the dry-run report/export. The delete engine, dry-run, and empty-trash are free
 forever.
 
 The license is an Ed25519-signed token verified entirely in the user's

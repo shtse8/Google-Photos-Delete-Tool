@@ -17,7 +17,7 @@
  * use the raw API — they are callback-based in both browsers.
  */
 import { DEFAULT_CONFIG, DeleteEngine, type Progress } from '../core'
-import { describeFilter, type PhotoFilter } from '../core/photo-filter'
+import { PRO_FILTER_ERROR, describeFilter, filterRequiresPro, type PhotoFilter } from '../core/photo-filter'
 import { openDuplicateFinder } from '../ui/dupes/finder'
 import { browserDom } from '../core/browser-dom'
 import { findConfirmButton, findConfirmDialog, findEmptyTrashButton, isTrashEmpty } from '../core/selectors'
@@ -95,6 +95,9 @@ const start = async (opts: StartOptions): Promise<{ ok: boolean; error?: string 
     const dryRun = opts.dryRun ?? false
     const emptyTrashAfter = opts.emptyTrashAfter ?? false
     const filter = opts.filter ?? { kind: 'all' as const }
+    if (filterRequiresPro(filter) && !(await isProActive())) {
+      return { ok: false, error: PRO_FILTER_ERROR }
+    }
 
     let consent: Acknowledgement = { readable: true, acknowledged: false }
     let emptyTrashAck: Acknowledgement = { readable: true, acknowledged: false }
@@ -405,7 +408,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const dryRunLabels = engine ? engine.getDryRunLabels() : []
       const labels = dryRunLabels.length > 0 ? [...dryRunLabels] : undefined
       const total = lastProgress?.total ?? (labels ? labels.length : undefined)
-      sendResponse({ summary: labels ? { total: total ?? labels.length, labels } : null })
+      sendResponse({
+        summary: labels ? { total: total ?? labels.length, labels } : null,
+        dateReport: engine ? engine.getDateReport() : null,
+      })
       break
     }
     default:

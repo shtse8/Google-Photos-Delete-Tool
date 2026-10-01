@@ -899,3 +899,5 @@ body {
   text-decoration: underline;
 }
 .license-get:hover { color: inherit; }
+
+.date-input { width: 130px; text-align: left; appearance: auto; -moz-appearance: auto; }

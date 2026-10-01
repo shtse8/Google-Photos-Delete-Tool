@@ -2,7 +2,7 @@ import './popup.css'
 import { formatElapsed } from '../../core/utils'
 import { buildDiagnosticIssueUrl, type DiagnosticBlob } from '../../core/diagnostics'
 import { verifyLicense } from '../../core/license'
-import { PRO_TOKEN_KEY, buildDryRunTeaser, countLabelTypes } from '../../core/pro-moments'
+import { PRO_TOKEN_KEY, buildDryRunTeaser, countLabelTypes, dateReportLine } from '../../core/pro-moments'
 import { renderProTeaser } from '../../ui/pro-teaser/teaser'
 import { TRASH_URL } from '../../core/empty-trash-baton'
 import {
@@ -17,7 +17,7 @@ import {
   type Acknowledgement,
 } from '../../core/consent'
 import { storageGet, storageSet, tabsCreate, tabsQuery, tabsSendMessage } from '../api'
-import type { PhotoFilter, PhotoType } from '../../core/photo-filter'
+import { buildFilterFromControls, type PhotoFilter } from '../../core/photo-filter'
 import { ACTIVE_STATUSES, TERMINAL_STATUSES, type RunStatus } from '../../core/status'
 import {
   LOCALES,
@@ -41,6 +41,11 @@ const dryRunInput     = document.getElementById('dry-run')        as HTMLInputEl
 const emptyTrashInput = document.getElementById('empty-trash')    as HTMLInputElement
 const emptyTrashWarning = document.getElementById('empty-trash-warning') as HTMLElement
 const filterSelect    = document.getElementById('filter')         as HTMLSelectElement
+const dateModeSelect  = document.getElementById('date-mode')      as HTMLSelectElement
+const dateRow         = document.getElementById('date-row')       as HTMLElement
+const dateAInput      = document.getElementById('date-a')         as HTMLInputElement
+const dateBInput      = document.getElementById('date-b')         as HTMLInputElement
+const dateProLink     = document.getElementById('date-pro')       as HTMLElement
 const licenseInput    = document.getElementById('license-token')  as HTMLInputElement
 const licenseBtn      = document.getElementById('license-btn')    as HTMLButtonElement
 const licenseStatus   = document.getElementById('license-status') as HTMLElement
@@ -88,6 +93,7 @@ mountIcon('field-icon-max',  'hash')
 mountIcon('field-icon-dry',  'flask')
 mountIcon('field-icon-empty','trashX')
 mountIcon('field-icon-filter','filter')
+mountIcon('field-icon-date','filter')
 mountIcon('field-icon-license','key')
 mountIcon('start-icon',      'play')
 mountIcon('pause-icon',      'pause')
@@ -102,6 +108,11 @@ let startedAt = 0
 let elapsedTimer: ReturnType<typeof setInterval> | null = null
 let proActive = false
 const proTeaserEl = document.getElementById('pro-teaser') as HTMLElement
+const dateReportEl = document.getElementById('date-report') as HTMLElement
+const showDateReport = (text: string | null): void => {
+  dateReportEl.textContent = text ?? ''
+  dateReportEl.classList.toggle('hidden', !text)
+}
 let lastReport: { total: number; labels: string[] } | null = null
 let currentView: PhotosView | null = null
 let surfaceReady = false
@@ -373,7 +384,16 @@ const refreshDryRunDependentFields = (): void => {
   maxCountInput.disabled   = lockedByEngine || lockedByDryRun
   emptyTrashInput.disabled = lockedByEngine || lockedByDryRun
   filterSelect.disabled    = lockedByEngine || !proActive
+  dateModeSelect.disabled  = lockedByEngine || !proActive
+  dateAInput.disabled      = lockedByEngine || !proActive
+  dateBInput.disabled      = lockedByEngine || !proActive
+  dateProLink.classList.toggle('hidden', proActive)
+  const mode = dateModeSelect.value
+  dateRow.classList.toggle('hidden', mode === 'off')
+  dateBInput.classList.toggle('hidden', mode !== 'between')
 }
+
+dateModeSelect.addEventListener('change', refreshDryRunDependentFields)
 
 // ─── Trusted HTML fragments for i18n ────────────────────────────
 
@@ -515,20 +535,23 @@ consentCancel.addEventListener('click', () => {
 
 // ─── Button handlers ────────────────────────────────────────────
 
-const readFilter = (): PhotoFilter => {
-  const value = filterSelect.value
-  return value === 'all' ? { kind: 'all' } : { kind: 'type', type: value as Exclude<PhotoType, 'unknown'> }
-}
+const readFilter = (): { ok: true; filter: PhotoFilter } | { ok: false; error: string } =>
+  buildFilterFromControls(filterSelect.value, proActive ? dateModeSelect.value : 'off', dateAInput.value, dateBInput.value)
 
 startBtn.addEventListener('click', async () => {
   if (uiState !== 'idle' || !surfaceReady) return
   startBtn.disabled = true
   try {
+    const built = readFilter()
+    if (!built.ok) {
+      showError(built.error)
+      return
+    }
     const opts = {
       maxCount: readMaxCount(),
       dryRun: dryRunInput.checked,
       emptyTrashAfter: emptyTrashInput.checked,
-      filter: readFilter(),
+      filter: built.filter,
     }
     saveSettings()
     hideError()
@@ -740,6 +763,7 @@ function applyProgressUpdate(data: ProgressMessageData): void {
   } else if (TERMINAL_STATUSES.has(status as RunStatus)) {
     utilityRow.classList.add('hidden')
     lastReport = null
+    showDateReport(null)
     renderProTeaser(proTeaserEl, null)
   } else {
     renderProTeaser(proTeaserEl, null)
@@ -754,6 +778,8 @@ function applyProgressUpdate(data: ProgressMessageData): void {
 async function refreshReport(): Promise<void> {
   const res = await sendToContent({ action: 'report' })
   if (!res || typeof res !== 'object') return
+  const dateReport = (res as { dateReport?: { matched: number; skippedUnreadable: number; total: number } | null }).dateReport
+  showDateReport(dateReport ? dateReportLine(dateReport) : null)
   const summary = (res as { summary?: { total: number; labels: string[] } | null }).summary
   if (summary && summary.labels.length > 0) {
     lastReport = summary

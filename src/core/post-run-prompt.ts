@@ -28,7 +28,7 @@ export interface PostRunResult {
   status: RunStatus
   deleted: number
   /** Engine filter kind: 'ids' is a duplicate cleanup. */
-  filterKind: 'all' | 'type' | 'ids'
+  filterKind: 'all' | 'type' | 'date' | 'ids'
   /** The run is about to navigate to /trash, which reloads the page. */
   navigatingToTrash?: boolean
 }

@@ -29,6 +29,7 @@ export {
   StopRequested,
   type Progress,
   type EngineOptions,
+  type DateDryRunReport,
 } from './delete-engine'
 export {
   RunInProgressError,
@@ -55,6 +56,12 @@ export {
   tileMatchesFilter,
   describeFilter,
   labelTypeToken,
+  parseLabelDay,
+  inputDayKey,
+  dayInRange,
+  filterRequiresPro,
+  buildFilterFromControls,
+  type DateRange,
   type PhotoType,
   type PhotoFilter,
 } from './photo-filter'
