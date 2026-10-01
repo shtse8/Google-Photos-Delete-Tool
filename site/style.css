@@ -42,7 +42,7 @@ section{padding-block:64px}
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;border-radius:10px;background:var(--acc);color:var(--accfg);font-weight:650;text-decoration:none;border:1px solid transparent;transition:background .15s}
 .btn:hover{background:var(--acc-h);color:var(--accfg)}
-.btn-sm{min-height:36px;padding:0 14px;font-size:.875rem;border-radius:8px}
+.btn-sm{min-height:36px;padding:0 14px;white-space:nowrap;font-size:.875rem;border-radius:8px}
 .btn-ghost{background:transparent;color:var(--fg);border-color:var(--line2)}
 .btn-ghost:hover{background:var(--bg2);color:var(--fg)}
 .cta-row{display:flex;flex-wrap:wrap;gap:12px}
