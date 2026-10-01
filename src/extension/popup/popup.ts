@@ -2,6 +2,8 @@ import './popup.css'
 import { formatElapsed } from '../../core/utils'
 import { buildDiagnosticIssueUrl, type DiagnosticBlob } from '../../core/diagnostics'
 import { verifyLicense } from '../../core/license'
+import { PRO_TOKEN_KEY, buildDryRunTeaser, countLabelTypes } from '../../core/pro-moments'
+import { renderProTeaser } from '../../ui/pro-teaser/teaser'
 import { TRASH_URL } from '../../core/empty-trash-baton'
 import {
   admitSurface,
@@ -99,11 +101,11 @@ let uiState: UIState = 'idle'
 let startedAt = 0
 let elapsedTimer: ReturnType<typeof setInterval> | null = null
 let proActive = false
+const proTeaserEl = document.getElementById('pro-teaser') as HTMLElement
 let lastReport: { total: number; labels: string[] } | null = null
 let currentView: PhotosView | null = null
 let surfaceReady = false
 
-const PRO_TOKEN_KEY = 'proToken'
 
 // ─── Locale init ────────────────────────────────────────────────
 
@@ -738,6 +740,9 @@ function applyProgressUpdate(data: ProgressMessageData): void {
   } else if (TERMINAL_STATUSES.has(status as RunStatus)) {
     utilityRow.classList.add('hidden')
     lastReport = null
+    renderProTeaser(proTeaserEl, null)
+  } else {
+    renderProTeaser(proTeaserEl, null)
   }
 
   // State transitions
@@ -753,6 +758,11 @@ async function refreshReport(): Promise<void> {
   if (summary && summary.labels.length > 0) {
     lastReport = summary
     exportBtn.classList.toggle('hidden', !proActive)
+    // Free users: show what a type filter would act on. Real runs have no
+    // dry-run labels, so no summary and no teaser.
+    renderProTeaser(proTeaserEl, buildDryRunTeaser(countLabelTypes(summary.labels), summary.labels.length, proActive))
+  } else {
+    renderProTeaser(proTeaserEl, null)
   }
 }
 

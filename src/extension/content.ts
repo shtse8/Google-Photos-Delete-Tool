@@ -43,6 +43,8 @@ import {
   waitUntilAbortable,
 } from '../core/run-occupancy'
 import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../core/post-run-prompt'
+import { PRO_TOKEN_KEY } from '../core/pro-moments'
+import { verifyLicense } from '../core/license'
 import { showPostRunPrompt } from '../ui/post-run/prompt'
 import { createChromeBaton, runtimeSendMessage, storageGet, storageRemove, storageSet } from './api'
 
@@ -165,6 +167,16 @@ const isRunning = (): boolean =>
 
 // ─── One-time rate/share prompt (after a successful real run) ───
 
+/** Pro state for the post-run card: the popup stores the token, verified locally. */
+async function isProActive(): Promise<boolean> {
+  try {
+    const token = (await storageGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
+    return typeof token === 'string' && (await verifyLicense(token)).ok
+  } catch {
+    return false
+  }
+}
+
 async function maybeShowPostRunPrompt(
   local: DeleteEngine,
   dryRun: boolean,
@@ -188,7 +200,7 @@ async function maybeShowPostRunPrompt(
   }, {
     isShown: async () => Boolean((await storageGet([POST_RUN_PROMPT_KEY]))[POST_RUN_PROMPT_KEY]),
     markShown: () => storageSet({ [POST_RUN_PROMPT_KEY]: true }),
-  }, detectBrowser(navigator.userAgent))
+  }, detectBrowser(navigator.userAgent), await isProActive())
   if (prompt) showPostRunPrompt(prompt)
 }
 

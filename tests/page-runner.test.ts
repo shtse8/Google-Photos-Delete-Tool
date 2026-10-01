@@ -294,6 +294,16 @@ describe('PageRunner — empty-trash chain', () => {
 })
 
 describe('PageRunner — dry-run summary', () => {
+  it('has no summary after a real run, so no Pro teaser is built', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(['Screenshot - shot'])
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    runner.acknowledgeConsent()
+    await runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
+    expect(runner.getSummary()).toBeNull()
+  })
+
   it('builds a type-count summary from a dry-run', async () => {
     stubWindow()
     const dom = new RunnerFakeDom()

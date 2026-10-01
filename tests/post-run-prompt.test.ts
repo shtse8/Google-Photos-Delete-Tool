@@ -41,14 +41,14 @@ describe('shouldShowPostRunPrompt', () => {
 describe('claimPostRunPrompt', () => {
   it('shows once and persists the flag', async () => {
     const st = memStorage()
-    expect(await claimPostRunPrompt(ok, st, 'chrome')).not.toBeNull()
+    expect(await claimPostRunPrompt(ok, st, 'chrome', false)).not.toBeNull()
     expect(st.shown).toBe(true)
-    expect(await claimPostRunPrompt(ok, st, 'chrome')).toBeNull()
+    expect(await claimPostRunPrompt(ok, st, 'chrome', false)).toBeNull()
   })
   it('does not set the flag when conditions fail', async () => {
     const st = memStorage()
     for (const r of [{ ...ok, dryRun: true }, { ...ok, status: 'error' as const }, { ...ok, stopped: true }, { ...ok, deleted: 0 }]) {
-      expect(await claimPostRunPrompt(r, st, 'chrome')).toBeNull()
+      expect(await claimPostRunPrompt(r, st, 'chrome', false)).toBeNull()
     }
     expect(st.shown).toBe(false)
   })
@@ -57,12 +57,12 @@ describe('claimPostRunPrompt', () => {
       isShown: async () => { throw new Error('unreadable') },
       markShown: async () => {},
     }
-    expect(await claimPostRunPrompt(ok, broken, 'chrome')).toBeNull()
+    expect(await claimPostRunPrompt(ok, broken, 'chrome', false)).toBeNull()
   })
   it('uses the real count, singular/plural and duplicate wording', async () => {
-    const p = await claimPostRunPrompt(ok, memStorage(), 'chrome')
+    const p = await claimPostRunPrompt(ok, memStorage(), 'chrome', false)
     expect(p?.shareText).toMatch(/^I just cleared 12 photos from Google Photos with this free extension: https:\/\//)
-    const d = await claimPostRunPrompt({ ...ok, deleted: 1, filterKind: 'ids' }, memStorage(), 'chrome')
+    const d = await claimPostRunPrompt({ ...ok, deleted: 1, filterKind: 'ids' }, memStorage(), 'chrome', false)
     expect(d?.kind).toBe('duplicates')
     expect(d?.shareText).toContain('1 duplicate from')
   })
@@ -83,12 +83,31 @@ describe('links', () => {
     expect(ratingUrlFor('edge')).toBeNull()
   })
   it('share link carries the share medium', async () => {
-    const p = await claimPostRunPrompt(ok, memStorage(), 'chrome')
+    const p = await claimPostRunPrompt(ok, memStorage(), 'chrome', false)
     expect(new URL(p!.shareUrl).searchParams.get('utm_medium')).toBe('share')
   })
   it('detects browsers', () => {
     expect(detectBrowser('Mozilla/5.0 Chrome/120 Safari/537 Edg/120')).toBe('edge')
     expect(detectBrowser('Mozilla/5.0 Gecko/20100101 Firefox/121.0')).toBe('firefox')
     expect(detectBrowser('Mozilla/5.0 Chrome/120 Safari/537')).toBe('chrome')
+  })
+})
+
+describe('post-run Get Pro button', () => {
+  it('carries a utm_medium=post_run Pro link for free users only', async () => {
+    const free = await claimPostRunPrompt(ok, memStorage(), 'chrome', false)
+    expect(free?.proUrl).toBeTruthy()
+    const u = new URL(free!.proUrl!)
+    expect(u.hash).toBe('#pro')
+    expect(u.searchParams.get('utm_medium')).toBe('post_run')
+    expect(u.searchParams.get('utm_source')).toBe('extension')
+    const pro = await claimPostRunPrompt(ok, memStorage(), 'chrome', true)
+    expect(pro).not.toBeNull()
+    expect(pro?.proUrl).toBeNull()
+  })
+  it('keeps the show-once rule', async () => {
+    const st = memStorage()
+    expect(await claimPostRunPrompt(ok, st, 'chrome', false)).not.toBeNull()
+    expect(await claimPostRunPrompt(ok, st, 'chrome', false)).toBeNull()
   })
 })

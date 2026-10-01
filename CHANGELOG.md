@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-10-01
+
+### Added
+- Dry-run teaser for free users: after a dry run the popup and userscript
+  panel show the per-type counts the scan already saw ("This view has 12
+  screenshots, 40 videos.") with one line about Pro and a dismissable Get
+  Pro link. Pro users do not see it, and a real run never does.
+- "Get Pro" button on the one-time post-run rate/share card, free users
+  only. The card still shows once with the same rules.
+- Both links open the README `#pro` section with UTM parameters
+  (`utm_medium=dryrun_teaser` / `post_run`). No network call, no telemetry;
+  deleting, dry run, duplicates and empty trash stay free.
+
 ## [3.2.1] - 2026-10-01
 
 ### Added

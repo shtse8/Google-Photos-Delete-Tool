@@ -14,6 +14,8 @@ import { PHOTO_TYPES, type PhotoFilter, type PhotoType } from '../../core/photo-
 import { openDuplicateFinder } from '../dupes/finder'
 import { sleep } from '../../core/utils'
 import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../../core/post-run-prompt'
+import { buildDryRunTeaser } from '../../core/pro-moments'
+import { renderProTeaser } from '../pro-teaser/teaser'
 import { showPostRunPrompt } from '../post-run/prompt'
 
 const ROOT_ID = 'gpdt-panel-root'
@@ -160,6 +162,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
       </div>
     </div>
     <button class="gpdt-ghost" id="gpdt-dupes" style="width:100%;margin-top:8px">Find duplicates</button>
+    <div id="gpdt-pro-teaser" style="display:none"></div>
     <div class="gpdt-footer">
       <button class="gpdt-ghost" id="gpdt-report">Report issue</button>
       <button class="gpdt-ghost" id="gpdt-copy" style="display:none">Copy summary</button>
@@ -193,6 +196,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   const consentPermanent = $<HTMLElement>('gpdt-consent-permanent')
   const copyBtn = $<HTMLButtonElement>('gpdt-copy')
   const exportBtn = $<HTMLButtonElement>('gpdt-export')
+  const proTeaserEl = $<HTMLElement>('gpdt-pro-teaser')
   const scopeEl = $<HTMLElement>('gpdt-scope')
 
   const admission = admitSurface(window.location.href)
@@ -201,6 +205,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     : 'Open photos.google.com first.'
 
   let pro = false
+  let teaserFor: unknown = null
   let pendingStart: PanelRunOptions | null = null
 
   // ─── Pro license ──────────────────────────────────────────────
@@ -411,12 +416,20 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     const summary = runner.getSummary()
     copyBtn.style.display = summary ? 'block' : 'none'
     exportBtn.style.display = summary && pro ? 'block' : 'none'
+    if (!summary && teaserFor) {
+      teaserFor = null
+      renderProTeaser(proTeaserEl, null)
+    }
     if (summary) {
       const counts = PHOTO_TYPES
         .map((t) => ({ t, n: summary.counts[t] }))
         .filter(c => c.n > 0)
         .map(c => `${FILTER_LABELS[c.t]}: ${c.n.toLocaleString()}`)
         .join(' · ')
+      if (teaserFor !== summary) {
+        teaserFor = summary
+        renderProTeaser(proTeaserEl, buildDryRunTeaser(summary.counts, summary.total, pro))
+      }
       statusEl.textContent = `Counted ${summary.total.toLocaleString()} · ${counts || 'all items'}`
     }
   }
@@ -429,7 +442,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     void claimPostRunPrompt(result, {
       isShown: async () => window.localStorage.getItem(POST_RUN_PROMPT_KEY) === '1',
       markShown: async () => window.localStorage.setItem(POST_RUN_PROMPT_KEY, '1'),
-    }, detectBrowser(navigator.userAgent)).then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
+    }, detectBrowser(navigator.userAgent), pro).then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
   })
   void refreshProState()
 }
