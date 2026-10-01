@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "message": "Google フォト一括削除ツール – 重複写真の検出と一括削除",
+    "description": "Store name of the extension (max 75 characters)."
+  },
+  "appNameEdge": {
+    "message": "Google フォト一括削除ツール",
+    "description": "Short name used by the Edge and Firefox builds (max 45 characters)."
+  },
+  "appShortName": {
+    "message": "フォト一括削除",
+    "description": "Short name shown where space is tight (max 12 characters)."
+  },
+  "appDescription": {
+    "message": "重複した写真を見つけて、Google フォトで一括削除。まずはドライラン、削除した写真はゴミ箱へ。処理はすべてブラウザ内で完結します。",
+    "description": "One-sentence description (max 132 characters)."
+  },
+  "appActionTitle": {
+    "message": "Google フォト一括削除",
+    "description": "Toolbar button tooltip."
+  }
+}

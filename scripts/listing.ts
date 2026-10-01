@@ -12,6 +12,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
+import { DEFAULT_LOCALE, MESSAGE_LIMITS, localeCodes, readMessages } from './lib/locales'
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const read = (p: string) => readFileSync(resolve(root, p), 'utf-8')
@@ -55,6 +56,29 @@ const LIMITS = {
 
 for (const [field, [text, max]] of Object.entries(LIMITS)) {
   check(typeof text === 'string' && text.length > 0 && text.length <= max, `${field}: ${text.length} chars (max ${max})`)
+}
+
+// ─── Per-language dashboard listing (cws.localized) ──────────────
+// One entry per shipped _locales code; title and summary are the same text as
+// the manifest's appName / appDescription, so store and manifest never drift.
+{
+  const localized: Record<string, { title?: string; summary?: string }> = listing.cws.localized ?? {}
+  const codes = localeCodes()
+  check(
+    codes.join() === Object.keys(localized).sort().join(),
+    `cws.localized covers exactly the _locales codes (${codes.join(', ')})`,
+  )
+  for (const code of codes) {
+    const entry = localized[code] ?? {}
+    const msgs = readMessages(code)
+    const t = entry.title ?? ''
+    const s = entry.summary ?? ''
+    check(t.length > 0 && t.length <= MESSAGE_LIMITS.appName, `cws.localized.${code}.title: ${t.length} chars (max ${MESSAGE_LIMITS.appName})`)
+    check(s.length > 0 && s.length <= MESSAGE_LIMITS.appDescription, `cws.localized.${code}.summary: ${s.length} chars (max ${MESSAGE_LIMITS.appDescription})`)
+    check(t === msgs.appName?.message && s === msgs.appDescription?.message, `cws.localized.${code} equals _locales/${code} appName/appDescription`)
+  }
+  check(listing.cws.locale === DEFAULT_LOCALE, `cws.locale == ${DEFAULT_LOCALE}`)
+  check(listing.cws.localized?.[DEFAULT_LOCALE]?.title === listing.cws.title, 'cws.localized.en.title == cws.title')
 }
 
 // ─── Content sanity: Pro disclosure is required by store policy ──

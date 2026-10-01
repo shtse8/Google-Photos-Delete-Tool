@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "message": "Elimina Google Foto – Trova duplicati ed elimina in blocco",
+    "description": "Store name of the extension (max 75 characters)."
+  },
+  "appNameEdge": {
+    "message": "Strumento per eliminare Google Foto",
+    "description": "Short name used by the Edge and Firefox builds (max 45 characters)."
+  },
+  "appShortName": {
+    "message": "Elimina Foto",
+    "description": "Short name shown where space is tight (max 12 characters)."
+  },
+  "appDescription": {
+    "message": "Trova le foto duplicate ed eliminale in blocco su Google Foto. Prima una prova, poi il cestino. Tutto gira nel tuo browser.",
+    "description": "One-sentence description (max 132 characters)."
+  },
+  "appActionTitle": {
+    "message": "Elimina Google Foto",
+    "description": "Toolbar button tooltip."
+  }
+}

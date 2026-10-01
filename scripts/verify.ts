@@ -16,6 +16,7 @@ import { readFileSync, existsSync } from 'fs'
 import { SUPPORTED_MATCH_PATTERN } from '../src/core/surface'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'path'
+import { DEFAULT_LOCALE, MESSAGE_KEYS, MESSAGE_LIMITS, localeCodes, messageProblems, readMessages } from './lib/locales'
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf-8'))
@@ -47,6 +48,9 @@ console.log('verify: package version =', pkg.version)
   const m = JSON.parse(read('dist/extension/manifest.json'))
   check(m.version === pkg.version, `chrome manifest version == ${pkg.version}`)
   check(m.manifest_version === 3, 'chrome manifest_version == 3')
+  check(m.name === '__MSG_appName__' && m.short_name === '__MSG_appShortName__' && m.description === '__MSG_appDescription__', 'chrome name/short_name/description use __MSG_*__ keys')
+  check(m.action?.default_title === '__MSG_appActionTitle__', 'chrome action.default_title uses __MSG_appActionTitle__')
+  check(m.default_locale === DEFAULT_LOCALE, `chrome default_locale == ${DEFAULT_LOCALE}`)
   check(
     typeof m.background?.service_worker === 'string',
     'chrome background.service_worker present',
@@ -61,7 +65,8 @@ console.log('verify: package version =', pkg.version)
 {
   const m = JSON.parse(read('dist/extension-edge/manifest.json'))
   check(m.version === pkg.version, `edge manifest version == ${pkg.version}`)
-  check(typeof m.name === 'string' && m.name.length > 0 && m.name.length <= 45, `edge manifest name ≤ 45 chars (${m.name?.length})`)
+  check(m.name === '__MSG_appNameEdge__', 'edge manifest name uses __MSG_appNameEdge__ (≤ 45 chars in every locale)')
+  check(m.default_locale === DEFAULT_LOCALE, `edge default_locale == ${DEFAULT_LOCALE}`)
   check(m.manifest_version === 3, 'edge manifest_version == 3')
   check(m.permissions?.length === 1 && m.permissions[0] === 'storage', 'edge permissions == ["storage"]')
   check(typeof m.background?.service_worker === 'string', 'edge background.service_worker present')
@@ -75,6 +80,8 @@ console.log('verify: package version =', pkg.version)
   const m = JSON.parse(read('dist/extension-firefox/manifest.json'))
   check(m.version === pkg.version, `firefox manifest version == ${pkg.version}`)
   check(m.manifest_version === 3, 'firefox manifest_version == 3')
+  check(m.name === '__MSG_appNameEdge__' && m.default_locale === DEFAULT_LOCALE, 'firefox name uses __MSG_appNameEdge__ (AMO max 50) and default_locale is set')
+  check(m.browser_specific_settings?.gecko?.id === 'google-photos-delete-tool@shtse8.github.io', 'firefox gecko.id unchanged')
   check(!m.background?.service_worker, 'firefox background has NO service_worker (unsupported in Firefox MV3)')
   check(Array.isArray(m.background?.scripts) && m.background.scripts.includes('background.js'), 'firefox background.scripts includes background.js')
   check(!!m.browser_specific_settings?.gecko?.id, 'firefox browser_specific_settings.gecko.id present')
@@ -88,6 +95,23 @@ console.log('verify: package version =', pkg.version)
     m.browser_specific_settings?.gecko?.data_collection_permissions?.required?.[0] === 'none',
     'firefox gecko.data_collection_permissions declares none (AMO requires it)',
   )
+}
+
+// ─── Store locales (_locales/<code>/messages.json) ──────────────
+{
+  const codes = localeCodes()
+  check(codes.includes(DEFAULT_LOCALE), `_locales has the default locale (${DEFAULT_LOCALE})`)
+  const base = Object.keys(readMessages(DEFAULT_LOCALE)).sort().join()
+  for (const code of codes) {
+    const msgs = readMessages(code)
+    const problems = messageProblems(code, msgs)
+    check(problems.length === 0, `_locales/${code}: all ${MESSAGE_KEYS.length} keys present, within limits (${MESSAGE_KEYS.map((k) => `${k} ${msgs[k]?.message.length}/${MESSAGE_LIMITS[k]}`).join(', ')})`)
+    for (const p of problems) console.error(`    ${p}`)
+    check(Object.keys(msgs).sort().join() === base, `_locales/${code}: same keys as ${DEFAULT_LOCALE}`)
+    for (const dir of ['extension', 'extension-edge', 'extension-firefox']) {
+      check(existsSync(resolve(root, `dist/${dir}/_locales/${code}/messages.json`)), `dist/${dir}/_locales/${code}/messages.json shipped`)
+    }
+  }
 }
 
 // ─── Extension built JS ─────────────────────────────────────────

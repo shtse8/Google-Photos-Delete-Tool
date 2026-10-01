@@ -1,0 +1,22 @@
+{
+  "appName": {
+    "message": "Google 相簿批次刪除工具 – 重複照片尋找與大量清理",
+    "description": "Store name of the extension (max 75 characters)."
+  },
+  "appNameEdge": {
+    "message": "Google 相簿批次刪除工具",
+    "description": "Short name used by the Edge and Firefox builds (max 45 characters)."
+  },
+  "appShortName": {
+    "message": "相簿清理",
+    "description": "Short name shown where space is tight (max 12 characters)."
+  },
+  "appDescription": {
+    "message": "尋找重複照片，批次刪除 Google 相簿中的照片。先試跑，刪除的照片會進入垃圾桶。全部在瀏覽器本機執行。",
+    "description": "One-sentence description (max 132 characters)."
+  },
+  "appActionTitle": {
+    "message": "Google 相簿批次刪除",
+    "description": "Toolbar button tooltip."
+  }
+}
