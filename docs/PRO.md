@@ -95,6 +95,33 @@ Reading results:
 - Keep both variants until the gap is larger than noise at the observed
   purchase counts; then set the winner as the only copy and drop the other.
 
+## Paid-ads tracking
+
+Google Ads cannot measure a click that lands straight on the Chrome Web Store,
+so ads point at the landing page (`site/`, published by
+`.github/workflows/pages.yml` at
+<https://sylphxai.github.io/Google-Photos-Delete-Tool/>). It uses gtag.js
+(GA4 plus Google Ads) with Consent Mode v2: analytics and ad storage, user data
+and personalization are denied by default in the EEA, UK and CH and granted
+elsewhere, and a small banner updates them. No email, name or other personal
+data is sent.
+
+- **Payment Link redirect:** in Stripe, set the Payment Link's after-payment
+  redirect to
+  `https://sylphxai.github.io/Google-Photos-Delete-Tool/thanks.html?session_id={CHECKOUT_SESSION_ID}`.
+- **`site/config.json`:** `ga4MeasurementId` (`G-...`), `adsConversionId`
+  (`AW-...`), `addToChromeSendTo` and `purchaseSendTo` (each `AW-.../label`, one
+  Ads conversion action per event). While any value is a placeholder
+  (`XXXX`), no tag loads at all.
+- **Flow:** ad click, then landing page (`page_view`, UTM kept); the
+  **Add to Chrome** click fires `add_to_chrome_click` (Ads micro conversion)
+  and opens the store listing with the same UTM; after payment Stripe sends
+  the buyer to `thanks.html`, which fires `purchase` (US$9.99) once, with the
+  Checkout Session id as `transaction_id` so a reload is not counted twice.
+- **Public statistics:** users and rating come only from `site/stats.json`;
+  update it with its source and date.
+- **Test:** `tests/site.test.ts`.
+
 ## Sales
 
 1. **Product:** Pro is sold as a Stripe Payment Link, US$9.99 one-time and
