@@ -37,6 +37,7 @@ export interface Translations {
     dryRun: { label: string; hint: string }
     emptyTrash: { label: string; hint: string }
     dateFilter: { label: string; hint: string; off: string; before: string; after: string; between: string; pro: string }
+    presets: { label: string; hint: string; pro: string; none: string; namePlaceholder: string; save: string; apply: string; rename: string; delete: string; viewHint: string }
     filter: { label: string; hint: string; all: string; screenshot: string; video: string; photo: string; animation: string; collage: string }
     license: { label: string; hint: string; placeholder: string; activate: string; getPro: string; active: string; invalid: string }
     language: { label: string; trigger: string }
