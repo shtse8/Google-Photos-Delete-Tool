@@ -33,6 +33,9 @@ stay in your library. **Find duplicates** finds them for you:
    without changing anything. **Move to Trash** hands them to the same safe
    delete flow as the rest of the tool: a one-time confirmation, batches,
    Stop at any time, and 60 days in Trash to change your mind.
+7. **Pro review tools** (free review is unchanged; see [Pro](#pro)) save time on
+   big libraries: a keep rule for every group at once, auto-accept for
+   near-identical groups, and a CSV export of the groups.
 
 ![Find duplicates reviewing look-alike groups on a test page](docs/images/find-duplicates.png)
 
@@ -85,7 +88,8 @@ Google Photos Library API has no delete endpoint.
 
 - **Find duplicates:** scan the current view, group look-alike photos by
   perceptual hash at an adjustable similarity, review which to keep, then move
-  the rest to Trash through the consent-gated flow.
+  the rest to Trash through the consent-gated flow. Pro adds keep rules,
+  auto-accept for confident groups and a CSV export of the groups.
 - **Batch delete:** up to 500 per batch (Google's selection cap); the engine
   detects the cap, scrolls and flushes the final partial batch.
 - **Pause / Resume / Stop:** stop is instant; a stopped run never reports a
@@ -165,6 +169,23 @@ nothing. **Pro** adds the analysis layer on top:
   background runs), and if its saved view differs from the page you are on it
   only shows the address as a hint; it never navigates. Presets live on your
   device (extension storage, or the userscript's local storage).
+- **Duplicate review tools** - for big libraries, in Find duplicates:
+  - **Keep rule** - keep the highest resolution, the newest or the oldest copy
+    in every group at once (instead of the default best copy). A rule needs
+    the data it uses: where a group has no size or no readable date, that group
+    keeps the default pick and the tool tells you how many did. Ties also fall
+    back to the default pick. Every group still keeps exactly one photo you can
+    change.
+  - **Auto-accept confident groups** - groups where every photo is 98% or more
+    similar are pre-approved. The groups below 98% come as one combined list;
+    each moves to Trash only after you approve it (or approve all). You still
+    press **Move to Trash** and confirm as before.
+  - **Export CSV** - the groups as `group_id,item_id,decision,similarity`
+    (kept or trashed), downloaded on your device. No network call.
+
+  Free users see these controls disabled with a **Pro** link and keep the
+  complete default review: all groups, the best copy kept, flip any photo,
+  preview, Trash.
 - **Dry-run report and export** - see exactly what a run would remove, and
   export it as CSV before you commit.
 

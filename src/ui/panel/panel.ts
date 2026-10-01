@@ -468,6 +468,7 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
         return error ? { ok: false, error } : { ok: true }
       },
       stopRun: () => runner.stop(),
+      isPro: () => runner.isPro(),
       consentAcknowledged: async () => runner.consentAcknowledged(),
       acknowledgeConsent: async () => runner.acknowledgeConsent(),
       onRunProgress: (cb) => runner.onUpdate((s) => { if (s.progress) cb(s.progress) }),

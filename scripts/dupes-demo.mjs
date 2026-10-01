@@ -114,8 +114,21 @@ if (process.argv.includes('--check')) {
   // Move the red copies through the real delete engine and check that
   // exactly those went to Trash and every original stayed.
   const host = page.locator('#gpdt-dupes-host')
+  // Free users see the Pro review tools disabled, each with the Get Pro link.
+  const tools = {
+    selectOff: await host.locator('.tools select').isDisabled(),
+    autoOff: await host.locator('.tools input[type=checkbox]').isDisabled(),
+    csvOff: await host.getByRole('button', { name: 'Export CSV' }).isDisabled(),
+    links: await host.locator('a.pro-tag').evaluateAll((as) => as.map((a) => `${a.textContent}|${new URL(a.href).searchParams.get('utm_medium')}`)),
+  }
+  const toolsOk = tools.selectOff && tools.autoOff && tools.csvOff && tools.links.length === 3 && tools.links.every((l) => l === 'Pro|dupes')
+  console.log(`dupes-demo free gating: ${JSON.stringify(tools)}`)
+  if (!toolsOk) {
+    console.error('dupes-demo: FAILED — free users must see disabled Pro controls with the Get Pro link')
+    process.exitCode = 1
+  }
   const planned = Number((await host.getByRole('button', { name: /^Move \d+ to Trash$/ }).innerText()).match(/\d+/)[0])
-  await host.locator('input[type=checkbox]').check()
+  await host.locator('.consent input[type=checkbox]').check()
   await host.getByRole('button', { name: /^Move \d+ to Trash$/ }).click()
   await host.getByText(/^Done\./).waitFor({ timeout: 60_000 })
   const trashed = await page.evaluate(() => window.__trashed ?? [])
@@ -139,7 +152,7 @@ if (process.argv.includes('--check')) {
   await drift.getByRole('button', { name: 'Scan this view' }).click()
   await drift.locator('#gpdt-dupes-host').getByText('To Trash', { exact: true }).waitFor({ timeout: 60_000 })
   const driftHost = drift.locator('#gpdt-dupes-host')
-  await driftHost.locator('input[type=checkbox]').check()
+  await driftHost.locator('.consent input[type=checkbox]').check()
   await driftHost.getByRole('button', { name: /^Move \d+ to Trash$/ }).click()
   await driftHost.getByText(/never showed any of them as selected/).waitFor({ timeout: 60_000 })
   const driftTiles = await drift.locator('.ckGgle').count()

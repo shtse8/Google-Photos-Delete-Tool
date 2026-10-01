@@ -24,6 +24,14 @@ All notable changes to this project will be documented in this file.
   and never opened. Free users see the row disabled with a Get Pro link
   (`utm_medium=presets`). Stored in `chrome.storage.local` (extension) or
   `localStorage` (userscript); corrupt data is ignored.
+- Pro duplicate review tools: a keep rule for all groups at once (highest
+  resolution, newest or oldest; groups without the needed data or with a tie
+  keep the default pick), auto-accept for groups at 98% or more similarity with
+  one combined review list for the rest, and a CSV export of the groups
+  (`group_id,item_id,decision,similarity`, local download). Free users see the
+  controls disabled with a Get Pro link (`utm_medium=dupes`) and keep today's
+  review unchanged. Every group still keeps at least one photo and nothing
+  moves without your confirmation. No network calls, no telemetry.
 
 ### Changed
 - Firefox package passes `web-ext lint` with 0 warnings (was 5): popup markup

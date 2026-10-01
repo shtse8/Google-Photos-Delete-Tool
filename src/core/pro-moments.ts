@@ -3,7 +3,7 @@
  * "Get Pro" button. Both are plain, dismissable text and a link; no network
  * call, no telemetry. Measurement is the UTM parameters on the link only.
  * Pro users never see either. Deleting, dry run, duplicates and empty trash
- * stay free (docs/vision.md).
+ * stay free (docs/vision.md); Pro only adds review power tools on top.
  */
 import { PHOTO_TYPES, classifyLabel, type PhotoType } from './photo-filter'
 
@@ -11,8 +11,7 @@ import { PHOTO_TYPES, classifyLabel, type PhotoType } from './photo-filter'
 export const PRO_TOKEN_KEY = 'proToken'
 
 export const PRO_URL = 'https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro'
-
-export type ProMedium = 'dryrun_teaser' | 'post_run' | 'date_filter' | 'presets'
+export type ProMedium = 'dryrun_teaser' | 'post_run' | 'date_filter' | 'presets' | 'dupes'
 
 /** The README #pro URL with UTM parameters (before the anchor). */
 export function proUrl(medium: ProMedium): string {
