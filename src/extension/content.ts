@@ -351,6 +351,7 @@ function openFinder(): void {
     acknowledgeConsent: async () => {
       await storageSet({ [STORAGE_KEYS.consent]: true })
     },
+    isPro: isProActive,
     onRunProgress: (cb) => {
       progressListeners.add(cb)
       return () => progressListeners.delete(cb)
