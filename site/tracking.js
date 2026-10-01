@@ -35,13 +35,26 @@
     link.href = out.toString()
   }
 
-  function banner(update) {
+  // The banner shows when no choice is stored, and reopens from the footer "Cookie settings" link.
+  // Reopening marks the current choice (aria-pressed); a new choice updates consent at once.
+  function banner(update, current) {
     var el = document.getElementById('consent')
     if (!el) return
-    el.hidden = false
+    var cur = current
+    function mark() {
+      ;['all', 'analytics', 'none'].forEach(function (choice) {
+        el.querySelector('[data-consent="' + choice + '"]').setAttribute('aria-pressed', choice === cur ? 'true' : 'false')
+      })
+    }
     ;['all', 'analytics', 'none'].forEach(function (choice) {
-      el.querySelector('[data-consent="' + choice + '"]').addEventListener('click', function () { write(STORE_KEY, choice); update(choice); el.hidden = true })
+      el.querySelector('[data-consent="' + choice + '"]').addEventListener('click', function () {
+        write(STORE_KEY, choice); cur = choice; update(choice); mark(); el.hidden = true
+      })
     })
+    var open = function () { mark(); el.hidden = false }
+    var link = document.getElementById('cookie-settings')
+    if (link) link.addEventListener('click', function (e) { if (e && e.preventDefault) e.preventDefault(); open() })
+    if (!cur) open()
   }
 
   function start(cfg) {
@@ -75,7 +88,7 @@
     s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(useGa ? ga4 : ads)
     document.head.appendChild(s)
 
-    if (!saved) banner(function (choice) { gtag('consent', 'update', state(choice)) })
+    banner(function (choice) { gtag('consent', 'update', state(choice)) }, saved)
 
     var link = document.getElementById('add-to-chrome')
     if (link) {

@@ -13,14 +13,16 @@ async function run(page: 'index' | 'thanks', config: object, search = '', initia
   const listeners: Record<string, () => void> = {}
   const link = { href: '', addEventListener: (_: string, f: () => void) => { listeners.click = f } }
   const buttons: Record<string, () => void> = {}
+  const pressed: Record<string, string> = {}
+  const settings = { addEventListener: (_: string, f: () => void) => { listeners.settings = f } }
   const banner = {
     hidden: true,
-    querySelector: (sel: string) => ({ addEventListener: (_: string, f: () => void) => { buttons[sel.match(/"(.+)"/)![1]] = f } }),
+    querySelector: (sel: string) => ({ setAttribute: (k: string, v: string) => { if (k === 'aria-pressed') pressed[sel.match(/"(.+)"/)![1]] = v }, addEventListener: (_: string, f: () => void) => { buttons[sel.match(/"(.+)"/)![1]] = f } }),
   }
   const ctx: Record<string, unknown> = {
     document: {
       currentScript: { getAttribute: () => page },
-      getElementById: (id: string) => (id === 'add-to-chrome' ? link : id === 'consent' ? banner : null),
+      getElementById: (id: string) => (id === 'add-to-chrome' ? link : id === 'consent' ? banner : id === 'cookie-settings' ? settings : null),
       createElement: () => ({}),
       head: { appendChild: (e: { src?: string }) => appended.push(e) },
     },
@@ -38,7 +40,7 @@ async function run(page: 'index' | 'thanks', config: object, search = '', initia
   runInNewContext(tracking, ctx)
   await new Promise((r) => setTimeout(r, 10))
   const snapshot = () => ((ctx.dataLayer as unknown[]) ?? []).map((a) => Array.from(a as ArrayLike<unknown>)) as Call[]
-  return { calls: snapshot(), snapshot, appended, link, click: listeners.click, buttons, banner, storage }
+  return { calls: snapshot(), snapshot, appended, link, click: listeners.click, buttons, banner, storage, pressed, reopen: listeners.settings }
 }
 
 const real = {
@@ -144,5 +146,23 @@ describe('site tracking', () => {
       for (const c of ['all', 'analytics', 'none']) expect(b).toContain(`data-consent="${c}"`)
       expect(b).toContain('PRIVACY.md')
     }
+  })
+
+  it('Cookie settings reopens the banner with the current choice and a new choice applies at once', async () => {
+    const r = await run('index', real, '', { gpdt_consent: 'all' })
+    expect(r.banner.hidden).toBe(true)
+    r.reopen()
+    expect(r.banner.hidden).toBe(false)
+    expect(r.pressed).toEqual({ all: 'true', analytics: 'false', none: 'false' })
+    r.buttons.none()
+    expect(lastUpdate(r.snapshot())).toEqual({ ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied' })
+    expect(r.storage.get('gpdt_consent')).toBe('none')
+    expect(r.banner.hidden).toBe(true)
+    r.reopen()
+    expect(r.pressed.none).toBe('true')
+  })
+
+  it('both pages have a Cookie settings link', () => {
+    for (const f of ['index.html', 'thanks.html']) expect(read(f)).toContain('id="cookie-settings"')
   })
 })
