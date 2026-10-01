@@ -22,7 +22,7 @@ export function showPostRunPrompt(prompt: PostRunPrompt, container: HTMLElement 
   msg.style.cssText = 'margin:0 0 10px'
   msg.textContent =
     `Done: ${prompt.count.toLocaleString()} ${what} moved to Trash. ` +
-    'If this tool helped, a short review or sharing it helps others find it.'
+    'A short review or a share helps others find it.'
   box.appendChild(msg)
 
   const status = document.createElement('div')

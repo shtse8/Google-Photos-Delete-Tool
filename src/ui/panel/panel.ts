@@ -13,7 +13,7 @@ import type { Progress, RunStatus } from '../../core'
 import { PHOTO_TYPES, type PhotoFilter, type PhotoType } from '../../core/photo-filter'
 import { openDuplicateFinder } from '../dupes/finder'
 import { sleep } from '../../core/utils'
-import { POST_RUN_PROMPT_KEY, claimPostRunPrompt } from '../../core/post-run-prompt'
+import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../../core/post-run-prompt'
 import { showPostRunPrompt } from '../post-run/prompt'
 
 const ROOT_ID = 'gpdt-panel-root'
@@ -423,12 +423,12 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
   runner.onUpdate(updateUI)
 
   // One-time rate/share prompt after a successful real run (userscript:
-  // flag in localStorage; rating link goes to the Chrome Web Store listing).
+  // flag in localStorage; rating link is the Chrome Web Store review page, hidden on Firefox and Edge).
   runner.onRunSettled((result) => {
     void claimPostRunPrompt(result, {
       isShown: async () => window.localStorage.getItem(POST_RUN_PROMPT_KEY) === '1',
       markShown: async () => window.localStorage.setItem(POST_RUN_PROMPT_KEY, '1'),
-    }, 'chrome').then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
+    }, detectBrowser(navigator.userAgent)).then((prompt) => { if (prompt) showPostRunPrompt(prompt, container) })
   })
   void refreshProState()
 }

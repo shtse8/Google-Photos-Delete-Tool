@@ -7,7 +7,7 @@
  * session for the mechanical parts and stops for review at each step.
  *
  *   node scripts/edge-bootstrap.mjs open          # navigate to Edge overview
- *   node scripts/edge-bootstrap.mjs upload-zip    # attach google-photos-delete-tool.zip
+ *   node scripts/edge-bootstrap.mjs upload-zip    # attach google-photos-delete-tool-edge.zip
  *   node scripts/edge-bootstrap.mjs fill-listing  # paste edge copy from listing.json
  *   node scripts/edge-bootstrap.mjs submit        # click submit for certification
  *
@@ -45,7 +45,7 @@ if (cmd === 'open') {
 } else if (cmd === 'upload-zip') {
   const input = page.locator('input[type="file"]').first()
   await input.waitFor({ timeout: 60000 }).catch(show)
-  await input.setInputFiles(resolve(root, 'google-photos-delete-tool.zip'))
+  await input.setInputFiles(resolve(root, 'google-photos-delete-tool-edge.zip'))
   console.log('edge-bootstrap: zip attached — click Continue in the browser and run "fill-listing" next.')
 } else if (cmd === 'fill-listing') {
   const fill = async (label, value) => {

@@ -169,6 +169,26 @@ describe('PageRunner — consent gate', () => {
   })
 })
 
+describe('PageRunner — run-settled hook', () => {
+  it('fires once after a settled successful real run, and reports a dry run as dry', async () => {
+    stubWindow()
+    const dom = new RunnerFakeDom()
+    dom.setTiles(['Photo - a'])
+    const runner = new PageRunner({ dom: dom as unknown as EngineDom, baton: fakeBaton() })
+    runner.acknowledgeConsent()
+    const seen: Array<{ dryRun: boolean; status: string; deleted: number }> = []
+    runner.onRunSettled((r) => seen.push(r))
+    await runner.start({ maxCount: 500, dryRun: false, emptyTrashAfter: false, filter: { kind: 'all' } })
+    expect(seen).toHaveLength(1)
+    expect(seen[0]).toMatchObject({ dryRun: false, status: 'done' })
+    expect(seen[0]!.deleted).toBeGreaterThanOrEqual(1)
+    dom.setTiles(['Photo - b'])
+    await runner.start({ maxCount: 500, dryRun: true, emptyTrashAfter: false, filter: { kind: 'all' } })
+    expect(seen).toHaveLength(2)
+    expect(seen[1]).toMatchObject({ dryRun: true, deleted: 0 })
+  })
+})
+
 describe('PageRunner — occupancy', () => {
   it('does not start a second engine while the first run is settling', async () => {
     stubWindow()

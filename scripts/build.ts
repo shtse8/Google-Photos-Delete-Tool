@@ -19,6 +19,7 @@ import {
   writeFileSync,
   mkdirSync,
   copyFileSync,
+  cpSync,
   existsSync,
   rmSync,
   renameSync,
@@ -134,6 +135,18 @@ writeFileSync(
   JSON.stringify(chromeManifest(), null, 2),
 )
 console.log('✅ Chrome extension → dist/extension/')
+
+// ─── Edge extension ─────────────────────────────────────────────
+// Edge reads the extension name from the manifest and caps it at 45
+// characters, so the Edge package is the Chrome build with the short name.
+const edgeDir = resolve(root, 'dist/extension-edge')
+rmSync(edgeDir, { recursive: true, force: true })
+cpSync(chromeDir, edgeDir, { recursive: true })
+writeFileSync(
+  resolve(edgeDir, 'manifest.json'),
+  JSON.stringify({ ...chromeManifest(), name: 'Google Photos Delete Tool' }, null, 2),
+)
+console.log('✅ Edge extension → dist/extension-edge/')
 
 // ─── Firefox extension ──────────────────────────────────────────
 

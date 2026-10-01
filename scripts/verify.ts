@@ -57,6 +57,13 @@ console.log('verify: package version =', pkg.version)
   check(Array.isArray(m.content_scripts?.[0]?.matches) && m.content_scripts[0].matches.includes(SUPPORTED_MATCH_PATTERN), 'chrome content_scripts match photos.google.com')
 }
 
+// ─── Edge manifest (Edge caps the manifest name at 45 characters) ──
+{
+  const m = JSON.parse(read('dist/extension-edge/manifest.json'))
+  check(m.version === pkg.version, `edge manifest version == ${pkg.version}`)
+  check(typeof m.name === 'string' && m.name.length > 0 && m.name.length <= 45, `edge manifest name ≤ 45 chars (${m.name?.length})`)
+}
+
 // ─── Firefox manifest ───────────────────────────────────────────
 {
   const m = JSON.parse(read('dist/extension-firefox/manifest.json'))
