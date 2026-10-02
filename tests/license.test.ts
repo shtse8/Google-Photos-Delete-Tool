@@ -90,6 +90,15 @@ describe('verifyLicense', () => {
     expect(await verifyLicense('!!!.!!!', testKeys.publicRaw)).toEqual({ ok: false, reason: 'malformed' })
   })
 
+  it('rejects a signed payload that is JSON null or a non-object as malformed', async () => {
+    expect(await verifyLicense(await signPayload(null), testKeys.publicRaw)).toEqual({ ok: false, reason: 'malformed' })
+    expect(await verifyLicense(await signPayload('pro'), testKeys.publicRaw)).toEqual({ ok: false, reason: 'malformed' })
+  })
+
+  it('treats an array payload as a wrong plan, never a throw', async () => {
+    expect(await verifyLicense(await signPayload([]), testKeys.publicRaw)).toEqual({ ok: false, reason: 'wrong-plan' })
+  })
+
   it('rejects a well-formed token with a wrong payload plan', async () => {
     const token = await signPayload({ plan: 'free', issuedAt: 1 })
     const result = await verifyLicense(token, testKeys.publicRaw)

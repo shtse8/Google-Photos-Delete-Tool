@@ -110,9 +110,10 @@ export async function verifyLicense(
   } catch {
     return { ok: false, reason: 'malformed' }
   }
+  if (!payload || typeof payload !== 'object') return { ok: false, reason: 'malformed' }
 
   const hasTime = typeof payload.issuedAt === 'number' || typeof payload.expiresAt === 'number'
-  if (!payload || payload.plan !== 'pro' || !hasTime || (payload.product !== undefined && payload.product !== 'gpdt')) {
+  if (payload.plan !== 'pro' || !hasTime || (payload.product !== undefined && payload.product !== 'gpdt')) {
     return { ok: false, reason: 'wrong-plan' }
   }
 
