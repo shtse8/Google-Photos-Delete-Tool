@@ -4,7 +4,7 @@
  *   bun run license:keygen            # generate a keypair; saves the private
  *                                     # key to ~/.gpdt/gpdt-license-private.pem
  *                                     # and prints the public key to embed.
- *   bun run license:issue --email=x   # sign a Pro license payload → token
+ *   bun run license:issue --email=x [--order=pi_...]   # sign a Pro payload → token (email required)
  *   bun run license:verify <token>    # verify a token against the embedded keys
  *   bun run scripts/license.ts verify-buyer <token> --email=<expected>
  *                                     # first-purchase readback; exit 0 only if
@@ -17,6 +17,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { loadPrivateKey, privateKeyWritePath } from './license-keys'
+import { buildIssuePayload, type IssuePayload } from './license-payload'
 
 /**
  * Seller private key. $GPDT_PRO_PRIVATE_KEY is either a file path or the
@@ -27,7 +28,7 @@ import { loadPrivateKey, privateKeyWritePath } from './license-keys'
 const PRIVATE_KEY_PATH = privateKeyWritePath()
 
 function usage(command: string): never {
-  console.error(`Usage: bun run license:${command} ${command === 'issue' ? '[--email <email>]' : '<token>'}`)
+  console.error(`Usage: bun run license:${command} ${command === 'issue' ? '--email=<email> [--order=<Stripe payment or session id>]' : '<token>'}`)
   process.exit(1)
 }
 
@@ -56,7 +57,15 @@ async function keygen(): Promise<void> {
   console.log(`  export const PRO_PUBLIC_KEY_BASE64URL = '${b64url(rawPub)}'`)
 }
 
-async function issue(email?: string): Promise<void> {
+async function issue(email?: string, order?: string): Promise<void> {
+  let payload: IssuePayload
+  try {
+    payload = buildIssuePayload(email, order)
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err))
+    console.error('Usage: bun run license:issue --email=<email> [--order=<Stripe payment or session id>]')
+    process.exit(1)
+  }
   let key: CryptoKey
   try {
     key = await loadPrivateKey()
@@ -65,12 +74,6 @@ async function issue(email?: string): Promise<void> {
     console.error(err instanceof Error && err.message.startsWith('No private key') ? err.message : 'Could not load the private key (expected a file path, PEM, or base64url PKCS8).')
     process.exit(1)
   }
-  const payload: { plan: 'pro'; email?: string; issuedAt: number } = {
-    plan: 'pro',
-    issuedAt: Date.now(),
-  }
-  if (email) payload.email = email
-
   const payloadBytes = new TextEncoder().encode(JSON.stringify(payload))
   const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, key, payloadBytes))
   const token = `${b64url(payloadBytes)}.${b64url(sig)}`
@@ -104,7 +107,8 @@ switch (command) {
     break
   case 'issue': {
     const emailArg = rest.find((a) => a.startsWith('--email='))
-    await issue(emailArg ? emailArg.slice('--email='.length) : undefined)
+    const orderArg = rest.find((a) => a.startsWith('--order='))
+    await issue(emailArg?.slice('--email='.length), orderArg?.slice('--order='.length))
     break
   }
   case 'verify': {

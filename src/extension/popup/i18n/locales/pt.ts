@@ -78,7 +78,7 @@ const pt: Translations = {
     },
     license: {
       label: "Licença Pro",
-      hint: "Verificada localmente; nunca sai do dispositivo",
+      hint: "Verificada no teu dispositivo; nunca nos é enviada",
       placeholder: "Cole o token de licença",
       activate: "Ativar",
       getPro: "Adquira o Pro — US$9.99, pagamento único",

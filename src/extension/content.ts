@@ -43,11 +43,11 @@ import {
   waitUntilAbortable,
 } from '../core/run-occupancy'
 import { POST_RUN_PROMPT_KEY, claimPostRunPrompt, detectBrowser } from '../core/post-run-prompt'
-import { PRO_TOKEN_KEY, PRO_VARIANT_KEY, getProVariant } from '../core/pro-moments'
+import { PRO_VARIANT_KEY, getProVariant } from '../core/pro-moments'
 import { verifyLicense } from '../core/license'
 import { showPostRunPrompt } from '../ui/post-run/prompt'
 import { LOCALES, detectBrowserLocale, setLocale } from './popup/i18n'
-import { createChromeBaton, runtimeSendMessage, storageGet, storageRemove, storageSet } from './api'
+import { createChromeBaton, runtimeSendMessage, readProToken, storageGet, storageRemove, storageSet } from './api'
 
 const LOG = '[gpdt:content]'
 
@@ -174,8 +174,8 @@ const isRunning = (): boolean =>
 /** Pro state for the post-run card: the popup stores the token, verified locally. */
 async function isProActive(): Promise<boolean> {
   try {
-    const token = (await storageGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
-    return typeof token === 'string' && (await verifyLicense(token)).ok
+    const token = await readProToken()
+    return token !== null && (await verifyLicense(token)).ok
   } catch {
     return false
   }

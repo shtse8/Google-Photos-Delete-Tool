@@ -78,7 +78,7 @@ const zh: Translations = {
     },
     license: {
       label: "Pro 许可证",
-      hint: "本地验证，绝不离开设备",
+      hint: "在您的设备上验证；绝不发送给我们",
       placeholder: "粘贴许可证令牌",
       activate: "激活",
       getPro: "升级 Pro — 一次性 US$9.99",

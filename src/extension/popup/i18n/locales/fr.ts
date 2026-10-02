@@ -78,7 +78,7 @@ const fr: Translations = {
     },
     license: {
       label: "Licence Pro",
-      hint: "Vérifiée localement ; ne quitte jamais votre appareil",
+      hint: "Vérifiée sur votre appareil ; jamais envoyée à nous",
       placeholder: "Collez le jeton de licence",
       activate: "Activer",
       getPro: "Passer à Pro — US$9.99, une seule fois",

@@ -9,6 +9,7 @@
  */
 import type { EmptyTrashBaton } from '../core/empty-trash-baton'
 import { PRESETS_KEY, type PresetStore } from '../core/presets'
+import { PRO_TOKEN_KEY } from '../core/pro-moments'
 
 export function storageGet(keys: string | string[]): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -38,6 +39,107 @@ export function storageRemove(keys: string | string[]): Promise<void> {
       else resolve()
     })
   })
+}
+
+/**
+ * chrome.storage.sync wrappers. Sync is best-effort: it can be absent or
+ * disabled (signed-out Chrome, enterprise policy), so callers treat a
+ * rejection as "no sync" and fall back to local.
+ */
+function syncArea(): chrome.storage.SyncStorageArea {
+  const area = chrome.storage.sync
+  if (!area) throw new Error('chrome.storage.sync unavailable')
+  return area
+}
+
+export function syncGet(keys: string | string[]): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    try {
+      syncArea().get(keys, (data) => {
+        const err = chrome.runtime.lastError
+        if (err) reject(new Error(err.message))
+        else resolve(data as Record<string, unknown>)
+      })
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
+export function syncSet(items: Record<string, unknown>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      syncArea().set(items, () => {
+        const err = chrome.runtime.lastError
+        if (err) reject(new Error(err.message))
+        else resolve()
+      })
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
+export function syncRemove(keys: string | string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      syncArea().remove(keys, () => {
+        const err = chrome.runtime.lastError
+        if (err) reject(new Error(err.message))
+        else resolve()
+      })
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
+/**
+ * The Pro token follows the user's browser sign-in: it is kept in
+ * chrome.storage.sync AND chrome.storage.local. A token is ~200 bytes, far
+ * under the sync per-item (8 KB) and total (100 KB) quotas. Read order: local
+ * first, then sync. When local exists and differs from sync (missing or
+ * stale), it is pushed up to sync, best effort, so installs that predate sync
+ * migrate on first read. The local copy is always kept, so Pro keeps working
+ * when sync is off.
+ */
+async function pushLocalToSync(local: string): Promise<void> {
+  try {
+    const synced = (await syncGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
+    if (synced === local) return
+    await syncSet({ [PRO_TOKEN_KEY]: local })
+  } catch (err) {
+    console.warn('[gpdt:license] sync push failed:', err)
+  }
+}
+
+export async function readProToken(): Promise<string | null> {
+  try {
+    const local = (await storageGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
+    if (typeof local === 'string' && local) {
+      await pushLocalToSync(local)
+      return local
+    }
+  } catch {
+    /* local unavailable: fall through to sync */
+  }
+  try {
+    const synced = (await syncGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
+    if (typeof synced === 'string' && synced) return synced
+  } catch {
+    /* sync unavailable */
+  }
+  return null
+}
+
+/** Local write must succeed (it throws); the sync write is best-effort. */
+export async function writeProToken(token: string): Promise<void> {
+  await storageSet({ [PRO_TOKEN_KEY]: token })
+  try {
+    await syncSet({ [PRO_TOKEN_KEY]: token })
+  } catch (err) {
+    console.warn('[gpdt:license] sync write failed:', err)
+  }
 }
 
 export function runtimeSendMessage(message: unknown): Promise<unknown> {

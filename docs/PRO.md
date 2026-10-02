@@ -1,12 +1,16 @@
 # Pro — Local License Verification (zero-server)
 
-Pro unlocks the **analysis layer**: type filters, the date filter and
-the dry-run report/export. The delete engine, dry-run, and empty-trash are free
-forever.
+Pro unlocks the convenience layer: type and date filters, saved presets,
+duplicate keep rules, auto-accept and CSV export. The feature list lives only in
+[README.md#pro](../README.md#pro). The delete engine, dry run, duplicate
+finding and empty trash are free forever.
 
 The license is an Ed25519-signed token verified entirely in the user's
 browser (WebCrypto `SubtleCrypto`). There is **no account, no backend, no
-telemetry** — the token never leaves the device.
+telemetry**. The token is never sent to us. The extension keeps it in
+`chrome.storage.local` and `chrome.storage.sync` (read sync first, then local,
+migrating local to sync), so it follows the user's Chrome sign-in; the
+userscript keeps it in `localStorage` only.
 
 ## Token format
 
@@ -17,10 +21,15 @@ ${base64url(payload)}.${base64url(signature)}
 where `payload` is JSON:
 
 ```json
-{ "plan": "pro", "email": "buyer@example.com", "issuedAt": 1786300000000 }
+{ "plan": "pro", "email": "buyer@example.com", "issuedAt": 1786300000000, "order": "cs_live_..." }
 ```
 
-- `email` is optional.
+- `email` and `order` bind the token to the purchaser record: `email` is the
+  address the buyer paid with, `order` the Stripe payment or session id. The
+  issuer (`bun run license:issue`) refuses to run without `--email`, and takes
+  `--order=<id>`; always pass both. The same `{plan, email, issuedAt, order}`
+  shape is what the Money licence capability issues. The verifier ignores
+  `order` and accepts older tokens that lack it.
 - The signature is Ed25519 over the payload bytes, made with the seller's
   private key.
 - Verification (see `src/core/license.ts`) checks format, plan, and
@@ -33,8 +42,8 @@ where `payload` is JSON:
 # 1. Generate a keypair (creates ~/.gpdt/gpdt-license-private.pem, mode 600)
 bun run license:keygen
 
-# 2. Issue a Pro token for a buyer
-bun run license:issue --email=buyer@example.com
+# 2. Issue a Pro token for a buyer (email required; add the Stripe id)
+bun run license:issue --email=buyer@example.com --order=cs_live_...
 
 # 3. Verify a token against the embedded keys
 bun run license:verify <token>
@@ -126,15 +135,26 @@ data is sent.
 
 1. **Product:** Pro is sold as a Stripe Payment Link, US$9.99 one-time and
    lifetime, a convenience unlock for power users of a free tool. The
-   README `#pro` section links to it (`PAYMENT_LINK_URL`), and both the popup
-   and the userscript panel point to that anchor, so the link can change without
-   a store release.
-2. **Issuance:** automated, one token per paid order, signed with the current
-   key and emailed to the buyer, who pastes it under Pro in the extension. The
-   issuer's runbook lives outside this repository.
-3. **Support:** the order record (email, date) lives in Stripe; reissue with
-   `bun run license:issue --email=<buyer email>`.
-4. **First-purchase readback:** after the first paid order, check the emailed
+   README `#pro` section carries the buy link (`PRO_CHECKOUT_URL` placeholder
+   until the link is live), and both the popup and the userscript panel point
+   to that anchor, so the link can change without a store release.
+2. **Issuance is manual.** After Stripe confirms payment, the operator runs
+   `bun run license:issue --email=<the email the buyer paid with> --order=<Stripe payment or session id>`
+   and emails the token to that address. Email and order id are both required
+   in practice: they bind the token to the purchaser record and are how a
+   reissue is matched. Delivery is promised as "usually
+   within a few hours" with no deadline (`site/thanks.html`); do not
+   promise faster until issuance is automated. The seller key stays in
+   1Password.
+3. **Support:** the order record (email, date, id) lives in Stripe; reissue
+   with `--email` and the same `--order` after checking both match the Stripe
+   payment.
+4. **Refunds:** Pro is digital content supplied at the buyer's express
+   request at checkout, so the 14-day right to cancel ends on delivery. Beyond
+   that we only offer the legal minimum: if Pro does not work as described and
+   cannot be fixed, we put it right or refund. The wording lives in
+   `site/terms.html`; keep this section pointing there instead of copying it.
+5. **First-purchase readback:** after the first paid order, check the emailed
    token without printing it back:
    `bun run scripts/license.ts verify-buyer <token> --email=<buyer email>`.
    It prints `valid`, which embedded key verified it (`old` or `new`; new
@@ -146,7 +166,7 @@ data is sent.
 ## Chrome Web Store compliance
 
 The extension is free and its core (batch delete, dry run, empty trash) is
-fully free. Pro adds analysis (type filters, dry-run report and export) through
-a token sold outside the store, the standard compliant shape for the Chrome Web
+fully free. Pro adds convenience features through a token sold outside the
+store, the standard compliant shape for the Chrome Web
 Store: no in-extension payment and no paywalled core. The store listing
 discloses the paid Pro layer.
