@@ -252,6 +252,14 @@ export class DeleteEngine {
         }
       }
 
+      // A run is a series of passes from the top of the gallery. It reports
+      // done only after a full pass that deleted nothing: the final flush of
+      // one pass counts as a batch, and Google can re-render rows after it.
+      let previousPassDeleted = Infinity
+      for (let pass = 0; ; pass++) {
+      const deletedAtPassStart = this.progress.deleted
+      consecutiveNoProgress = 0
+      if (pass > 0) await this.returnToTop()
       while (!this.stopped) {
         await this.awaitControl()
 
@@ -324,6 +332,24 @@ export class DeleteEngine {
           }
           consecutiveNoProgress = 0
         }
+      }
+      // End of pass: flush the last partial batch as a regular batch, then
+      // go again from the top while passes keep deleting. An id run selects
+      // exactly its chosen items and needs no second pass.
+      if (this.stopped || this.targetIds) break
+      if (this.getCount() > 0) await this.deleteSelected()
+      const passDeleted = this.progress.deleted - deletedAtPassStart
+      if (passDeleted === 0) break
+      // Passes must shrink the gallery. A pass that deletes as much as the one
+      // before means photos stay after confirm: stop instead of looping.
+      if (passDeleted >= previousPassDeleted) {
+        throw new Error(
+          `Photos are still in the gallery after ${passDeleted} were moved to Trash twice in a row. ` +
+          `Stopping so nothing is deleted twice; check the page and run again.`,
+        )
+      }
+      previousPassDeleted = passDeleted
+      console.log(`${LOG} pass ${pass + 1} deleted ${passDeleted}; scanning again from the top`)
       }
     } catch (err) {
       if (err instanceof StopRequested) {
@@ -631,6 +657,7 @@ export class DeleteEngine {
     // Pause does not burn the settle budget — it holds the scan.
     const pollMs = Math.min(this.config.pollDelay, 200)
     let remaining = this.config.scrollSettleMs
+    const sizeBefore = seen.size
     // Observer-driven early exit: only when the scroll position advanced and
     // the page then changed and went quiet. Anything else (no movement, no
     // change: possibly the end of the list) waits the full settle ceiling.
@@ -640,7 +667,9 @@ export class DeleteEngine {
       const quiet = await this.dom.waitForDomQuiet(remaining, OBSERVED_QUIET_MS)
       await this.awaitControl()
       this.harvestVisibleIds(seen, onWarn)
-      remaining = quiet ? 0 : remaining - (Date.now() - startedAt)
+      // Stop waiting only when the page settled AND the harvest actually grew:
+      // an unrelated mutation on a busy page settles before the rows render.
+      remaining = quiet && seen.size > sizeBefore ? 0 : remaining - Math.max(1, Date.now() - startedAt)
     }
     while (remaining > 0) {
       await this.awaitControl()
@@ -778,35 +807,42 @@ export class DeleteEngine {
       return false
     }
 
-    const measure = (): { top: number; height: number; checkboxes: number } => ({
-      top: target.scrollTop,
-      height: target.scrollHeight,
-      checkboxes: this.dom.uncheckedTiles().length,
-    })
+    // Progress means new tiles actually appeared, never just a scroll
+    // position that moved while the grid is still rendering.
+    const keyOf = (tile: PhotoTile): string | null => tile.id?.() ?? tile.label()
+    const snapshot = (): { top: number; height: number; keys: Set<string>; anonymous: boolean; count: number } => {
+      const tiles = this.dom.uncheckedTiles()
+      const keys = new Set<string>()
+      let anonymous = false
+      for (const tile of tiles) {
+        const key = keyOf(tile)
+        if (key === null) anonymous = true
+        else keys.add(key)
+      }
+      return { top: target.scrollTop, height: target.scrollHeight, keys, anonymous, count: tiles.length }
+    }
 
     await this.awaitControl()
 
-    const before = measure()
+    const before = snapshot()
     const step = Math.max(200, target.clientHeight || 800)
     target.scrollBy({ top: step, left: 0, behavior: 'auto' })
 
     let settleRemaining = this.config.scrollSettleMs
     while (settleRemaining > 0) {
       await this.awaitControl()
-      const slice = Math.min(this.config.pollDelay, 200)
-      if (this.dom.waitForDomQuiet) await this.dom.waitForDomQuiet(slice, OBSERVED_QUIET_MS)
-      else await this.dom.sleep(slice)
+      settleRemaining -= await this.pollWait(Math.min(this.config.pollDelay, 200), OBSERVED_QUIET_MS)
       await this.awaitControl()
-      settleRemaining -= slice
-      const after = measure()
-      const movedScroll = after.top > before.top
-      const grewHeight = after.height > before.height
-      const moreCheckboxes = after.checkboxes > before.checkboxes
-      if (movedScroll || grewHeight || moreCheckboxes) {
+      const after = snapshot()
+      let newTiles = false
+      for (const key of after.keys) if (!before.keys.has(key)) { newTiles = true; break }
+      // Tiles whose identity cannot be read fall back to the count.
+      if (!newTiles && (before.anonymous || after.anonymous) && after.count > before.count) newTiles = true
+      if (newTiles) {
         console.log(
           `${LOG} scroll progress: top ${before.top}→${after.top}, ` +
           `height ${before.height}→${after.height}, ` +
-          `unchecked ${before.checkboxes}→${after.checkboxes}`,
+          `unchecked ${before.count}→${after.count}`,
         )
         return true
       }
@@ -814,7 +850,7 @@ export class DeleteEngine {
 
     console.log(
       `${LOG} scroll yielded no new content (top=${before.top} of ${before.height}, ` +
-      `unchecked=${before.checkboxes})`,
+      `unchecked=${before.count})`,
     )
     return false
   }
@@ -890,18 +926,42 @@ export class DeleteEngine {
 
     // Best-effort: scroll the photo container back to the top so the
     // next batch starts from the same anchor. Failure is non-fatal.
+    await this.returnToTop()
+  }
+
+  /**
+   * Scroll the gallery to the top and wait until tiles are on screen again
+   * (ceiling: the scroll settle time). The grid re-renders the top rows after
+   * the reset and a selection pass that starts before they exist skips them.
+   */
+  private async returnToTop(): Promise<void> {
     const scrollTarget = this.dom.findScrollTarget()
-    if (scrollTarget) {
-      scrollTarget.scrollTop = 0
-      console.log(`${LOG} scrolled gallery back to top for next batch`)
-      // The grid re-renders the top rows after the reset; selecting before
-      // they exist would skip them, so wait for the page to change and settle
-      // (ceiling: the scroll settle time, as for any scroll).
-      if (this.dom.waitForDomQuiet) {
-        await this.awaitControl()
-        await this.dom.waitForDomQuiet(this.config.scrollSettleMs, OBSERVED_QUIET_MS)
-      }
+    if (!scrollTarget) return
+    scrollTarget.scrollTop = 0
+    console.log(`${LOG} scrolled gallery back to top`)
+    let remaining = this.config.scrollSettleMs
+    while (remaining > 0) {
+      await this.awaitControl()
+      const ready =
+        this.dom.uncheckedTiles().some((tile) => tileMatchesFilter(tile, this.filter, this.targetIds ?? undefined)) ||
+        this.dom.checkedTiles().length > 0
+      if (ready) return
+      remaining -= await this.pollWait(Math.min(this.config.pollDelay, 200), 0)
     }
+  }
+
+  /**
+   * One poll wait. Observer-driven when the adapter supports it (returns
+   * the time actually spent, `ms` is the ceiling), otherwise a fixed sleep.
+   */
+  private async pollWait(ms: number, quietMs: number): Promise<number> {
+    if (this.dom.waitForDomQuiet) {
+      const startedAt = Date.now()
+      await this.dom.waitForDomQuiet(ms, quietMs)
+      return Math.max(1, Date.now() - startedAt)
+    }
+    await this.dom.sleep(ms)
+    return ms
   }
 
   /**
@@ -922,18 +982,10 @@ export class DeleteEngine {
       if (remaining <= 0) {
         throw new Error(`Timed out after ${timeoutMs}ms: ${what}`)
       }
-      if (this.dom.waitForDomQuiet) {
-        // Wake on the next page change instead of the fixed poll; the poll
-        // interval stays the ceiling per wait and the timeout is wall-clock.
-        const startedAt = Date.now()
-        await this.dom.waitForDomQuiet(this.config.pollDelay, 0)
-        await this.awaitControl()
-        remaining -= Math.max(1, Date.now() - startedAt)
-      } else {
-        await this.dom.sleep(this.config.pollDelay)
-        await this.awaitControl()
-        remaining -= this.config.pollDelay
-      }
+      // Wake on the next page change instead of the fixed poll; the poll
+      // interval stays the ceiling per wait and the timeout is wall-clock.
+      remaining -= await this.pollWait(this.config.pollDelay, 0)
+      await this.awaitControl()
     }
   }
 }

@@ -40,7 +40,7 @@ class RunnerFakeDom implements EngineDom {
   uncheckedTiles(): PhotoTile[] { return this.tiles.filter((t) => !t.checked).map((t) => this.wrap(t)) }
   checkedTiles(): PhotoTile[] { return this.tiles.filter((t) => t.checked).map((t) => this.wrap(t)) }
   private deleteBtn: ClickTarget = { click: () => { this.clicks.push('delete') } }
-  private confirmBtn: ClickTarget = { click: () => { this.clicks.push('confirm'); for (const t of this.tiles) t.checked = false } }
+  private confirmBtn: ClickTarget = { click: () => { this.clicks.push('confirm'); this.tiles = this.tiles.filter((t) => !t.checked) } }
   findDeleteToolbarButton(): ClickTarget | null { return this.tiles.some((t) => t.checked) ? this.deleteBtn : null }
   findConfirmDialog(): ClickTarget | null { return { click: () => undefined } }
   findConfirmButton(): ClickTarget | null { return this.confirmBtn }

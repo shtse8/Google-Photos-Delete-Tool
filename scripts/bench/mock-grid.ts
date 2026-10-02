@@ -24,6 +24,12 @@ export interface MockConfig {
   loadDelay: number
   dialogDelay: number
   deleteLatency: number
+  /** Gap between the selection clearing and the deleted tiles leaving the DOM. */
+  staleGap: number
+  /** Background mutation interval range [min, max] ms, or null for a quiet page. */
+  backgroundMs: [number, number] | null
+  /** Seed for the background mutation timer (mulberry32); fixed so runs repeat. */
+  seed: number
 }
 
 export const DEFAULT_MOCK: Omit<MockConfig, 'n'> = {
@@ -36,6 +42,21 @@ export const DEFAULT_MOCK: Omit<MockConfig, 'n'> = {
   loadDelay: 150,
   dialogDelay: 60,
   deleteLatency: 800,
+  staleGap: 0,
+  backgroundMs: null,
+  seed: 1,
+}
+
+export type ScenarioName = 'default' | 'busy'
+
+/**
+ * `default`: quiet page, fast render. `busy`: unrelated DOM changes every
+ * 200-300 ms (a ticker, as on a live page), slow render and slow chunk load,
+ * and the selection clears 150 ms before the trashed tiles leave the grid.
+ */
+export const SCENARIOS: Record<ScenarioName, Omit<MockConfig, 'n'>> = {
+  default: DEFAULT_MOCK,
+  busy: { ...DEFAULT_MOCK, renderDelay: 400, loadDelay: 900, staleGap: 150, backgroundMs: [200, 300] },
 }
 
 export function mockPageHtml(cfg: MockConfig): string {
@@ -51,10 +72,13 @@ body{margin:0;background:#202124;font-family:sans-serif;color:#fff}
 [role=dialog]{position:fixed;top:200px;left:200px;width:300px;padding:16px;background:#303134;z-index:10}
 </style></head><body>
 <div id="bar"><span class="rtExYb">0</span><button aria-label="Move to trash" id="tb" style="display:none">Move to trash</button></div>
+<div id="ticker" aria-live="off">0</div>
+<div id="toast" role="status"></div>
 <div class="yDSiEe uGCjIb zcLWac" role="main" id="sc"><div id="spacer"></div></div>
 <script>
 const C = ${JSON.stringify(cfg)};
 let items = Array.from({ length: C.n }, (_, i) => i);
+let itemSet = new Set(items);
 let loaded = Math.min(C.loadChunk, items.length);
 let loading = false, renderPending = false;
 const selected = new Set();
@@ -62,6 +86,11 @@ const stats = { checkboxClicks: 0, toolbarClicks: 0, confirmClicks: 0, batches: 
 const sc = document.getElementById('sc'), spacer = document.getElementById('spacer');
 const counter = document.querySelector('.rtExYb'), tb = document.getElementById('tb');
 const live = new Map();
+const rnd = (() => { let a = C.seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
+if (C.backgroundMs) {
+  const tick = () => { document.getElementById('ticker').textContent = String(Number(document.getElementById('ticker').textContent) + 1); setTimeout(tick, C.backgroundMs[0] + rnd() * (C.backgroundMs[1] - C.backgroundMs[0])); };
+  setTimeout(tick, C.backgroundMs[0]);
+}
 const pad = (v) => String(v).padStart(2, '0');
 const labelOf = (id) => 'Photo - Mar ' + (1 + (id % 28)) + ', 2024, ' + pad(Math.floor(id / 3600)) + ':' + pad(Math.floor(id / 60) % 60) + ':' + pad(id % 60);
 function sizeSpacer() { spacer.style.height = Math.ceil(loaded / C.cols) * C.rowH + 'px'; }
@@ -102,6 +131,7 @@ document.addEventListener('click', (e) => {
   if (!c) return;
   stats.checkboxClicks++;
   const id = Number(c.parentElement.dataset.id);
+  if (!itemSet.has(id)) return;
   if (selected.has(id)) selected.delete(id); else selected.add(id);
   c.setAttribute('aria-checked', String(selected.has(id)));
   update();
@@ -116,17 +146,27 @@ tb.addEventListener('click', () => {
     d.querySelector('#cf').addEventListener('click', () => {
       stats.confirmClicks++;
       setTimeout(() => {
-        const n = selected.size;
-        items = items.filter((id) => !selected.has(id));
-        selected.clear(); loaded = Math.max(0, loaded - n);
-        stats.batches++; stats.deleted += n;
-        d.remove(); live.forEach((el) => el.remove()); live.clear();
-        sizeSpacer(); update(); scheduleRender(); maybeLoad();
+        const gone = new Set(selected);
+        const n = gone.size;
+        d.remove();
+        selected.clear();
+        stats.deleted += n; stats.batches++;
+        document.getElementById('toast').textContent = 'Moved ' + n + ' items to trash';
+        update();
+        // The server removes the items now, but the grid drops the tiles a moment later.
+        for (const el of live.values()) el.querySelector('.ckGgle').setAttribute('aria-checked', 'false');
+        itemSet = new Set(items.filter((id) => !gone.has(id)));
+        setTimeout(() => {
+          items = items.filter((id) => !gone.has(id));
+          loaded = Math.max(0, loaded - n);
+          live.forEach((el) => el.remove()); live.clear();
+          sizeSpacer(); update(); scheduleRender(); maybeLoad();
+        }, C.staleGap);
       }, C.deleteLatency);
     });
   }, C.dialogDelay);
 });
 sizeSpacer(); render();
-window.__mock = { stats, remaining: () => items.length, ids: () => items.slice() };
+window.__mock = { stats, remaining: () => itemSet.size, ids: () => items.slice() };
 </script></body></html>`
 }
