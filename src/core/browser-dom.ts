@@ -77,6 +77,39 @@ function findScrollTarget(): ScrollTarget | null {
   return null
 }
 
+/**
+ * Resolve when the document changed and then stayed quiet (see
+ * `EngineDom.waitForDomQuiet`). One MutationObserver per call, disconnected
+ * on resolve; the `maxMs` timer is the ceiling.
+ */
+function waitForDomQuiet(maxMs: number, quietMs: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') {
+      sleep(maxMs).then(() => resolve(false))
+      return
+    }
+    let quietTimer: ReturnType<typeof setTimeout> | undefined
+    const finish = (value: boolean) => {
+      observer.disconnect()
+      clearTimeout(maxTimer)
+      clearTimeout(quietTimer)
+      resolve(value)
+    }
+    const observer = new MutationObserver(() => {
+      if (quietMs <= 0) return finish(true)
+      clearTimeout(quietTimer)
+      quietTimer = setTimeout(() => finish(true), quietMs)
+    })
+    const maxTimer = setTimeout(() => finish(false), maxMs)
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      characterData: true,
+    })
+  })
+}
+
 export const browserDom: EngineDom = {
   get pathname() {
     return typeof window !== 'undefined' ? window.location.pathname : '(no window)'
@@ -97,4 +130,5 @@ export const browserDom: EngineDom = {
   findScrollTarget,
   click: (target: ClickTarget) => (target as HTMLElement).click(),
   sleep,
+  waitForDomQuiet,
 }

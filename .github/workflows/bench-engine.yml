@@ -1,0 +1,41 @@
+name: Engine benchmark
+
+# Mock-grid throughput and heap harness (scripts/bench/engine.ts). Fails only
+# when a run is more than 2x worse than bench/engine-baseline.json, so the
+# budget can only be tightened later by committing a better baseline.
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'src/**'
+      - 'scripts/bench/**'
+      - 'bench/**'
+      - '.github/workflows/bench-engine.yml'
+
+jobs:
+  bench:
+    name: Engine throughput and heap (mock grid)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run engine benchmark
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome
+        run: bun run bench:engine --check --out bench-engine.json
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-engine
+          path: bench-engine.json
+          if-no-files-found: ignore

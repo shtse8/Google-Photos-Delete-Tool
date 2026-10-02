@@ -21,6 +21,9 @@ export { StopRequested }
 
 const LOG = '[gpdt]'
 
+/** Quiet window (ms) that ends an observer-driven settle once the page has changed. */
+const OBSERVED_QUIET_MS = 80
+
 export interface Progress {
   /** Photos actually moved to Trash. Always 0 for a dry-run scan — a preview never mutates. */
   deleted: number
@@ -628,6 +631,17 @@ export class DeleteEngine {
     // Pause does not burn the settle budget — it holds the scan.
     const pollMs = Math.min(this.config.pollDelay, 200)
     let remaining = this.config.scrollSettleMs
+    // Observer-driven early exit: only when the scroll position advanced and
+    // the page then changed and went quiet. Anything else (no movement, no
+    // change: possibly the end of the list) waits the full settle ceiling.
+    if (this.dom.waitForDomQuiet && target.scrollTop > beforeTop) {
+      await this.awaitControl()
+      const startedAt = Date.now()
+      const quiet = await this.dom.waitForDomQuiet(remaining, OBSERVED_QUIET_MS)
+      await this.awaitControl()
+      this.harvestVisibleIds(seen, onWarn)
+      remaining = quiet ? 0 : remaining - (Date.now() - startedAt)
+    }
     while (remaining > 0) {
       await this.awaitControl()
       await this.dom.sleep(pollMs)
@@ -780,7 +794,8 @@ export class DeleteEngine {
     while (settleRemaining > 0) {
       await this.awaitControl()
       const slice = Math.min(this.config.pollDelay, 200)
-      await this.dom.sleep(slice)
+      if (this.dom.waitForDomQuiet) await this.dom.waitForDomQuiet(slice, OBSERVED_QUIET_MS)
+      else await this.dom.sleep(slice)
       await this.awaitControl()
       settleRemaining -= slice
       const after = measure()
@@ -879,6 +894,13 @@ export class DeleteEngine {
     if (scrollTarget) {
       scrollTarget.scrollTop = 0
       console.log(`${LOG} scrolled gallery back to top for next batch`)
+      // The grid re-renders the top rows after the reset; selecting before
+      // they exist would skip them, so wait for the page to change and settle
+      // (ceiling: the scroll settle time, as for any scroll).
+      if (this.dom.waitForDomQuiet) {
+        await this.awaitControl()
+        await this.dom.waitForDomQuiet(this.config.scrollSettleMs, OBSERVED_QUIET_MS)
+      }
     }
   }
 
@@ -900,9 +922,18 @@ export class DeleteEngine {
       if (remaining <= 0) {
         throw new Error(`Timed out after ${timeoutMs}ms: ${what}`)
       }
-      await this.dom.sleep(this.config.pollDelay)
-      await this.awaitControl()
-      remaining -= this.config.pollDelay
+      if (this.dom.waitForDomQuiet) {
+        // Wake on the next page change instead of the fixed poll; the poll
+        // interval stays the ceiling per wait and the timeout is wall-clock.
+        const startedAt = Date.now()
+        await this.dom.waitForDomQuiet(this.config.pollDelay, 0)
+        await this.awaitControl()
+        remaining -= Math.max(1, Date.now() - startedAt)
+      } else {
+        await this.dom.sleep(this.config.pollDelay)
+        await this.awaitControl()
+        remaining -= this.config.pollDelay
+      }
     }
   }
 }

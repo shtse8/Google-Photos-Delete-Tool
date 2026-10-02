@@ -1,0 +1,84 @@
+{
+  "mock": {
+    "cols": 6,
+    "rowH": 100,
+    "viewH": 800,
+    "buffer": 2,
+    "loadChunk": 200,
+    "renderDelay": 40,
+    "loadDelay": 150,
+    "dialogDelay": 60,
+    "deleteLatency": 800
+  },
+  "rows": [
+    {
+      "n": 500,
+      "mode": "delete",
+      "status": "done",
+      "count": 500,
+      "elapsedS": 4,
+      "photosPerMinute": 7484.3,
+      "sleepSharePct": 45.1,
+      "sleeps": 26,
+      "peakHeapMB": 2.7,
+      "heapGrowthMB": 0.9,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      }
+    },
+    {
+      "n": 500,
+      "mode": "dry",
+      "status": "done",
+      "count": 500,
+      "elapsedS": 7.4,
+      "photosPerMinute": 4037.1,
+      "sleepSharePct": 68.7,
+      "sleeps": 19,
+      "peakHeapMB": 2.7,
+      "heapGrowthMB": 0.8,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      }
+    },
+    {
+      "n": 2000,
+      "mode": "delete",
+      "status": "done",
+      "count": 2000,
+      "elapsedS": 14.1,
+      "photosPerMinute": 8523.6,
+      "sleepSharePct": 35.5,
+      "sleeps": 89,
+      "peakHeapMB": 3,
+      "heapGrowthMB": 1.2,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      }
+    },
+    {
+      "n": 2000,
+      "mode": "dry",
+      "status": "done",
+      "count": 2000,
+      "elapsedS": 15.1,
+      "photosPerMinute": 7938.1,
+      "sleepSharePct": 33.8,
+      "sleeps": 19,
+      "peakHeapMB": 2.9,
+      "heapGrowthMB": 1.1,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      }
+    }
+  ],
+  "note": "Desk baselines are N=500 and N=2000 only (desk policy: 300 s per locked browser run), recorded with observer-driven waits. N=5000 is measured in the CI job (bench-engine artifact), not on the desk; --check skips sizes without a baseline row. Pre-optimisation (fixed sleeps) numbers are in the PR description."
+}
