@@ -54,21 +54,21 @@ reviewer is technical or asks how drift is found; otherwise leave it out.
 
 **de** Danke für die Rückmeldung, und schade, dass es nicht geklappt hat. Google Fotos ändert gelegentlich seine Seite, und das Tool stoppt, statt eine Löschschaltfläche zu raten. Bitte öffne die Erweiterung und klicke auf "Problem melden"; das erstellt ein vorausgefülltes GitHub-Issue mit den Angaben, die wir für den Fix brauchen. So beobachten wir solche Änderungen: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
 
-**es** Gracias por avisarnos, y lamentamos que no funcionara. Google Fotos cambia su página de vez en cuando y la herramienta se detiene en lugar de adivinar un botón de borrado. Abre la extensión y pulsa "Report issue"; crea una incidencia de GitHub ya rellenada con los datos que necesitamos para corregirlo. Así vigilamos estos cambios: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
+**es** Gracias por avisarnos, y lamentamos que no funcionara. Google Fotos cambia su página de vez en cuando y la herramienta se detiene en lugar de adivinar un botón de borrado. Abre la extensión y pulsa "Informar de un problema"; crea una incidencia de GitHub ya rellenada con los datos que necesitamos para corregirlo. Así vigilamos estos cambios: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
 
-**fr** Merci de nous le signaler, et désolé que cela n'ait pas fonctionné. Google Photos modifie sa page de temps à autre, et l'outil s'arrête au lieu de deviner un bouton de suppression. Ouvrez l'extension et cliquez sur "Report issue" : cela crée un ticket GitHub prérempli avec les informations dont nous avons besoin pour le corriger. Voici comment nous surveillons ces changements : https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
+**fr** Merci de nous le signaler, et désolé que cela n'ait pas fonctionné. Google Photos modifie sa page de temps à autre, et l'outil s'arrête au lieu de deviner un bouton de suppression. Ouvrez l'extension et cliquez sur "Signaler un problème" : cela crée un ticket GitHub prérempli avec les informations dont nous avons besoin pour le corriger. Voici comment nous surveillons ces changements : https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
 
-**it** Grazie della segnalazione, ci dispiace che non abbia funzionato. Google Foto cambia ogni tanto la sua pagina e lo strumento si ferma invece di indovinare un pulsante di eliminazione. Apri l'estensione e premi "Report issue": crea una segnalazione GitHub già compilata con i dati che ci servono per correggerlo. Come monitoriamo questi cambiamenti: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
+**it** Grazie della segnalazione, ci dispiace che non abbia funzionato. Google Foto cambia ogni tanto la sua pagina e lo strumento si ferma invece di indovinare un pulsante di eliminazione. Apri l'estensione e premi "Segnala un problema": crea una segnalazione GitHub già compilata con i dati che ci servono per correggerlo. Come monitoriamo questi cambiamenti: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
 
-**nl** Bedankt voor je melding, en jammer dat het niet werkte. Google Foto's past af en toe de pagina aan, en de tool stopt dan in plaats van een verwijderknop te raden. Open de extensie en druk op "Report issue"; dat maakt een ingevuld GitHub-issue met de gegevens die we nodig hebben om het te herstellen. Zo houden we zulke wijzigingen in de gaten: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
+**nl** Bedankt voor je melding, en jammer dat het niet werkte. Google Foto's past af en toe de pagina aan, en de tool stopt dan in plaats van een verwijderknop te raden. Open de extensie en druk op "Probleem melden"; dat maakt een ingevuld GitHub-issue met de gegevens die we nodig hebben om het te herstellen. Zo houden we zulke wijzigingen in de gaten: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
 
-**pt_BR** Obrigado por avisar, e sentimos que não tenha funcionado. O Google Fotos muda a página de vez em quando e a ferramenta para em vez de adivinhar um botão de exclusão. Abra a extensão e clique em "Report issue"; isso cria uma issue no GitHub já preenchida com os dados de que precisamos para corrigir. Veja como acompanhamos essas mudanças: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
+**pt_BR** Obrigado por avisar, e sentimos que não tenha funcionado. O Google Fotos muda a página de vez em quando e a ferramenta para em vez de adivinhar um botão de exclusão. Abra a extensão e clique em "Relatar problema"; isso cria uma issue no GitHub já preenchida com os dados de que precisamos para corrigir. Veja como acompanhamos essas mudanças: https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
 
-**zh_CN** 感谢反馈，抱歉给您带来不便。Google 相册偶尔会改版，工具遇到无法确认的删除按钮时会停止，而不是乱猜。请打开扩展并点击"Report issue"，它会生成一个已填好信息的 GitHub issue，我们据此修复。我们如何监测这类改版：https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
+**zh_CN** 感谢反馈，抱歉给您带来不便。Google 相册偶尔会改版，工具遇到无法确认的删除按钮时会停止，而不是乱猜。请打开扩展并点击"报告问题"，它会生成一个已填好信息的 GitHub issue，我们据此修复。我们如何监测这类改版：https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
 
-**zh_TW** 感謝回報，抱歉造成不便。Google 相簿偶爾會改版，工具遇到無法確認的刪除按鈕時會停止，而不是亂猜。請開啟擴充功能並按「Report issue」，它會建立一則已填好資料的 GitHub issue，我們會依此修復。我們如何監測這類改版：https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
+**zh_TW** 感謝回報，抱歉造成不便。Google 相簿偶爾會改版，工具遇到無法確認的刪除按鈕時會停止，而不是亂猜。請開啟擴充功能並按「报告问题」，它會建立一則已填好資料的 GitHub issue，我們會依此修復。我們如何監測這類改版：https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
 
-**ja** ご連絡ありがとうございます。うまく動かずご迷惑をおかけしました。Google フォトは時々ページが変わり、その際このツールは削除ボタンを推測せず停止します。拡張機能を開いて「Report issue」を押すと、修正に必要な情報が入力済みの GitHub issue が作成されます。変更の検知方法はこちらです：https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
+**ja** ご連絡ありがとうございます。うまく動かずご迷惑をおかけしました。Google フォトは時々ページが変わり、その際このツールは削除ボタンを推測せず停止します。拡張機能を開いて「問題を報告」を押すと、修正に必要な情報が入力済みの GitHub issue が作成されます。変更の検知方法はこちらです：https://github.com/SylphxAI/Google-Photos-Delete-Tool/blob/master/docs/CANARY.md
 
 ## B. Deleted the wrong photos
 
@@ -84,21 +84,21 @@ already empty, say so honestly and do not promise recovery.
 
 **de** Es tut uns leid, dass du dir Sorgen um deine Fotos machst. Das Tool verschiebt nur Fotos in den Papierkorb, die du ausgewählt oder bestätigt hast, und Google Fotos bewahrt sie dort 60 Tage auf. Öffne bitte jetzt den Papierkorb in Google Fotos und stelle wieder her, was du brauchst (war "Papierkorb danach leeren" aktiv, ist dieser Schritt endgültig). Wirkt etwas falsch, klicke in der Erweiterung auf "Problem melden", damit wir prüfen können, was passiert ist.
 
-**es** Lamentamos que estés preocupado por tus fotos. La herramienta solo envía a la papelera las fotos que elegiste o aprobaste, y Google Fotos las conserva allí 60 días. Abre ahora la papelera de Google Fotos y restaura lo que necesites (si activaste "Vaciar la papelera después", ese paso es permanente). Si algo no cuadra, pulsa "Report issue" en la extensión para que podamos revisar qué pasó.
+**es** Lamentamos que estés preocupado por tus fotos. La herramienta solo envía a la papelera las fotos que elegiste o aprobaste, y Google Fotos las conserva allí 60 días. Abre ahora la papelera de Google Fotos y restaura lo que necesites (si activaste "Vaciar la papelera después", ese paso es permanente). Si algo no cuadra, pulsa "Informar de un problema" en la extensión para que podamos revisar qué pasó.
 
-**fr** Nous sommes désolés que vous vous inquiétiez pour vos photos. L'outil ne place dans la corbeille que les photos que vous avez choisies ou approuvées, et Google Photos les y garde 60 jours. Ouvrez dès maintenant la corbeille de Google Photos et restaurez ce dont vous avez besoin (si "Vider la corbeille ensuite" était activé, cette étape est définitive). Si quelque chose semble anormal, cliquez sur "Report issue" dans l'extension pour que nous vérifiions ce qui s'est passé.
+**fr** Nous sommes désolés que vous vous inquiétiez pour vos photos. L'outil ne place dans la corbeille que les photos que vous avez choisies ou approuvées, et Google Photos les y garde 60 jours. Ouvrez dès maintenant la corbeille de Google Photos et restaurez ce dont vous avez besoin (si "Vider la corbeille ensuite" était activé, cette étape est définitive). Si quelque chose semble anormal, cliquez sur "Signaler un problème" dans l'extension pour que nous vérifiions ce qui s'est passé.
 
-**it** Ci dispiace che tu sia preoccupato per le tue foto. Lo strumento sposta nel cestino solo le foto che hai scelto o approvato, e Google Foto le conserva lì per 60 giorni. Apri subito il cestino di Google Foto e ripristina ciò che ti serve (se "Svuota il cestino dopo" era attivo, quel passaggio è definitivo). Se qualcosa non torna, premi "Report issue" nell'estensione così possiamo verificare cos'è successo.
+**it** Ci dispiace che tu sia preoccupato per le tue foto. Lo strumento sposta nel cestino solo le foto che hai scelto o approvato, e Google Foto le conserva lì per 60 giorni. Apri subito il cestino di Google Foto e ripristina ciò che ti serve (se "Svuota il cestino dopo" era attivo, quel passaggio è definitivo). Se qualcosa non torna, premi "Segnala un problema" nell'estensione così possiamo verificare cos'è successo.
 
-**nl** Het spijt ons dat je je zorgen maakt over je foto's. De tool zet alleen foto's in de prullenbak die jij hebt gekozen of goedgekeurd, en Google Foto's bewaart ze daar 60 dagen. Open nu de prullenbak in Google Foto's en herstel wat je nodig hebt (stond "Prullenbak daarna legen" aan, dan is die stap definitief). Lijkt er iets mis te zijn, druk dan in de extensie op "Report issue" zodat we kunnen nagaan wat er gebeurde.
+**nl** Het spijt ons dat je je zorgen maakt over je foto's. De tool zet alleen foto's in de prullenbak die jij hebt gekozen of goedgekeurd, en Google Foto's bewaart ze daar 60 dagen. Open nu de prullenbak in Google Foto's en herstel wat je nodig hebt (stond "Prullenbak daarna legen" aan, dan is die stap definitief). Lijkt er iets mis te zijn, druk dan in de extensie op "Probleem melden" zodat we kunnen nagaan wat er gebeurde.
 
-**pt_BR** Sentimos que você esteja preocupado com suas fotos. A ferramenta só envia para a lixeira as fotos que você escolheu ou aprovou, e o Google Fotos as mantém lá por 60 dias. Abra agora a lixeira do Google Fotos e restaure o que precisar (se "Esvaziar a lixeira depois" estava ativado, essa etapa é permanente). Se algo parecer errado, clique em "Report issue" na extensão para podermos verificar o que aconteceu.
+**pt_BR** Sentimos que você esteja preocupado com suas fotos. A ferramenta só envia para a lixeira as fotos que você escolheu ou aprovou, e o Google Fotos as mantém lá por 60 dias. Abra agora a lixeira do Google Fotos e restaure o que precisar (se "Esvaziar a lixeira depois" estava ativado, essa etapa é permanente). Se algo parecer errado, clique em "Relatar problema" na extensão para podermos verificar o que aconteceu.
 
-**zh_CN** 很抱歉让您担心照片。工具只会把您选择或确认过的照片移入回收站，Google 相册会在回收站保留 60 天。请现在打开 Google 相册的回收站，恢复您需要的照片（如果开启了"完成后清空回收站"，该步骤不可恢复）。如果发现异常，请在扩展中点击"Report issue"，我们会核查发生了什么。
+**zh_CN** 很抱歉让您担心照片。工具只会把您选择或确认过的照片移入回收站，Google 相册会在回收站保留 60 天。请现在打开 Google 相册的回收站，恢复您需要的照片（如果开启了"完成后清空回收站"，该步骤不可恢复）。如果发现异常，请在扩展中点击"报告问题"，我们会核查发生了什么。
 
-**zh_TW** 很抱歉讓您擔心照片。工具只會把您選擇或確認過的照片移到垃圾桶，Google 相簿會在垃圾桶保留 60 天。請現在開啟 Google 相簿的垃圾桶，還原您需要的照片（若開啟了「完成後清空垃圾桶」，該步驟無法復原）。若發現異常，請在擴充功能中按「Report issue」，我們會查明發生了什麼事。
+**zh_TW** 很抱歉讓您擔心照片。工具只會把您選擇或確認過的照片移到垃圾桶，Google 相簿會在垃圾桶保留 60 天。請現在開啟 Google 相簿的垃圾桶，還原您需要的照片（若開啟了「完成後清空垃圾桶」，該步驟無法復原）。若發現異常，請在擴充功能中按「报告问题」，我們會查明發生了什麼事。
 
-**ja** 写真のことでご心配をおかけしました。このツールは、ご自身が選択または承認した写真だけをゴミ箱に移し、Google フォトはそれを 60 日間保管します。今すぐ Google フォトのゴミ箱を開き、必要な写真を復元してください（「完了後にゴミ箱を空にする」をオンにしていた場合、その操作は元に戻せません）。おかしな点があれば、拡張機能の「Report issue」を押してください。状況を確認します。
+**ja** 写真のことでご心配をおかけしました。このツールは、ご自身が選択または承認した写真だけをゴミ箱に移し、Google フォトはそれを 60 日間保管します。今すぐ Google フォトのゴミ箱を開き、必要な写真を復元してください（「完了後にゴミ箱を空にする」をオンにしていた場合、その操作は元に戻せません）。おかしな点があれば、拡張機能の「問題を報告」を押してください。状況を確認します。
 
 ## C. It's slow
 
@@ -111,21 +111,21 @@ for the total and ETA.
 
 **de** Danke für die Rückmeldung. Das Tool wartet, bis Google Fotos jeden Stapel bestätigt hat, bevor es weitermacht, und läuft deshalb in Googles Tempo. Ein Probelauf zeigt vorab die Gesamtzahl und eine geschätzte Dauer; eine kleinere Stapelgröße oder eine engere Ansicht (Album oder Suche) macht einen Lauf handlicher. Wirkt es eher festgefahren als langsam, klicke auf "Problem melden", dann sehen wir nach.
 
-**es** Gracias por el comentario. La herramienta espera a que Google Fotos confirme cada lote antes de continuar, por eso va al ritmo de Google. Una simulación previa muestra el total y un tiempo estimado, y un lote más pequeño o una vista más acotada (un álbum o una búsqueda) puede hacerlo más manejable. Si parece bloqueado más que lento, pulsa "Report issue" y lo revisamos.
+**es** Gracias por el comentario. La herramienta espera a que Google Fotos confirme cada lote antes de continuar, por eso va al ritmo de Google. Una simulación previa muestra el total y un tiempo estimado, y un lote más pequeño o una vista más acotada (un álbum o una búsqueda) puede hacerlo más manejable. Si parece bloqueado más que lento, pulsa "Informar de un problema" y lo revisamos.
 
-**fr** Merci pour votre retour. L'outil attend que Google Photos confirme chaque lot avant de continuer, il avance donc au rythme de Google. Une simulation préalable indique le total et une durée estimée, et un lot plus petit ou une vue plus ciblée (un album ou une recherche) peut faciliter l'opération. S'il semble bloqué plutôt que lent, cliquez sur "Report issue" et nous regarderons.
+**fr** Merci pour votre retour. L'outil attend que Google Photos confirme chaque lot avant de continuer, il avance donc au rythme de Google. Une simulation préalable indique le total et une durée estimée, et un lot plus petit ou une vue plus ciblée (un album ou une recherche) peut faciliter l'opération. S'il semble bloqué plutôt que lent, cliquez sur "Signaler un problème" et nous regarderons.
 
-**it** Grazie per il feedback. Lo strumento aspetta che Google Foto confermi ogni blocco prima di proseguire, quindi va al ritmo di Google. Una prova preliminare mostra il totale e un tempo stimato, e un blocco più piccolo o una vista più ristretta (un album o una ricerca) può rendere l'operazione più gestibile. Se sembra bloccato più che lento, premi "Report issue" e controlliamo.
+**it** Grazie per il feedback. Lo strumento aspetta che Google Foto confermi ogni blocco prima di proseguire, quindi va al ritmo di Google. Una prova preliminare mostra il totale e un tempo stimato, e un blocco più piccolo o una vista più ristretta (un album o una ricerca) può rendere l'operazione più gestibile. Se sembra bloccato più che lento, premi "Segnala un problema" e controlliamo.
 
-**nl** Bedankt voor je feedback. De tool wacht tot Google Foto's elke batch bevestigt voordat hij verdergaat, dus hij werkt op het tempo van Google. Een proefrun toont vooraf het totaal en een geschatte tijd, en een kleinere batchgrootte of een smallere weergave (een album of zoekopdracht) maakt een run beter hanteerbaar. Lijkt het vast te zitten in plaats van traag, druk dan op "Report issue" en we kijken mee.
+**nl** Bedankt voor je feedback. De tool wacht tot Google Foto's elke batch bevestigt voordat hij verdergaat, dus hij werkt op het tempo van Google. Een proefrun toont vooraf het totaal en een geschatte tijd, en een kleinere batchgrootte of een smallere weergave (een album of zoekopdracht) maakt een run beter hanteerbaar. Lijkt het vast te zitten in plaats van traag, druk dan op "Probleem melden" en we kijken mee.
 
-**pt_BR** Obrigado pelo retorno. A ferramenta espera o Google Fotos confirmar cada lote antes de continuar, por isso segue o ritmo do Google. Uma simulação prévia mostra o total e um tempo estimado, e um lote menor ou uma visualização mais restrita (um álbum ou uma busca) pode deixar a execução mais fácil de acompanhar. Se parecer travado em vez de lento, clique em "Report issue" e vamos verificar.
+**pt_BR** Obrigado pelo retorno. A ferramenta espera o Google Fotos confirmar cada lote antes de continuar, por isso segue o ritmo do Google. Uma simulação prévia mostra o total e um tempo estimado, e um lote menor ou uma visualização mais restrita (um álbum ou uma busca) pode deixar a execução mais fácil de acompanhar. Se parecer travado em vez de lento, clique em "Relatar problema" e vamos verificar.
 
-**zh_CN** 感谢反馈。工具会等 Google 相册确认每一批之后才继续，所以速度取决于 Google 的页面响应。先做一次试运行可以看到总数和预计时间，调小每批数量或缩小范围（某个相册或搜索结果）也会更好控制。如果是卡住而不只是慢，请点击"Report issue"，我们来查看。
+**zh_CN** 感谢反馈。工具会等 Google 相册确认每一批之后才继续，所以速度取决于 Google 的页面响应。先做一次试运行可以看到总数和预计时间，调小每批数量或缩小范围（某个相册或搜索结果）也会更好控制。如果是卡住而不只是慢，请点击"报告问题"，我们来查看。
 
-**zh_TW** 感謝回饋。工具會等 Google 相簿確認每一批之後才繼續，所以速度取決於 Google 的頁面回應。先做一次試跑可看到總數與預估時間，調小每批數量或縮小範圍（某個相簿或搜尋結果）也比較好掌控。若是卡住而不只是慢，請按「Report issue」，我們會查看。
+**zh_TW** 感謝回饋。工具會等 Google 相簿確認每一批之後才繼續，所以速度取決於 Google 的頁面回應。先做一次試跑可看到總數與預估時間，調小每批數量或縮小範圍（某個相簿或搜尋結果）也比較好掌控。若是卡住而不只是慢，請按「报告问题」，我們會查看。
 
-**ja** ご意見ありがとうございます。このツールは Google フォトが各バッチを確認してから次へ進むため、Google の動作速度に合わせて動きます。事前のドライランで総数と目安の時間が分かり、バッチ数を減らす、またはアルバムや検索で範囲を絞ると扱いやすくなります。遅いのではなく止まっているように見える場合は、「Report issue」を押してください。確認します。
+**ja** ご意見ありがとうございます。このツールは Google フォトが各バッチを確認してから次へ進むため、Google の動作速度に合わせて動きます。事前のドライランで総数と目安の時間が分かり、バッチ数を減らす、またはアルバムや検索で範囲を絞ると扱いやすくなります。遅いのではなく止まっているように見える場合は、「問題を報告」を押してください。確認します。
 
 ## D. Pro questions and refunds
 
@@ -193,21 +193,21 @@ ask for changes to the rating or for a Pro purchase.
 
 **de** Vielen Dank, das freut uns. Schön, dass es dir Zeit gespart hat. Prüfe vor einem echten Lauf am besten den Probelauf. Rückmeldungen sind jederzeit über "Problem melden" willkommen.
 
-**es** Muchas gracias, nos alegra mucho. Nos alegra que te ahorrara tiempo; antes de una ejecución real, revisa la simulación. Tus comentarios siempre son bienvenidos con "Report issue".
+**es** Muchas gracias, nos alegra mucho. Nos alegra que te ahorrara tiempo; antes de una ejecución real, revisa la simulación. Tus comentarios siempre son bienvenidos con "Informar de un problema".
 
-**fr** Merci beaucoup, c'est très aimable. Nous sommes ravis que cela vous ait fait gagner du temps ; avant un vrai passage, consultez la simulation. Vos retours sont toujours les bienvenus via "Report issue".
+**fr** Merci beaucoup, c'est très aimable. Nous sommes ravis que cela vous ait fait gagner du temps ; avant un vrai passage, consultez la simulation. Vos retours sont toujours les bienvenus via "Signaler un problème".
 
-**it** Grazie mille, ci fa molto piacere. Siamo contenti che ti abbia fatto risparmiare tempo; prima di un'esecuzione reale controlla la prova preliminare. I tuoi commenti sono sempre benvenuti tramite "Report issue".
+**it** Grazie mille, ci fa molto piacere. Siamo contenti che ti abbia fatto risparmiare tempo; prima di un'esecuzione reale controlla la prova preliminare. I tuoi commenti sono sempre benvenuti tramite "Segnala un problema".
 
-**nl** Hartelijk dank, erg fijn. We zijn blij dat het je tijd bespaarde; controleer vóór een echte run de proefrun. Feedback is altijd welkom via "Report issue".
+**nl** Hartelijk dank, erg fijn. We zijn blij dat het je tijd bespaarde; controleer vóór een echte run de proefrun. Feedback is altijd welkom via "Probleem melden".
 
-**pt_BR** Muito obrigado, ficamos felizes. Que bom que economizou seu tempo; antes de uma execução real, confira a simulação. Seu feedback é sempre bem-vindo em "Report issue".
+**pt_BR** Muito obrigado, ficamos felizes. Que bom que economizou seu tempo; antes de uma execução real, confira a simulação. Seu feedback é sempre bem-vindo em "Relatar problema".
 
-**zh_CN** 非常感谢您的好评。很高兴它帮您节省了时间；正式运行前请先看一下试运行结果。欢迎随时通过"Report issue"反馈。
+**zh_CN** 非常感谢您的好评。很高兴它帮您节省了时间；正式运行前请先看一下试运行结果。欢迎随时通过"报告问题"反馈。
 
-**zh_TW** 非常感謝您的好評。很高興它幫您節省了時間；正式執行前請先看一下試跑結果。歡迎隨時透過「Report issue」回饋。
+**zh_TW** 非常感謝您的好評。很高興它幫您節省了時間；正式執行前請先看一下試跑結果。歡迎隨時透過「报告问题」回饋。
 
-**ja** 嬉しいお言葉をありがとうございます。お役に立てて何よりです。本番実行の前にはドライランの結果をご確認ください。ご意見は「Report issue」からいつでもお寄せください。
+**ja** 嬉しいお言葉をありがとうございます。お役に立てて何よりです。本番実行の前にはドライランの結果をご確認ください。ご意見は「問題を報告」からいつでもお寄せください。
 
 ## Can the store do this for us? No API
 
@@ -229,7 +229,7 @@ templates.
 
 ## Weekly checklist
 
-Owner: the OSS lane lead (name here: ______). One person owns the week; if
+Owner: Spiron (holds the Chrome Web Store dashboard login); the OSS lane lead reviews the log weekly. One person owns the week; if
 they are away, they hand it over by writing the next owner in the log.
 
 1. Make sure "Item review completed" email alerts are on in the Developer
