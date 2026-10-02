@@ -90,6 +90,8 @@ export class DeleteEngine {
   private readonly clickedIds = new Set<string>()
   /** Identity (`id`, else label) of every photo confirmed into Trash this run; never clicked again. */
   private readonly trashedKeys = new Set<string>()
+  /** Matching tiles skipped in the current pass because their key is in `trashedKeys`. */
+  private passSkippedTrashed = new Set<string>()
   private readonly onProgress?: (progress: Progress) => void
 
   private progress: Progress
@@ -266,6 +268,7 @@ export class DeleteEngine {
       }
       const deletedAtPassStart = this.progress.deleted
       const trashedAtPassStart = this.trashedKeys.size
+      this.passSkippedTrashed = new Set()
       consecutiveNoProgress = 0
       if (pass > 0) await this.returnToTop()
       while (!this.stopped) {
@@ -348,15 +351,15 @@ export class DeleteEngine {
       if (this.getCount() > 0) await this.deleteSelected()
       const passDeleted = this.progress.deleted - deletedAtPassStart
       if (passDeleted === 0) {
-        // Nothing new was deleted. Photos we already confirmed that are still
-        // on screen after a settle mean the page did not remove them: fail
-        // closed instead of reporting done.
-        await this.returnToTop()
-        await this.pollWait(this.config.scrollSettleMs, OBSERVED_QUIET_MS)
-        if (this.trashedStillVisible() > 0) {
+        // Nothing new was deleted, and this pass scanned the whole gallery
+        // from the top. A matching tile it skipped because its key was
+        // already trashed is either a photo the page did not remove or a
+        // different photo that cannot be told apart from one (same label, no
+        // id): fail closed instead of reporting done.
+        if (this.passSkippedTrashed.size > 0) {
           throw new Error(
-            `${this.trashedStillVisible()} photo(s) already moved to Trash are still in the gallery. ` +
-            `Stopping so nothing is deleted twice; check the page and run again.`,
+            `${this.passSkippedTrashed.size} photo(s) already moved to Trash, or that cannot be told apart from them, ` +
+            `are still in the gallery; run again.`,
           )
         }
         break
@@ -777,14 +780,6 @@ export class DeleteEngine {
     return tile.id?.() ?? tile.label()
   }
 
-  /** Matching unchecked tiles on screen whose photo was already confirmed into Trash. */
-  private trashedStillVisible(): number {
-    return this.dom.uncheckedTiles().filter((t) => {
-      const k = this.keyOf(t)
-      return k !== null && this.trashedKeys.has(k) && tileMatchesFilter(t, this.filter, this.targetIds ?? undefined)
-    }).length
-  }
-
   private async selectVisibleCheckboxes(maxToSelect: number): Promise<number> {
     if (maxToSelect <= 0) return 0
 
@@ -797,7 +792,12 @@ export class DeleteEngine {
       const remaining = maxToSelect - clicked
       const candidates = this.dom.uncheckedTiles()
         .filter(tile => tileMatchesFilter(tile, this.filter, this.targetIds ?? undefined))
-        .filter(tile => { const k = this.keyOf(tile); return k === null || !this.trashedKeys.has(k) })
+        .filter(tile => {
+          const k = this.keyOf(tile)
+          if (k === null || !this.trashedKeys.has(k)) return true
+          this.passSkippedTrashed.add(k)
+          return false
+        })
         .slice(0, remaining)
       if (candidates.length === 0) break
       for (const tile of candidates) {

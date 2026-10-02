@@ -43,8 +43,19 @@ class GridDom implements EngineDom {
   counterText(): string | null {
     return String(this.tiles.filter((t) => t.checked).length)
   }
+  private labels: Map<string, string> | null = null
+  private noIdMode = false
+  /** Use these labels, optionally with unreadable ids. */
+  useLabels(labels: Map<string, string>, noIds: boolean): void { this.labels = labels; this.noIdMode = noIds }
+  protected tileId(id: string): string | null { return id }
+  /** Tiles that stay in the gallery after every confirm, rendered only once scrolled down. */
+  stickyBelow: string[] = []
   private wrap(t: Tile): PhotoTile {
-    return { click: () => { t.checked = !t.checked; this.clicks.push(`tile:${t.id}`) }, label: () => `Photo - ${t.id}`, id: () => t.id }
+    return {
+      click: () => { t.checked = !t.checked; this.clicks.push(`tile:${t.id}`) },
+      label: () => this.labels?.get(t.id) ?? `Photo - ${t.id}`,
+      id: () => (this.noIdMode ? null : this.tileId(t.id)),
+    }
   }
   uncheckedTiles(): PhotoTile[] { return this.tiles.filter((t) => !t.checked).map((t) => this.wrap(t)) }
   checkedTiles(): PhotoTile[] { return this.tiles.filter((t) => t.checked).map((t) => this.wrap(t)) }
@@ -55,6 +66,7 @@ class GridDom implements EngineDom {
       if (this.confirmRemoves) this.tiles = this.tiles.filter((t) => !t.checked)
       else for (const t of this.tiles) t.checked = false
       for (const id of this.afterConfirm.splice(0)) this.tiles.push(new Tile(id))
+      this.stickyBelow = this.stickyBelow.filter((id) => !this.tiles.some((x) => x.id === id) && (this.tiles.push(new Tile(id)), true))
       this.dialogOpen = false
     },
   }
@@ -145,6 +157,36 @@ describe('DeleteEngine — passes until a pass deletes nothing', () => {
     const result = await engineOn(dom).run()
     expect(result.status).toBe('done')
     expect(result.deleted).toBe(2)
+  })
+})
+
+describe('DeleteEngine — photos that cannot be told apart', () => {
+  class LabelDom extends GridDom {
+    labelOf = new Map<string, string>()
+    noIds = true
+    protected override tileId(id: string): string | null { return this.noIds ? null : id }
+  }
+
+  it('burst shots sharing a label and no id never end done with one left behind', async () => {
+    const ids = [...Array.from({ length: 100 }, (_, i) => `n${i}`), 'dup1', 'dup2']
+    const dom = new LabelDom(ids.slice(0, 101))
+    dom.afterConfirm = ['dup2']
+    for (const id of ids) dom.labelOf.set(id, id.startsWith('dup') ? 'Screenshot - Mar 1, 2024, 10:00:00' : `Photo - ${id}`)
+    dom.useLabels(dom.labelOf, true)
+    const engine = new DeleteEngine({ dom, config: { ...CONFIG, dryRun: false }, filter: { kind: 'type', type: 'screenshot' } })
+    const result = await engine.run()
+    expect(dom.tiles.some((t) => t.id === 'dup2')).toBe(true)
+    expect(result.status).toBe('error')
+    expect(result.error).toMatch(/cannot be told apart/)
+  })
+
+  it('photos stuck below the first screen end in an error', async () => {
+    const dom = new GridDom(['a', 'b'])
+    dom.stickyBelow = ['x1', 'x2']
+    const result = await engineOn(dom).run()
+    expect(result.status).toBe('error')
+    expect(result.error).toMatch(/still in the gallery/)
+    expect(dom.tiles.some((t) => t.id === 'x1')).toBe(true)
   })
 })
 
