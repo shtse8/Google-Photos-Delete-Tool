@@ -289,6 +289,12 @@ minute is measured in the release gate and published in its notes.
 "Empty trash afterwards" empties and permanently removes them — with your
 explicit opt-in.
 
+## Support
+
+Problems: press **Report issue** in the extension, or open a
+[GitHub issue](https://github.com/SylphxAI/Google-Photos-Delete-Tool/issues).
+How we answer store reviews: [`docs/REVIEWS.md`](docs/REVIEWS.md).
+
 ## License & provenance
 
 MIT, see [`LICENSE`](LICENSE). A Sylphx open-source product, modernized from
