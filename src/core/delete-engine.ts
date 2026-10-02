@@ -960,6 +960,27 @@ export class DeleteEngine {
     // Best-effort: scroll the photo container back to the top so the
     // next batch starts from the same anchor. Failure is non-fatal.
     await this.returnToTop()
+    await this.waitForTrashedToLeave()
+  }
+
+  /**
+   * Google Photos removes trashed tiles from the grid a moment after the
+   * selection clears. Wait (ceiling: the scroll settle time) until no tile of
+   * the batch is still rendered, so the next scan does not mistake that lag
+   * for a photo the page refused to remove. Tiles that really stay are still
+   * caught by the fail-closed check at the end of a pass.
+   */
+  private async waitForTrashedToLeave(): Promise<void> {
+    let remaining = this.config.scrollSettleMs
+    while (remaining > 0) {
+      await this.awaitControl()
+      const lingering = [...this.dom.uncheckedTiles(), ...this.dom.checkedTiles()].some((tile) => {
+        const k = this.keyOf(tile)
+        return k !== null && this.trashedKeys.has(k)
+      })
+      if (!lingering) return
+      remaining -= await this.pollWait(Math.min(this.config.pollDelay, 200), 0)
+    }
   }
 
   /**

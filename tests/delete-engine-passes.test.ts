@@ -35,6 +35,11 @@ class GridDom implements EngineDom {
   private sleepsSinceScroll = 0
   private scrolled = false
   private dialogOpen = false
+  /** Trashed tiles stay rendered (unchecked) for this many sleeps before the grid drops them. */
+  staleSleeps = 0
+  /** When false the page has no scrollable container (a short gallery). */
+  scrollable = true
+  private stale: { tiles: Tile[]; left: number }[] = []
 
   constructor(ids: string[]) {
     this.tiles = ids.map((id) => new Tile(id))
@@ -63,8 +68,15 @@ class GridDom implements EngineDom {
   private confirmBtn: ClickTarget = {
     click: () => {
       this.clicks.push('confirm')
-      if (this.confirmRemoves) this.tiles = this.tiles.filter((t) => !t.checked)
-      else for (const t of this.tiles) t.checked = false
+      if (this.confirmRemoves) {
+        const gone = this.tiles.filter((t) => t.checked)
+        this.tiles = this.tiles.filter((t) => !t.checked)
+        if (this.staleSleeps > 0) {
+          for (const t of gone) t.checked = false
+          this.tiles.push(...gone)
+          this.stale.push({ tiles: gone, left: this.staleSleeps })
+        }
+      } else for (const t of this.tiles) t.checked = false
       for (const id of this.afterConfirm.splice(0)) this.tiles.push(new Tile(id))
       this.stickyBelow = this.stickyBelow.filter((id) => !this.tiles.some((x) => x.id === id) && (this.tiles.push(new Tile(id)), true))
       this.dialogOpen = false
@@ -74,6 +86,7 @@ class GridDom implements EngineDom {
   findConfirmDialog(): ClickTarget | null { return this.dialogOpen ? { click: () => undefined } : null }
   findConfirmButton(): ClickTarget | null { return this.dialogOpen ? this.confirmBtn : null }
   findScrollTarget(): ScrollTarget | null {
+    if (!this.scrollable) return null
     const self = this
     const height = () => 800 * (1 + self.lazy.length + (self.scrolled ? 0 : 0)) + 800
     return {
@@ -91,6 +104,10 @@ class GridDom implements EngineDom {
   }
   click(target: ClickTarget): void { target.click() }
   async sleep(): Promise<void> {
+    for (const s of this.stale) {
+      if (--s.left <= 0) this.tiles = this.tiles.filter((t) => !s.tiles.includes(t))
+    }
+    this.stale = this.stale.filter((s) => s.left > 0)
     if (!this.scrolled || this.lazy.length === 0 || this.revealEverySleeps === 0) return
     if (++this.sleepsSinceScroll >= this.revealEverySleeps) {
       const chunk = this.lazy.shift()!
@@ -130,6 +147,17 @@ describe('DeleteEngine — passes until a pass deletes nothing', () => {
     const result = await engineOn(dom).run()
     expect(result.status).toBe('done')
     expect(result.deleted).toBe(1000)
+    expect(dom.tiles).toHaveLength(0)
+  })
+
+  it('trashed tiles the grid drops a moment late do not end the run with a false "still in the gallery"', async () => {
+    const dom = new GridDom(Array.from({ length: 30 }, (_, i) => `a${i}`))
+    dom.staleSleeps = 2
+    dom.scrollable = false
+    const result = await engineOn(dom).run()
+    expect(result.error).toBeUndefined()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(30)
     expect(dom.tiles).toHaveLength(0)
   })
 
