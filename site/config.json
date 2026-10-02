@@ -2,5 +2,8 @@
   "ga4MeasurementId": "G-XXXX",
   "adsConversionId": "AW-XXXX",
   "addToChromeSendTo": "AW-XXXX/LABEL",
-  "purchaseSendTo": "AW-XXXX/LABEL"
+  "purchaseSendTo": "AW-XXXX/LABEL",
+  "selfServeCheckout": false,
+  "checkoutUrl": "https://buy.sylphx.com/buy/gpdt",
+  "recoverUrl": "https://buy.sylphx.com/recover?product=gpdt"
 }

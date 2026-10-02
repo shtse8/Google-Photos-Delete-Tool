@@ -2,7 +2,8 @@
  * Pro license verification — zero-server by design.
  *
  * A Pro token is `${base64url(payload)}.${base64url(signature)}` where
- * payload is JSON `{ plan: "pro", email, issuedAt, order? }` and the signature
+ * payload is JSON `{ plan: "pro", email, issuedAt, order? }` (Money-minted
+ * tokens add `product: "gpdt"`, `grant`, `seats`, `expiresAt`) and the signature
  * is an Ed25519 signature over the payload bytes, made with the seller's
  * private key. The public keys are embedded below; verification happens
  * entirely on the user's device (WebCrypto SubtleCrypto). No license
@@ -14,7 +15,14 @@
 export interface ProLicensePayload {
   plan: 'pro'
   email?: string
-  issuedAt: number
+  /** Present on tokens from the seller CLI and from Money; a Money token may carry only expiresAt. */
+  issuedAt?: number
+  /** Money tokens: product slug ("gpdt"), checked when present. */
+  product?: string
+  /** Money tokens: entitlement grant id, seats and expiry (ms); informational, expiry is not enforced (Pro does not expire). */
+  grant?: string
+  seats?: number
+  expiresAt?: number
   /** Stripe payment or session id the token was issued for; informational, not checked on device. */
   order?: string
 }
@@ -103,7 +111,8 @@ export async function verifyLicense(
     return { ok: false, reason: 'malformed' }
   }
 
-  if (payload.plan !== 'pro' || typeof payload.issuedAt !== 'number') {
+  const hasTime = typeof payload.issuedAt === 'number' || typeof payload.expiresAt === 'number'
+  if (!payload || payload.plan !== 'pro' || !hasTime || (payload.product !== undefined && payload.product !== 'gpdt')) {
     return { ok: false, reason: 'wrong-plan' }
   }
 

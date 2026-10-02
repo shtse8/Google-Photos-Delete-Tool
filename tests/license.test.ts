@@ -55,6 +55,25 @@ describe('verifyLicense', () => {
     }
   })
 
+  it('accepts a Money-shaped token (product gpdt, grant, seats, expiresAt, no issuedAt)', async () => {
+    const token = await signPayload({
+      plan: 'pro',
+      product: 'gpdt',
+      order: 'pi_test_123',
+      grant: 'checkouts/abc/line_items/0',
+      seats: 1,
+      expiresAt: Date.now() + 100 * 365 * 24 * 3600 * 1000,
+    })
+    const result = await verifyLicense(token, testKeys.publicRaw)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.payload.order).toBe('pi_test_123')
+  })
+
+  it('rejects a Money token for another product', async () => {
+    const token = await signPayload({ plan: 'pro', product: 'other', order: 'pi_x', seats: 1, expiresAt: Date.now() + 1e12 })
+    expect(await verifyLicense(token, testKeys.publicRaw)).toEqual({ ok: false, reason: 'wrong-plan' })
+  })
+
   it('rejects a token signed by a different key', async () => {
     const other = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify'])
     const bytes = new TextEncoder().encode(JSON.stringify({ plan: 'pro', issuedAt: 1 }))

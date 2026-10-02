@@ -131,6 +131,27 @@ data is sent.
   update it with its source and date.
 - **Test:** `tests/site.test.ts`.
 
+## Self-serve checkout (shipped off)
+
+Pro can be bought instantly at <https://buy.sylphx.com/buy/gpdt>: Money mints
+the offline licence (payload `plan: "pro"`, `product: "gpdt"`, `order`, `grant`,
+`seats: 1`, `expiresAt`), the success page shows the token and an emailed signed
+link repeats it. Activation is unchanged: paste the token. Two switches, both
+shipped off, flipped together:
+
+- `SELF_SERVE_CHECKOUT` in `src/core/pro-moments.ts` (every extension and
+  userscript Buy link, via `proUrl()`).
+- `selfServeCheckout` in `site/config.json` (the landing page Pro button, and
+  it reveals the "Lost your licence?" link to
+  <https://buy.sylphx.com/recover?product=gpdt>).
+
+Wording that changes on the flip (kept as is until then): README `#pro`
+(`PRO_CHECKOUT_URL` comment becomes the buy link; the "Activation" paragraph
+loses "we send"), `site/thanks.html` ("We send each Pro token by hand ..."
+becomes "your token is shown on the checkout success page and emailed"),
+`site/index.html` Pro button label "See Pro details" becomes "Buy Pro", and
+this Sales section.
+
 ## Sales
 
 1. **Product:** Pro is sold as a Stripe Payment Link, US$9.99 one-time and

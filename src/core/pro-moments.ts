@@ -18,6 +18,17 @@ export const PRO_TOKEN_KEY = 'proToken'
 export const PRO_URL = 'https://github.com/SylphxAI/Google-Photos-Delete-Tool#pro'
 
 /**
+ * Self-serve checkout switch. false: every Buy link keeps the current purchase
+ * path (PRO_URL above). true: every Buy link goes to SELF_SERVE_CHECKOUT_URL,
+ * where Money mints the offline licence and the success page shows the token.
+ * Ship false; flip after the live purchase readback. The site has the same
+ * switch as `selfServeCheckout` in site/config.json (docs/PRO.md).
+ */
+export const SELF_SERVE_CHECKOUT = false
+export const SELF_SERVE_CHECKOUT_URL = 'https://buy.sylphx.com/buy/gpdt'
+export const SELF_SERVE_RECOVER_URL = 'https://buy.sylphx.com/recover?product=gpdt'
+
+/**
  * Copy A/B test, measured without telemetry: each install gets a stable random
  * variant, kept in local storage only, and it travels only as utm_content on
  * the Pro link the user chooses to click. Read results in docs/PRO.md.
@@ -58,7 +69,8 @@ export const PRO_COPY: Record<ProVariant, { ctaLine: string; linkLabel: string }
 export type ProMedium = 'dryrun_teaser' | 'post_run' | 'date_filter' | 'presets' | 'dupes' | 'license_box'
 
 /** PRO_URL with UTM parameters (before the anchor); utm_content is the copy variant. */
-export function proUrl(medium: ProMedium, variant: ProVariant = 'a'): string {
+export function proUrl(medium: ProMedium, variant: ProVariant = 'a', selfServe: boolean = SELF_SERVE_CHECKOUT): string {
+  if (selfServe) return `${SELF_SERVE_CHECKOUT_URL}?utm_source=extension&utm_medium=${medium}&utm_campaign=pro&utm_content=${variant}`
   const [base, hash] = PRO_URL.split('#')
   return `${base}?utm_source=extension&utm_medium=${medium}&utm_campaign=pro&utm_content=${variant}#${hash}`
 }
