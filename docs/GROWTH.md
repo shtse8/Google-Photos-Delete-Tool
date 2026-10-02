@@ -58,7 +58,26 @@ for a product the submitter uses, no astroturfing. Drafts live in
 | Installs and velocity | store dashboards | week-over-week growth after each channel |
 | Store reviews | Chrome Web Store | 100% answered, rating 4.5 or higher |
 | GitHub stars | repository | velocity spikes after posts |
-| Pro orders | Gumroad | first 10 orders |
+| Pro orders | Stripe Checkout at buy.sylphx.com (Money) | first 10 orders |
 | Referral sources | store and repository traffic | double down on the best channel |
 
 Optimize the loop, not the star count: an install with a review is the loop.
+
+### Reading Pro orders
+
+Orders come from the Money/Stripe checkout at <https://buy.sylphx.com/buy/gpdt>
+(self-serve, see [PRO.md](PRO.md#self-serve-checkout-shipped-off); live once the
+switch is flipped). Every Buy link carries `utm_source=extension`, `utm_medium`
+(the moment) and `utm_content` (paywall copy variant `a` or `b`). Export
+Checkout sessions from the Stripe dashboard as CSV, then:
+
+```
+bun run growth:readout checkout_sessions.csv
+```
+
+It prints paid sessions, total sessions and revenue per
+`utm_source` / `utm_medium` / `utm_content`. It reads that one file: no secrets
+and no API calls. The CSV needs a Status or Payment Status column and the UTM
+values as columns (`utm_source`, `metadata[utm_source]` or
+`utm_source (metadata)`); sessions without UTM show as `(none)`. Divide by
+installs as described in [PRO.md](PRO.md#conversion-test).

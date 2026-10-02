@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "bench:engine": "bun run scripts/bench/engine.ts",
+    "growth:readout": "bun run scripts/checkout-readout.ts",
     "verify": "bun run scripts/verify.ts",
     "zip": "bun run scripts/zip.ts",
     "size:check": "bun run scripts/size-budget.ts",
