@@ -78,7 +78,7 @@ const nl: Translations = {
     },
     license: {
       label: "Pro-licentie",
-      hint: "Lokaal geverifieerd; verlaat nooit je apparaat",
+      hint: "Op je apparaat geverifieerd; nooit naar ons verstuurd",
       placeholder: "Licentietoken plakken",
       activate: "Activeren",
       getPro: "Neem Pro — US$9.99, eenmalig",

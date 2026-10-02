@@ -78,7 +78,7 @@ const ja: Translations = {
     },
     license: {
       label: "Pro ライセンス",
-      hint: "端末内で検証。外部に送信されません",
+      hint: "お使いの端末で検証。当社には送信されません",
       placeholder: "ライセンストークンを貼り付け",
       activate: "有効化",
       getPro: "Pro を入手 — 一度きり US$9.99",

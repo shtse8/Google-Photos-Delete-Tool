@@ -97,26 +97,39 @@ export function syncRemove(keys: string | string[]): Promise<void> {
 /**
  * The Pro token follows the user's browser sign-in: it is kept in
  * chrome.storage.sync AND chrome.storage.local. A token is ~200 bytes, far
- * under the sync per-item (8 KB) and total (100 KB) quotas. Read order: sync
- * first, then local; a token found only in local is copied up to sync so
- * installs that predate sync migrate on first read. The local copy is always
- * kept, so Pro keeps working when sync is off.
+ * under the sync per-item (8 KB) and total (100 KB) quotas. Read order: local
+ * first, then sync. When local exists and differs from sync (missing or
+ * stale), it is pushed up to sync, best effort, so installs that predate sync
+ * migrate on first read. The local copy is always kept, so Pro keeps working
+ * when sync is off.
  */
+async function pushLocalToSync(local: string): Promise<void> {
+  try {
+    const synced = (await syncGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
+    if (synced === local) return
+    await syncSet({ [PRO_TOKEN_KEY]: local })
+  } catch (err) {
+    console.warn('[gpdt:license] sync push failed:', err)
+  }
+}
+
 export async function readProToken(): Promise<string | null> {
+  try {
+    const local = (await storageGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
+    if (typeof local === 'string' && local) {
+      await pushLocalToSync(local)
+      return local
+    }
+  } catch {
+    /* local unavailable: fall through to sync */
+  }
   try {
     const synced = (await syncGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
     if (typeof synced === 'string' && synced) return synced
   } catch {
-    /* sync unavailable: fall through to local */
+    /* sync unavailable */
   }
-  const local = (await storageGet([PRO_TOKEN_KEY]))[PRO_TOKEN_KEY]
-  if (typeof local !== 'string' || !local) return null
-  try {
-    await syncSet({ [PRO_TOKEN_KEY]: local })
-  } catch (err) {
-    console.warn('[gpdt:license] sync migrate failed:', err)
-  }
-  return local
+  return null
 }
 
 /** Local write must succeed (it throws); the sync write is best-effort. */

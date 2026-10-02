@@ -143,13 +143,13 @@ data is sent.
    and emails the token to that address. Email and order id are both required
    in practice: they bind the token to the purchaser record and are how a
    reissue is matched. Delivery is promised as "usually
-   within a few hours, always within 24 hours" (`site/thanks.html`); do not
+   within a few hours" with no deadline (`site/thanks.html`); do not
    promise faster until issuance is automated. The seller key stays in
    1Password.
 3. **Support:** the order record (email, date, id) lives in Stripe; reissue
    with `--email` and the same `--order` after checking both match the Stripe
    payment.
-4. **Refunds:** Pro is digital content supplied immediately on the buyer's
+4. **Refunds:** Pro is digital content supplied at the buyer's express
    request at checkout, so the 14-day right to cancel ends on delivery. Beyond
    that we only offer the legal minimum: if Pro does not work as described and
    cannot be fixed, we put it right or refund. The wording lives in

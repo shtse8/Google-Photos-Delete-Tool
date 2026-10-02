@@ -99,8 +99,14 @@ describe('Pro token sync', () => {
     return { sync, local }
   }
 
-  it('prefers sync over local', async () => {
-    setup({ sync: new Map([[KEY, 'from-sync']]), local: new Map([[KEY, 'from-local']]) })
+  it('local wins over a stale sync value and is pushed up', async () => {
+    const { sync } = setup({ sync: new Map([[KEY, 'stale-sync']]), local: new Map([[KEY, 'from-local']]) })
+    expect(await readProToken()).toBe('from-local')
+    expect(sync.get(KEY)).toBe('from-local')
+  })
+
+  it('reads a sync-only token', async () => {
+    setup({ sync: new Map([[KEY, 'from-sync']]) })
     expect(await readProToken()).toBe('from-sync')
   })
 

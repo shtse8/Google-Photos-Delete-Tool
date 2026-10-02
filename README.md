@@ -198,10 +198,11 @@ replace this comment with: **[Buy Pro for US$9.99](https://buy.stripe.com/...)**
 
 **Activation:** open the extension (or the userscript panel), find the **Pro
 license** box, paste your Pro token and press **Activate**. The token is
-verified on your device, works offline, does not expire and never leaves the
-device. Pro is digital content delivered
-immediately: at checkout you ask us to supply it straight away and acknowledge
-that you lose your 14-day right to cancel once your token is delivered. If Pro
+verified on your device, works offline, does not expire and is never sent to us
+(your browser's own sync may copy it to your other signed-in devices). Pro is
+digital content: at checkout you ask us to supply it straight away and
+acknowledge that you lose your 14-day right to cancel once your token is
+delivered. If Pro
 doesn't work as described and we can't fix it, email
 [hi@sylphx.com](mailto:hi@sylphx.com) and we'll put it right or refund you.
 Terms and privacy:

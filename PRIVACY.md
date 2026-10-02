@@ -18,7 +18,7 @@ We do not collect, store, or transmit any user data. Specifically:
 - No data is sent to external servers
 - No cookies are set
 - Pro license verification happens **locally** (Ed25519 signature check in
-  your browser). The token is never sent to us. If you use Chrome sync, the
+  your browser). The token is never sent to us. If you use your browser's sync account, the
   browser itself copies the token to your other signed-in devices, like any
   extension setting
 
