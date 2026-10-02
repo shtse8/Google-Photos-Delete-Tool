@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { loadPrivateKey } from '../scripts/license-keys'
 import { verifyLicense, encodeBase64Url } from '../src/core/license'
+import { buildIssuePayload } from '../scripts/license-payload'
+import { verifyBuyer } from '../scripts/license-buyer'
 
 const toPem = (der: Uint8Array): string => {
   const b64 = Buffer.from(der).toString('base64')
@@ -36,5 +38,30 @@ describe('seller private-key loading', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+})
+
+describe('issue payload (email + order id)', () => {
+  it('requires an email', () => {
+    expect(() => buildIssuePayload(undefined, 'cs_live_1')).toThrow(/--email/)
+    expect(() => buildIssuePayload('  ', undefined)).toThrow(/--email/)
+    expect(() => buildIssuePayload('not-an-email', undefined)).toThrow(/--email/)
+  })
+
+  it('puts order in the payload only when given', () => {
+    expect(buildIssuePayload('a@b.co', ' cs_live_1 ', 5)).toEqual({ plan: 'pro', email: 'a@b.co', issuedAt: 5, order: 'cs_live_1' })
+    expect(buildIssuePayload('a@b.co', undefined, 5)).toEqual({ plan: 'pro', email: 'a@b.co', issuedAt: 5 })
+  })
+
+  it('a token carrying order verifies via verifyLicense and verify-buyer', async () => {
+    const kp = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify'])
+    const pub = encodeBase64Url(new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey)))
+    const bytes = new TextEncoder().encode(JSON.stringify(buildIssuePayload('buyer@example.com', 'cs_live_abc')))
+    const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, kp.privateKey, bytes))
+    const token = `${encodeBase64Url(bytes)}.${encodeBase64Url(sig)}`
+    const r = await verifyLicense(token, pub)
+    expect(r.ok && r.payload.order).toBe('cs_live_abc')
+    const report = await verifyBuyer(token, 'Buyer@Example.com', [pub])
+    expect(report.ok).toBe(true)
   })
 })

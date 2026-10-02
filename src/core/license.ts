@@ -2,7 +2,7 @@
  * Pro license verification — zero-server by design.
  *
  * A Pro token is `${base64url(payload)}.${base64url(signature)}` where
- * payload is JSON `{ plan: "pro", email?, issuedAt }` and the signature
+ * payload is JSON `{ plan: "pro", email, issuedAt, order? }` and the signature
  * is an Ed25519 signature over the payload bytes, made with the seller's
  * private key. The public keys are embedded below; verification happens
  * entirely on the user's device (WebCrypto SubtleCrypto). No license
@@ -15,6 +15,8 @@ export interface ProLicensePayload {
   plan: 'pro'
   email?: string
   issuedAt: number
+  /** Stripe payment or session id the token was issued for; informational, not checked on device. */
+  order?: string
 }
 
 export type LicenseResult =

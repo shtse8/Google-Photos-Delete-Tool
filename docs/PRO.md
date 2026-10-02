@@ -21,12 +21,15 @@ ${base64url(payload)}.${base64url(signature)}
 where `payload` is JSON:
 
 ```json
-{ "plan": "pro", "email": "buyer@example.com", "issuedAt": 1786300000000 }
+{ "plan": "pro", "email": "buyer@example.com", "issuedAt": 1786300000000, "order": "cs_live_..." }
 ```
 
-- `email` is required in practice: every token is issued with the purchaser's
-  email, so it is bound to the person who paid. The verifier accepts a token
-  without one (old tokens), but the issuing runbook never makes one.
+- `email` and `order` bind the token to the purchaser record: `email` is the
+  address the buyer paid with, `order` the Stripe payment or session id. The
+  issuer (`bun run license:issue`) refuses to run without `--email`, and takes
+  `--order=<id>`; always pass both. The same `{plan, email, issuedAt, order}`
+  shape is what the Money licence capability issues. The verifier ignores
+  `order` and accepts older tokens that lack it.
 - The signature is Ed25519 over the payload bytes, made with the seller's
   private key.
 - Verification (see `src/core/license.ts`) checks format, plan, and
@@ -39,8 +42,8 @@ where `payload` is JSON:
 # 1. Generate a keypair (creates ~/.gpdt/gpdt-license-private.pem, mode 600)
 bun run license:keygen
 
-# 2. Issue a Pro token for a buyer (always pass the email they paid with)
-bun run license:issue --email=buyer@example.com
+# 2. Issue a Pro token for a buyer (email required; add the Stripe id)
+bun run license:issue --email=buyer@example.com --order=cs_live_...
 
 # 3. Verify a token against the embedded keys
 bun run license:verify <token>
@@ -136,15 +139,16 @@ data is sent.
    until the link is live), and both the popup and the userscript panel point
    to that anchor, so the link can change without a store release.
 2. **Issuance is manual.** After Stripe confirms payment, the operator runs
-   `bun run license:issue --email=<the email the buyer paid with>` and emails
-   the token to that address. The email is required: it binds the token to the
-   purchaser and is how a reissue is matched. Delivery is promised as "usually
+   `bun run license:issue --email=<the email the buyer paid with> --order=<Stripe payment or session id>`
+   and emails the token to that address. Email and order id are both required
+   in practice: they bind the token to the purchaser record and are how a
+   reissue is matched. Delivery is promised as "usually
    within a few hours, always within 24 hours" (`site/thanks.html`); do not
    promise faster until issuance is automated. The seller key stays in
    1Password.
-3. **Support:** the order record (email, date) lives in Stripe; reissue with
-   `bun run license:issue --email=<buyer email>` after checking the email
-   matches the Stripe payment.
+3. **Support:** the order record (email, date, id) lives in Stripe; reissue
+   with `--email` and the same `--order` after checking both match the Stripe
+   payment.
 4. **Refunds:** Pro is digital content supplied immediately on the buyer's
    request at checkout, so the 14-day right to cancel ends on delivery. Beyond
    that we only offer the legal minimum: if Pro does not work as described and
