@@ -414,18 +414,18 @@ describe('DeleteEngine — pause holds selection progress (GPDT-CONTROL)', () =>
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const runPromise = engine.run()
-    const advance = setInterval(() => {
-      if (!engine.isPaused && !engine.isStopped) dom.releaseSleep()
-    }, 1)
-    const startWait = Date.now()
+    // Step the held sleeps one at a time and stop the moment the delete
+    // click lands. Each release spends one pollDelay of the 40ms action
+    // budget, so a free-running pump (or any over-release) can legitimately
+    // exhaust the confirm wait before the test pauses.
+    let steps = 0
     while (!dom.clicks.includes('delete')) {
-      if (Date.now() - startWait > 1000) {
-        clearInterval(advance)
-        throw new Error('never reached delete click')
-      }
-      await new Promise((r) => setTimeout(r, 5))
+      if (++steps > 50) throw new Error('never reached delete click')
+      await new Promise((r) => setTimeout(r, 0))
+      if (dom.clicks.includes('delete')) break
+      dom.releaseSleep()
     }
-    clearInterval(advance)
+    await new Promise((r) => setTimeout(r, 0))
 
     engine.pause()
     expect(engine.isPaused).toBe(true)
