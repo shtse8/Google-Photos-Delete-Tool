@@ -960,7 +960,7 @@ export class DeleteEngine {
     // Best-effort: scroll the photo container back to the top so the
     // next batch starts from the same anchor. Failure is non-fatal.
     await this.returnToTop()
-    await this.waitForTrashedToLeave()
+    await this.waitForTrashedToLeave(batchKeys)
   }
 
   /**
@@ -970,13 +970,15 @@ export class DeleteEngine {
    * for a photo the page refused to remove. Tiles that really stay are still
    * caught by the fail-closed check at the end of a pass.
    */
-  private async waitForTrashedToLeave(): Promise<void> {
+  private async waitForTrashedToLeave(batchKeys: readonly string[]): Promise<void> {
+    const batch = new Set(batchKeys)
+    if (batch.size === 0) return
     let remaining = this.config.scrollSettleMs
     while (remaining > 0) {
       await this.awaitControl()
       const lingering = [...this.dom.uncheckedTiles(), ...this.dom.checkedTiles()].some((tile) => {
         const k = this.keyOf(tile)
-        return k !== null && this.trashedKeys.has(k)
+        return k !== null && batch.has(k)
       })
       if (!lingering) return
       remaining -= await this.pollWait(Math.min(this.config.pollDelay, 200), 0)
@@ -1018,7 +1020,8 @@ export class DeleteEngine {
       return Math.max(1, Date.now() - startedAt)
     }
     await this.dom.sleep(ms)
-    return ms
+    // Never report a zero-length wait: a caller budget would then never shrink.
+    return Math.max(1, ms)
   }
 
   /**
