@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- A run that ends with nothing selected or moved to Trash no longer says a plain "Done". It says nothing was selected, that the page may have changed, and points to Report issue (all 9 languages).
+
 ## [3.6.0] - 2026-10-02
 
 ### Fixed

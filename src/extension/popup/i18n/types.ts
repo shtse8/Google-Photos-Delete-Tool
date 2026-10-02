@@ -22,6 +22,8 @@ export interface Translations {
     navigatingTrash: string
     emptyingTrash: string
     consentRequired: string
+    /** A real run ended with nothing selected or moved; points at Report issue. */
+    nothingMoved: string
   }
   stats: {
     /** Accessible label for the stats `<section>`. */

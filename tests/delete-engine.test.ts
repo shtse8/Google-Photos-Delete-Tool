@@ -794,6 +794,19 @@ describe('DeleteEngine — selection drift fails closed (GPDT-BATCH-VERIFY)', ()
     expect(result.deleted).toBe(1)
   })
 
+  it('marks a done run that moved nothing, so the UI never says a plain Done', async () => {
+    const empty = makeEngine(new FakeDom())
+    const result = await empty.engine.run()
+    expect(result.status).toBe('done')
+    expect(result.nothingMoved).toBe(true)
+
+    const deleting = new FakeDom()
+    deleting.setTiles(['Photo - a'])
+    const ran = await makeEngine(deleting).engine.run()
+    expect(ran.deleted).toBe(1)
+    expect(ran.nothingMoved).toBeUndefined()
+  })
+
   it('keeps a user stop at idle, not a drift error', async () => {
     const dom = new FakeDom()
     dom.manualSleep = true

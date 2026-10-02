@@ -17,6 +17,7 @@ const zh: Translations = {
     navigatingTrash: "正在打开回收站…",
     emptyingTrash: "正在清空回收站…",
     consentRequired: "需要确认 — 请先确认安全提示。",
+    nothingMoved: "没有选中任何内容，因此没有项目被移入回收站。页面可能已发生变化 — 请使用“报告问题”发送详细信息。",
   },
   stats: {
     sectionLabel: "统计",

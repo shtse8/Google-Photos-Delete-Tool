@@ -6,6 +6,7 @@
  * flow, which keeps its consent gate, dry run, batches, and Stop.
  * Runs inside a shadow root so Google Photos styles cannot leak in.
  */
+import { NOTHING_MOVED_TEXT, endedWithNothingMoved } from '../../core/nothing-moved'
 import type { Progress } from '../../core/delete-engine'
 import { ACTIVE_STATUSES } from '../../core/status'
 import { DEFAULT_THRESHOLD, GroupingAborted, groupDuplicates, type DupGroup } from '../../core/dedup/group'
@@ -452,6 +453,7 @@ export function openDuplicateFinder(host: FinderHost): void {
     if (p.status === 'error') lines.push(h('p', { class: 'err' }, p.error ?? 'The run stopped with an error.'))
     else if (p.status === 'idle') lines.push(h('p', {}, `Stopped. ${p.deleted.toLocaleString()} photos were moved to Trash before the stop.`))
     else if (p.total !== undefined && p.deleted === 0) lines.push(h('p', {}, `Preview done: ${p.total.toLocaleString()} of the chosen photos are in this view. Nothing was changed.`))
+    else if (endedWithNothingMoved(p)) lines.push(h('p', { class: 'err' }, NOTHING_MOVED_TEXT))
     else lines.push(h('p', {}, `Done. ${p.deleted.toLocaleString()} photos moved to Trash. You can restore them from Trash for 60 days.`))
     // Moved items are gone from the view; the old groups are stale.
     if (!runIsDryRun && p.deleted > 0) groups = []

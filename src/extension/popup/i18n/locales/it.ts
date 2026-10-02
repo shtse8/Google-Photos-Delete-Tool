@@ -17,6 +17,7 @@ const it: Translations = {
     navigatingTrash: "Apertura del cestino…",
     emptyingTrash: "Svuotamento del cestino…",
     consentRequired: "Consenso richiesto — conferma prima l’avviso di sicurezza.",
+    nothingMoved: "Non è stato selezionato nulla, quindi nulla è stato spostato nel cestino. La pagina potrebbe essere cambiata: usa «Segnala un problema» per inviare i dettagli.",
   },
   stats: {
     sectionLabel: "Statistiche",

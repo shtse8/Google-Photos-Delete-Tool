@@ -17,6 +17,7 @@ const pt: Translations = {
     navigatingTrash: "Abrindo lixeira…",
     emptyingTrash: "Esvaziando lixeira…",
     consentRequired: "Consentimento necessário — confirme primeiro o aviso de segurança.",
+    nothingMoved: "Nada foi selecionado, por isso nada foi movido para a lixeira. A página pode ter mudado — use «Relatar problema» para enviar os detalhes.",
   },
   stats: {
     sectionLabel: "Estatísticas",

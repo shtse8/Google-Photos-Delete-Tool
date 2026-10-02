@@ -17,6 +17,7 @@ const ja: Translations = {
     navigatingTrash: "ゴミ箱を開いています…",
     emptyingTrash: "ゴミ箱を空にしています…",
     consentRequired: "同意が必要です — 最初に安全に関する注意事項を確認してください。",
+    nothingMoved: "何も選択されなかったため、ゴミ箱に移動された項目はありません。ページが変更された可能性があります。「問題を報告」から詳細を送信してください。",
   },
   stats: {
     sectionLabel: "統計",

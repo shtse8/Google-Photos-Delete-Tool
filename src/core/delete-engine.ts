@@ -41,6 +41,11 @@ export interface Progress {
    * path. `deleted` stays 0 while `total` carries the observation.
    */
   total?: number
+  /**
+   * Set only by a real (non-preview) run that ended `done` with nothing moved
+   * to Trash, so a surface says so instead of a plain "Done".
+   */
+  nothingMoved?: boolean
 }
 
 export interface EngineOptions {
@@ -427,6 +432,8 @@ export class DeleteEngine {
           `have changed — use Report issue to send the details.`
         console.warn(`${LOG} ${this.progress.error}`)
       }
+
+      if (this.progress.status === 'done' && this.progress.deleted === 0) this.progress.nothingMoved = true
 
       this.emitProgress()
 
