@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest'
-import { PRO_COPY, PRO_URL, buildDryRunTeaser, countLabelTypes, dateReportLine, getProVariant, proUrl } from '../src/core/pro-moments'
+import { PRO_COPY, PRO_URL, SELF_SERVE_CHECKOUT, SELF_SERVE_CHECKOUT_URL, buildDryRunTeaser, countLabelTypes, dateReportLine, getProVariant, proUrl } from '../src/core/pro-moments'
 import { renderProTeaser } from '../src/ui/pro-teaser/teaser'
 import { showPostRunPrompt } from '../src/ui/post-run/prompt'
 import { claimPostRunPrompt } from '../src/core/post-run-prompt'
@@ -157,6 +157,13 @@ describe('copy A/B variant', () => {
         expect(url.startsWith(PRO_URL.split('#')[0]!)).toBe(true)
       }
     }
+  })
+  it('ships with self-serve checkout off and routes every link to it when on', () => {
+    expect(SELF_SERVE_CHECKOUT).toBe(false)
+    expect(proUrl('license_box', 'a').startsWith(PRO_URL.split('#')[0]!)).toBe(true)
+    const on = new URL(proUrl('license_box', 'b', true))
+    expect(on.origin + on.pathname).toBe(SELF_SERVE_CHECKOUT_URL)
+    expect(on.searchParams.get('utm_content')).toBe('b')
   })
   it('keeps static popup links tagged with utm_content', async () => {
     const { readFileSync } = await import('node:fs')

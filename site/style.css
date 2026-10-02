@@ -104,6 +104,7 @@ ul.tick li::before{content:"";position:absolute;left:4px;top:.45em;width:12px;he
 #consent{position:fixed;left:16px;right:16px;bottom:16px;max-width:720px;margin:0 auto;background:var(--card);border:1px solid var(--line2);border-radius:var(--r);box-shadow:0 12px 32px rgba(0,0,0,.18);padding:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:.875rem;z-index:30}
 #consent span{flex:1 1 100%}
 #consent[hidden]{display:none}
+#recover[hidden]{display:none}
 #consent button{font:inherit;font-weight:600;flex:1 1 0;min-height:40px;padding:0 14px;border-radius:8px;border:1px solid var(--line2);background:var(--bg);color:var(--fg);cursor:pointer}
 #consent button:hover{background:var(--bg2)}
 #consent button[aria-pressed=true]{outline:2px solid var(--acc);outline-offset:1px}

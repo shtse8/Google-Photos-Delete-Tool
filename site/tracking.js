@@ -143,6 +143,20 @@
   }
   function read2(k) { try { return localStorage.getItem(k) } catch (e) { return null } }
 
+  // Self-serve checkout switch (config.json selfServeCheckout, shipped false): when true every Pro buy
+  // link goes to checkoutUrl and the "Lost your licence?" link (recoverUrl) shows. Hrefs only.
+  function checkout(cfg) {
+    if (!cfg || cfg.selfServeCheckout !== true || !cfg.checkoutUrl) return
+    var pros = document.querySelectorAll ? Array.prototype.slice.call(document.querySelectorAll('[data-cta="pro"]')) : []
+    pros.forEach(function (el) { el.href = cfg.checkoutUrl })
+    var rec = document.getElementById ? document.getElementById('recover') : null
+    if (rec && cfg.recoverUrl) {
+      var a = rec.querySelector('a')
+      if (a) a.href = cfg.recoverUrl
+      rec.hidden = false
+    }
+  }
+
   carryUtm()
-  fetch('config.json', { cache: 'no-cache' }).then(function (r) { return r.json() }).then(start).catch(function () { /* no config: no tags */ })
+  fetch('config.json', { cache: 'no-cache' }).then(function (r) { return r.json() }).then(function (cfg) { try { checkout(cfg) } catch (e) { /* keep the current links */ } return start(cfg) }).catch(function () { /* no config: no tags */ })
 })()

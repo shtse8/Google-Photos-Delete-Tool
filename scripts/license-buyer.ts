@@ -28,7 +28,7 @@ export async function verifyBuyer(
     const { plan, email, issuedAt } = result.payload
     const emailMatch =
       typeof email === 'string' && email.trim().toLowerCase() === expectedEmail.trim().toLowerCase()
-    const issued = Number.isFinite(issuedAt) ? new Date(issuedAt) : null
+    const issued = typeof issuedAt === 'number' && Number.isFinite(issuedAt) ? new Date(issuedAt) : null
     return {
       valid: true,
       key: i === 0 ? 'old' : 'new',
