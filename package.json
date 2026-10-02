@@ -15,6 +15,7 @@
     "lint:fix": "eslint src/ scripts/ --fix",
     "test": "vitest run",
     "test:watch": "vitest",
+    "canary": "bun run scripts/canary/run.ts",
     "bench:engine": "bun run scripts/bench/engine.ts",
     "growth:readout": "bun run scripts/checkout-readout.ts",
     "verify": "bun run scripts/verify.ts",
