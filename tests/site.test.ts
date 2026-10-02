@@ -53,7 +53,7 @@ const real = {
   purchaseSendTo: 'AW-123456/bbb',
 }
 
-const PAGES = ['index.html', 'thanks.html', 'privacy.html', 'terms.html']
+const PAGES = ['index.html', 'thanks.html', 'bye.html', 'privacy.html', 'terms.html']
 const SIGNALS = ['ad_storage', 'ad_user_data', 'ad_personalization', 'analytics_storage']
 const lastUpdate = (calls: Call[]) => calls.filter((c) => c[0] === 'consent' && c[1] === 'update').pop()?.[2] as Record<string, string> | undefined
 

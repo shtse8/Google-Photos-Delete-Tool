@@ -18,6 +18,7 @@
     "bench:engine": "bun run scripts/bench/engine.ts",
     "verify": "bun run scripts/verify.ts",
     "zip": "bun run scripts/zip.ts",
+    "size:check": "bun run scripts/size-budget.ts",
     "package": "bun run build && bun run verify && bun run zip",
     "license:keygen": "bun run scripts/license.ts keygen",
     "license:issue": "bun run scripts/license.ts issue",

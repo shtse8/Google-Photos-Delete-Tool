@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { createChromeBaton } from '../src/extension/api'
+import { createChromeBaton, readProToken, writeProToken } from '../src/extension/api'
 
 /**
  * The extension API is built on callback-style chrome.* (Firefox + Chrome
@@ -75,5 +75,61 @@ describe('createChromeBaton', () => {
     })
     const b = createChromeBaton()
     await expect(b.writePending()).resolves.toBe(false)
+  })
+})
+
+describe('Pro token sync', () => {
+  const KEY = 'proToken'
+  const stubArea = (store: Map<string, unknown>, failing = false) => ({
+    get: (keys: string[], cb: (d: Record<string, unknown>) => void) => cb(Object.fromEntries(keys.filter((k) => store.has(k)).map((k) => [k, store.get(k)]))),
+    set: (items: Record<string, unknown>, cb: () => void) => {
+      if (failing) { (globalThis as any).chrome.runtime.lastError = { message: 'QUOTA' }; cb(); (globalThis as any).chrome.runtime.lastError = undefined; return }
+      for (const [k, v] of Object.entries(items)) store.set(k, v)
+      cb()
+    },
+    remove: (keys: string[], cb: () => void) => { for (const k of keys) store.delete(k); cb() },
+  })
+  const setup = (opts: { sync?: Map<string, unknown>; local?: Map<string, unknown>; syncFails?: boolean; noSync?: boolean } = {}) => {
+    const sync = opts.sync ?? new Map<string, unknown>()
+    const local = opts.local ?? new Map<string, unknown>()
+    vi.stubGlobal('chrome', {
+      storage: { local: stubArea(local), ...(opts.noSync ? {} : { sync: stubArea(sync, opts.syncFails) }) },
+      runtime: { lastError: undefined },
+    })
+    return { sync, local }
+  }
+
+  it('prefers sync over local', async () => {
+    setup({ sync: new Map([[KEY, 'from-sync']]), local: new Map([[KEY, 'from-local']]) })
+    expect(await readProToken()).toBe('from-sync')
+  })
+
+  it('migrates a local-only token up to sync', async () => {
+    const { sync } = setup({ local: new Map([[KEY, 'old-local']]) })
+    expect(await readProToken()).toBe('old-local')
+    expect(sync.get(KEY)).toBe('old-local')
+  })
+
+  it('returns null when neither area has a token', async () => {
+    setup()
+    expect(await readProToken()).toBeNull()
+  })
+
+  it('writes both areas', async () => {
+    const { sync, local } = setup()
+    await writeProToken('tok')
+    expect(sync.get(KEY)).toBe('tok')
+    expect(local.get(KEY)).toBe('tok')
+  })
+
+  it('falls back to local when sync is unavailable or over quota', async () => {
+    const a = setup({ noSync: true, local: new Map([[KEY, 'loc']]) })
+    expect(await readProToken()).toBe('loc')
+    await writeProToken('new')
+    expect(a.local.get(KEY)).toBe('new')
+    const b = setup({ syncFails: true })
+    await writeProToken('tok2')
+    expect(b.local.get(KEY)).toBe('tok2')
+    expect(b.sync.has(KEY)).toBe(false)
   })
 })

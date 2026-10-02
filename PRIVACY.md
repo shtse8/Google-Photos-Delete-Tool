@@ -18,7 +18,9 @@ We do not collect, store, or transmit any user data. Specifically:
 - No data is sent to external servers
 - No cookies are set
 - Pro license verification happens **locally** (Ed25519 signature check in
-  your browser) — the license token never leaves your device
+  your browser). The token is never sent to us. If you use Chrome sync, the
+  browser itself copies the token to your other signed-in devices, like any
+  extension setting
 
 ## How It Works
 
@@ -44,16 +46,25 @@ On your request, the tool stores **locally**:
 
 - Your preferences (batch size, dry-run, empty-trash, filter) in
   `chrome.storage.local` / `localStorage`
+- Your Pro token in `chrome.storage.local` and `chrome.storage.sync`, so Pro
+  follows your browser sign-in (the browser's own sync, under your Google
+  account's sync settings; we never receive it)
 - A short-lived "pending empty-trash" flag after a run that chose to
   continue to `/trash` (expires after 3 minutes and is always cleared on
   first sight)
 
-None of this is transmitted anywhere.
+None of this is transmitted to us or anyone else by the tool.
+
+On install the browser opens our landing page's how-to section in a tab, and on
+uninstall it opens a short "why did you leave" page. These are ordinary pages
+opened by the browser, not network calls by the tool. The uninstall address
+carries only the extension version, and the site measures visits only after you
+accept its cookie banner.
 
 ## Permissions
 
-- **`storage`** — saves your preferences and the transient empty-trash
-  flag locally.
+- **`storage`** — saves your preferences, the Pro token and the transient
+  empty-trash flag (local and browser sync storage).
 - **Host access to `https://photos.google.com/*`** — required to interact
   with the Google Photos interface. The tool only runs on this domain.
   Find duplicates fetches thumbnails from Google's image servers with the

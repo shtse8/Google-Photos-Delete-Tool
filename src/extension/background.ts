@@ -27,6 +27,9 @@ const lastBadgeAt = new Map<number, number>()
 const pendingBadge = new Map<number, ReturnType<typeof setTimeout>>()
 
 import { setBadgeBackgroundColor, setBadgeText } from './api'
+import { registerLifecycle } from './lifecycle'
+
+registerLifecycle()
 
 interface ProgressData {
   deleted: number

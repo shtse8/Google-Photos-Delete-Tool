@@ -3,7 +3,7 @@ import { setMarkup } from './set-markup'
 import { formatElapsed } from '../../core/utils'
 import { buildDiagnosticIssueUrl, type DiagnosticBlob } from '../../core/diagnostics'
 import { verifyLicense } from '../../core/license'
-import { PRO_TOKEN_KEY, PRO_VARIANT_KEY, buildDryRunTeaser, countLabelTypes, getProVariant, proUrl, type ProVariant } from '../../core/pro-moments'
+import { PRO_VARIANT_KEY, buildDryRunTeaser, countLabelTypes, getProVariant, proUrl, type ProVariant } from '../../core/pro-moments'
 import { renderProTeaser } from '../../ui/pro-teaser/teaser'
 import { TRASH_URL } from '../../core/empty-trash-baton'
 import {
@@ -17,7 +17,7 @@ import {
   admitDestructiveRun,
   type Acknowledgement,
 } from '../../core/consent'
-import { createChromePresetStore, storageGet, storageSet, tabsCreate, tabsQuery, tabsSendMessage } from '../api'
+import { createChromePresetStore, readProToken, writeProToken, storageGet, storageSet, tabsCreate, tabsQuery, tabsSendMessage } from '../api'
 import { createPresetManager, presetViewHint, type CleanupPreset } from '../../core/presets'
 import { buildFilterFromControls, type PhotoFilter } from '../../core/photo-filter'
 import { ACTIVE_STATUSES, TERMINAL_STATUSES, type RunStatus } from '../../core/status'
@@ -397,8 +397,7 @@ presetDelete.addEventListener('click', async () => {
 async function refreshProState(): Promise<void> {
   let token: string | null = null
   try {
-    const data = await storageGet([PRO_TOKEN_KEY])
-    token = typeof data[PRO_TOKEN_KEY] === 'string' ? data[PRO_TOKEN_KEY] : null
+    token = await readProToken()
   } catch (err) {
     console.warn(`${LOG} pro token read failed:`, err)
   }
@@ -427,7 +426,7 @@ licenseBtn.addEventListener('click', async () => {
     return
   }
   try {
-    await storageSet({ [PRO_TOKEN_KEY]: token })
+    await writeProToken(token)
   } catch (err) {
     console.warn(`${LOG} pro token persist failed:`, err)
   }
