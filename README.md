@@ -199,10 +199,12 @@ replace this comment with: **[Buy Pro for US$9.99](https://buy.stripe.com/...)**
 **Activation:** open the extension (or the userscript panel), find the **Pro
 license** box, paste your Pro token and press **Activate**. The token is
 verified on your device, works offline, does not expire and never leaves the
-device. Refunds: if you are not happy, email
-[hi@sylphx.com](mailto:hi@sylphx.com) within 14 days of purchase and we refund
-you in full, no questions asked. This includes your legal right as a UK or EU
-consumer to cancel within 14 days. Terms and privacy:
+device. Pro is digital content delivered
+immediately: at checkout you ask us to supply it straight away and acknowledge
+that you lose your 14-day right to cancel once your token is delivered. If Pro
+doesn't work as described and we can't fix it, email
+[hi@sylphx.com](mailto:hi@sylphx.com) and we'll put it right or refund you.
+Terms and privacy:
 [terms](https://sylphxai.github.io/Google-Photos-Delete-Tool/terms.html),
 [privacy](https://sylphxai.github.io/Google-Photos-Delete-Tool/privacy.html).
 Seller tooling and key custody: [`docs/PRO.md`](docs/PRO.md).
