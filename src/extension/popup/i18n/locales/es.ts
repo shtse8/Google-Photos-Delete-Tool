@@ -17,6 +17,7 @@ const es: Translations = {
     navigatingTrash: "Abriendo papelera…",
     emptyingTrash: "Vaciando papelera…",
     consentRequired: "Se requiere consentimiento — confirme primero el aviso de seguridad.",
+    nothingMoved: "No se seleccionó nada, así que no se movió nada a la papelera. Es posible que la página haya cambiado; use «Informar de un problema» para enviar los detalles.",
   },
   stats: {
     sectionLabel: "Estadísticas",

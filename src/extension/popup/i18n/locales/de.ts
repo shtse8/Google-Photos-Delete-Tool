@@ -17,6 +17,7 @@ const de: Translations = {
     navigatingTrash: "Papierkorb wird geöffnet…",
     emptyingTrash: "Papierkorb wird geleert…",
     consentRequired: "Zustimmung erforderlich — bestätigen Sie zuerst den Sicherheitshinweis.",
+    nothingMoved: "Es wurde nichts ausgewählt, daher wurde nichts in den Papierkorb verschoben. Die Seite hat sich möglicherweise geändert — senden Sie die Details über „Problem melden“.",
   },
   stats: {
     sectionLabel: "Statistik",

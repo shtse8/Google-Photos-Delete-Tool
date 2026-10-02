@@ -17,6 +17,7 @@ const fr: Translations = {
     navigatingTrash: "Ouverture de la corbeille…",
     emptyingTrash: "Vidage de la corbeille…",
     consentRequired: "Consentement requis — confirmez d’abord l’avis de sécurité.",
+    nothingMoved: "Rien n’a été sélectionné, donc rien n’a été déplacé dans la corbeille. La page a peut-être changé — utilisez « Signaler un problème » pour envoyer les détails.",
   },
   stats: {
     sectionLabel: "Statistiques",

@@ -17,6 +17,7 @@ const en: Translations = {
     navigatingTrash: "Opening trash…",
     emptyingTrash: "Emptying trash…",
     consentRequired: "Consent required — confirm the safety notice first.",
+    nothingMoved: "Nothing was selected, so nothing was moved to Trash. The page may have changed — use Report issue to send the details.",
   },
   stats: {
     sectionLabel: "Stats",

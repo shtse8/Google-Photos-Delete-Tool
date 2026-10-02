@@ -18,6 +18,7 @@ import { PRO_VARIANT_KEY, buildDryRunTeaser, dateReportLine, getProVariant, proU
 import { createLocalStoragePresetStore, createPresetManager, presetViewHint, type CleanupPreset } from '../../core/presets'
 import { renderProTeaser } from '../pro-teaser/teaser'
 import { showPostRunPrompt } from '../post-run/prompt'
+import { NOTHING_MOVED_TEXT, endedWithNothingMoved } from '../../core/nothing-moved'
 
 const ROOT_ID = 'gpdt-panel-root'
 const STYLE_ID = 'gpdt-panel-style'
@@ -573,8 +574,8 @@ export function mountPanel(container: HTMLElement, runner: PageRunner): void {
     }
 
     statusEl.textContent = STATUS_TEXT[p.status] ?? p.status
-    if (p.error) {
-      errEl.textContent = p.error
+    if (p.error || endedWithNothingMoved(p)) {
+      errEl.textContent = p.error ?? NOTHING_MOVED_TEXT
       errEl.style.display = 'block'
     } else {
       errEl.style.display = 'none'

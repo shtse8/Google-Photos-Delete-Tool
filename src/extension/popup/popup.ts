@@ -21,6 +21,7 @@ import { createChromePresetStore, readProToken, writeProToken, storageGet, stora
 import { createPresetManager, presetViewHint, type CleanupPreset } from '../../core/presets'
 import { buildFilterFromControls, type PhotoFilter } from '../../core/photo-filter'
 import { ACTIVE_STATUSES, TERMINAL_STATUSES, type RunStatus } from '../../core/status'
+import { endedWithNothingMoved } from '../../core/nothing-moved'
 import {
   LOCALES,
   detectBrowserLocale,
@@ -818,6 +819,7 @@ interface ProgressMessageData {
   status: string
   startedAt?: number
   total?: number
+  nothingMoved?: boolean
   error?: string
 }
 
@@ -835,6 +837,7 @@ function applyProgressUpdate(data: ProgressMessageData): void {
   statusDot.className = `status-dot ${STATUS_DOT[status] ?? ''}`.trim()
 
   if (error) showError(String(error))
+  else if (endedWithNothingMoved({ status: status as RunStatus, deleted, nothingMoved: data.nothingMoved })) showError(t('status.nothingMoved'))
   else hideError()
 
   // Indeterminate bar: maxCount is a *batch* size, not a deletion

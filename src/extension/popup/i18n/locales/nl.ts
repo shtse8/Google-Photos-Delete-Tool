@@ -17,6 +17,7 @@ const nl: Translations = {
     navigatingTrash: "Prullenbak openen…",
     emptyingTrash: "Prullenbak legen…",
     consentRequired: "Toestemming vereist — bevestig eerst de veiligheidsmelding.",
+    nothingMoved: "Er is niets geselecteerd, dus er is niets naar de prullenbak verplaatst. De pagina is mogelijk gewijzigd — gebruik ‘Probleem melden’ om de details te sturen.",
   },
   stats: {
     sectionLabel: "Statistieken",
