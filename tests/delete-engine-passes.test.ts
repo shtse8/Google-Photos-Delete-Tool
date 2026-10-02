@@ -103,13 +103,41 @@ describe('DeleteEngine — passes until a pass deletes nothing', () => {
     expect(dom.tiles).toHaveLength(0)
   })
 
-  it('stops with an error when photos stay after confirm instead of deleting forever', async () => {
-    const dom = new GridDom(['a', 'b', 'c'])
+  it('(A) 300 then 600 arriving late both finish done with everything deleted', async () => {
+    const dom = new GridDom(Array.from({ length: 300 }, (_, i) => `a${i}`))
+    dom.afterConfirm = Array.from({ length: 600 }, (_, i) => `b${i}`)
+    const result = await engineOn(dom).run()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(900)
+    expect(dom.tiles).toHaveLength(0)
+  })
+
+  it('(A2) 500 then 500 finish done with everything deleted', async () => {
+    const dom = new GridDom(Array.from({ length: 500 }, (_, i) => `a${i}`))
+    dom.afterConfirm = Array.from({ length: 500 }, (_, i) => `b${i}`)
+    const result = await engineOn(dom).run()
+    expect(result.status).toBe('done')
+    expect(result.deleted).toBe(1000)
+    expect(dom.tiles).toHaveLength(0)
+  })
+
+  it('(B) photos that stay after confirm end with an error, not a loop', async () => {
+    const dom = new GridDom(Array.from({ length: 400 }, (_, i) => `a${i}`))
     dom.confirmRemoves = false
     const result = await engineOn(dom).run()
     expect(result.status).toBe('error')
     expect(result.error).toMatch(/still in the gallery/)
-    expect(result.deleted).toBeLessThanOrEqual(6)
+    expect(result.deleted).toBeLessThanOrEqual(500)
+    expect(dom.clicks.filter((c) => c === 'confirm')).toHaveLength(1)
+  })
+
+  it('(B) 600 photos that stay stop after one cap of confirms each, never forever', async () => {
+    const dom = new GridDom(Array.from({ length: 600 }, (_, i) => `a${i}`))
+    dom.confirmRemoves = false
+    const result = await engineOn(dom).run()
+    expect(result.status).toBe('error')
+    expect(result.deleted).toBeLessThanOrEqual(600)
+    expect(dom.clicks.filter((c) => c === 'confirm').length).toBeLessThanOrEqual(2)
   })
 
   it('a clean gallery run still reports exactly what was deleted', async () => {

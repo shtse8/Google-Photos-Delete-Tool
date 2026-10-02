@@ -24,6 +24,9 @@ const LOG = '[gpdt]'
 /** Quiet window (ms) that ends an observer-driven settle once the page has changed. */
 const OBSERVED_QUIET_MS = 80
 
+/** Upper bound on passes from the top of the gallery in one run. */
+const MAX_PASSES = 20
+
 export interface Progress {
   /** Photos actually moved to Trash. Always 0 for a dry-run scan — a preview never mutates. */
   deleted: number
@@ -85,6 +88,8 @@ export class DeleteEngine {
   private readonly targetIds: ReadonlySet<string> | null
   /** Target ids clicked so far in this run. */
   private readonly clickedIds = new Set<string>()
+  /** Identity (`id`, else label) of every photo confirmed into Trash this run; never clicked again. */
+  private readonly trashedKeys = new Set<string>()
   private readonly onProgress?: (progress: Progress) => void
 
   private progress: Progress
@@ -255,9 +260,12 @@ export class DeleteEngine {
       // A run is a series of passes from the top of the gallery. It reports
       // done only after a full pass that deleted nothing: the final flush of
       // one pass counts as a batch, and Google can re-render rows after it.
-      let previousPassDeleted = Infinity
       for (let pass = 0; ; pass++) {
+      if (pass >= MAX_PASSES) {
+        throw new Error(`Stopped after ${MAX_PASSES} passes over the gallery with photos still left; check the page and run again.`)
+      }
       const deletedAtPassStart = this.progress.deleted
+      const trashedAtPassStart = this.trashedKeys.size
       consecutiveNoProgress = 0
       if (pass > 0) await this.returnToTop()
       while (!this.stopped) {
@@ -339,16 +347,24 @@ export class DeleteEngine {
       if (this.stopped || this.targetIds) break
       if (this.getCount() > 0) await this.deleteSelected()
       const passDeleted = this.progress.deleted - deletedAtPassStart
-      if (passDeleted === 0) break
-      // Passes must shrink the gallery. A pass that deletes as much as the one
-      // before means photos stay after confirm: stop instead of looping.
-      if (passDeleted >= previousPassDeleted) {
-        throw new Error(
-          `Photos are still in the gallery after ${passDeleted} were moved to Trash twice in a row. ` +
-          `Stopping so nothing is deleted twice; check the page and run again.`,
-        )
+      if (passDeleted === 0) {
+        // Nothing new was deleted. Photos we already confirmed that are still
+        // on screen after a settle mean the page did not remove them: fail
+        // closed instead of reporting done.
+        await this.returnToTop()
+        await this.pollWait(this.config.scrollSettleMs, OBSERVED_QUIET_MS)
+        if (this.trashedStillVisible() > 0) {
+          throw new Error(
+            `${this.trashedStillVisible()} photo(s) already moved to Trash are still in the gallery. ` +
+            `Stopping so nothing is deleted twice; check the page and run again.`,
+          )
+        }
+        break
       }
-      previousPassDeleted = passDeleted
+      // Every pass must delete at least one photo not deleted before.
+      if (this.trashedKeys.size === trashedAtPassStart) {
+        throw new Error('A pass deleted photos that could not be told apart from earlier ones; stopping instead of looping.')
+      }
       console.log(`${LOG} pass ${pass + 1} deleted ${passDeleted}; scanning again from the top`)
       }
     } catch (err) {
@@ -757,6 +773,18 @@ export class DeleteEngine {
    * already-selected tile (the historical "checkbox flap" that toggled
    * selections off). Returns the number of clicks performed.
    */
+  private keyOf(tile: PhotoTile): string | null {
+    return tile.id?.() ?? tile.label()
+  }
+
+  /** Matching unchecked tiles on screen whose photo was already confirmed into Trash. */
+  private trashedStillVisible(): number {
+    return this.dom.uncheckedTiles().filter((t) => {
+      const k = this.keyOf(t)
+      return k !== null && this.trashedKeys.has(k) && tileMatchesFilter(t, this.filter, this.targetIds ?? undefined)
+    }).length
+  }
+
   private async selectVisibleCheckboxes(maxToSelect: number): Promise<number> {
     if (maxToSelect <= 0) return 0
 
@@ -769,6 +797,7 @@ export class DeleteEngine {
       const remaining = maxToSelect - clicked
       const candidates = this.dom.uncheckedTiles()
         .filter(tile => tileMatchesFilter(tile, this.filter, this.targetIds ?? undefined))
+        .filter(tile => { const k = this.keyOf(tile); return k === null || !this.trashedKeys.has(k) })
         .slice(0, remaining)
       if (candidates.length === 0) break
       for (const tile of candidates) {
@@ -809,7 +838,7 @@ export class DeleteEngine {
 
     // Progress means new tiles actually appeared, never just a scroll
     // position that moved while the grid is still rendering.
-    const keyOf = (tile: PhotoTile): string | null => tile.id?.() ?? tile.label()
+    const keyOf = (tile: PhotoTile): string | null => this.keyOf(tile)
     const snapshot = (): { top: number; height: number; keys: Set<string>; anonymous: boolean; count: number } => {
       const tiles = this.dom.uncheckedTiles()
       const keys = new Set<string>()
@@ -869,6 +898,9 @@ export class DeleteEngine {
     this.emitProgress()
     console.log(`${LOG} deleting batch of ${count}`)
 
+    // Identity of what this batch trashes, read before any click.
+    const batchKeys = this.dom.checkedTiles().map((t) => this.keyOf(t)).filter((k): k is string => k !== null)
+
     // 1. Click the toolbar "move to trash" / "delete" button.
     const deleteBtn = await this.waitFor(
       () => this.dom.findDeleteToolbarButton(),
@@ -918,6 +950,7 @@ export class DeleteEngine {
       )
     }
 
+    for (const k of batchKeys) this.trashedKeys.add(k)
     this.progress.deleted += count
     this.progress.selected = 0
     this.log.record(count)
@@ -943,7 +976,10 @@ export class DeleteEngine {
     while (remaining > 0) {
       await this.awaitControl()
       const ready =
-        this.dom.uncheckedTiles().some((tile) => tileMatchesFilter(tile, this.filter, this.targetIds ?? undefined)) ||
+        this.dom.uncheckedTiles().some((tile) => {
+          const k = this.keyOf(tile)
+          return tileMatchesFilter(tile, this.filter, this.targetIds ?? undefined) && (k === null || !this.trashedKeys.has(k))
+        }) ||
         this.dom.checkedTiles().length > 0
       if (ready) return
       remaining -= await this.pollWait(Math.min(this.config.pollDelay, 200), 0)
