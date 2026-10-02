@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-10-02
+
+### Fixed
+- Deleting now finishes completely even when Google Photos loads slowly. After
+  each batch the tool waits for the page to settle, goes again from the top and
+  reports "done" only after a full pass that found nothing left to delete.
+- "Done" means verified done: photos are tracked by identity, so a run that
+  stops making progress ends with an error instead of a false "done".
+- Duplicate burst photos (several near-identical shots in a row) are handled
+  safely and counted correctly.
+- A busy page (background changes while it loads) no longer makes a dry run
+  under-count.
+- On a slow gallery, photos already moved to Trash can linger on screen for a
+  moment. The tool now waits for them to disappear, instead of stopping with a
+  false "photos are still in the gallery; run again" message.
+
+### Changed
+- Dry runs and deletes are faster: the tool reacts to the page going quiet
+  instead of always waiting a fixed 1.5 seconds between scrolls.
+- The store name and description appear in your language (de, es, fr, it, nl,
+  pt-BR, zh-CN, zh-TW, ja). This was prepared as 3.5.2, which was never
+  published on its own and ships here.
+
+### Added
+- `bun run bench:engine`: a mock Google Photos grid that measures photos per
+  minute and memory for dry and delete runs (developer tool, not shipped in
+  the extension).
+
 ## [3.5.2] - 2026-10-01
 
 ### Changed
