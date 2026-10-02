@@ -1,0 +1,9 @@
+id,Status,Payment Status,Amount Total,Currency,utm_source (metadata),utm_medium (metadata),utm_content (metadata)
+cs_1,complete,paid,9.99,usd,extension,dryrun_teaser,a
+cs_2,complete,paid,9.99,usd,extension,dryrun_teaser,b
+cs_3,complete,paid,9.99,usd,extension,post_run,b
+cs_4,expired,unpaid,9.99,usd,extension,dryrun_teaser,a
+cs_5,complete,paid,"1,009.50",usd,extension,dryrun_teaser,b
+cs_6,open,unpaid,9.99,usd,extension,post_run,b
+cs_7,complete,paid,9.99,usd,,,
+"cs_8",complete,paid,9.99,usd,"ext, ension",license_box,a
