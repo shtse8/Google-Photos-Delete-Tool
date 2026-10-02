@@ -21,6 +21,12 @@ export { StopRequested }
 
 const LOG = '[gpdt]'
 
+/** Quiet window (ms) that ends an observer-driven settle once the page has changed. */
+const OBSERVED_QUIET_MS = 80
+
+/** Upper bound on passes from the top of the gallery in one run. */
+const MAX_PASSES = 20
+
 export interface Progress {
   /** Photos actually moved to Trash. Always 0 for a dry-run scan — a preview never mutates. */
   deleted: number
@@ -82,6 +88,10 @@ export class DeleteEngine {
   private readonly targetIds: ReadonlySet<string> | null
   /** Target ids clicked so far in this run. */
   private readonly clickedIds = new Set<string>()
+  /** Identity (`id`, else label) of every photo confirmed into Trash this run; never clicked again. */
+  private readonly trashedKeys = new Set<string>()
+  /** Matching tiles skipped in the current pass because their key is in `trashedKeys`. */
+  private passSkippedTrashed = new Set<string>()
   private readonly onProgress?: (progress: Progress) => void
 
   private progress: Progress
@@ -249,6 +259,18 @@ export class DeleteEngine {
         }
       }
 
+      // A run is a series of passes from the top of the gallery. It reports
+      // done only after a full pass that deleted nothing: the final flush of
+      // one pass counts as a batch, and Google can re-render rows after it.
+      for (let pass = 0; ; pass++) {
+      if (pass >= MAX_PASSES) {
+        throw new Error(`Stopped after ${MAX_PASSES} passes over the gallery with photos still left; check the page and run again.`)
+      }
+      const deletedAtPassStart = this.progress.deleted
+      const trashedAtPassStart = this.trashedKeys.size
+      this.passSkippedTrashed = new Set()
+      consecutiveNoProgress = 0
+      if (pass > 0) await this.returnToTop()
       while (!this.stopped) {
         await this.awaitControl()
 
@@ -321,6 +343,32 @@ export class DeleteEngine {
           }
           consecutiveNoProgress = 0
         }
+      }
+      // End of pass: flush the last partial batch as a regular batch, then
+      // go again from the top while passes keep deleting. An id run selects
+      // exactly its chosen items and needs no second pass.
+      if (this.stopped || this.targetIds) break
+      if (this.getCount() > 0) await this.deleteSelected()
+      const passDeleted = this.progress.deleted - deletedAtPassStart
+      if (passDeleted === 0) {
+        // Nothing new was deleted, and this pass scanned the whole gallery
+        // from the top. A matching tile it skipped because its key was
+        // already trashed is either a photo the page did not remove or a
+        // different photo that cannot be told apart from one (same label, no
+        // id): fail closed instead of reporting done.
+        if (this.passSkippedTrashed.size > 0) {
+          throw new Error(
+            `${this.passSkippedTrashed.size} photo(s) already moved to Trash, or that cannot be told apart from them, ` +
+            `are still in the gallery; run again.`,
+          )
+        }
+        break
+      }
+      // Every pass must delete at least one photo not deleted before.
+      if (this.trashedKeys.size === trashedAtPassStart) {
+        throw new Error('A pass deleted photos that could not be told apart from earlier ones; stopping instead of looping.')
+      }
+      console.log(`${LOG} pass ${pass + 1} deleted ${passDeleted}; scanning again from the top`)
       }
     } catch (err) {
       if (err instanceof StopRequested) {
@@ -628,6 +676,20 @@ export class DeleteEngine {
     // Pause does not burn the settle budget — it holds the scan.
     const pollMs = Math.min(this.config.pollDelay, 200)
     let remaining = this.config.scrollSettleMs
+    const sizeBefore = seen.size
+    // Observer-driven early exit: only when the scroll position advanced and
+    // the page then changed and went quiet. Anything else (no movement, no
+    // change: possibly the end of the list) waits the full settle ceiling.
+    if (this.dom.waitForDomQuiet && target.scrollTop > beforeTop) {
+      await this.awaitControl()
+      const startedAt = Date.now()
+      const quiet = await this.dom.waitForDomQuiet(remaining, OBSERVED_QUIET_MS)
+      await this.awaitControl()
+      this.harvestVisibleIds(seen, onWarn)
+      // Stop waiting only when the page settled AND the harvest actually grew:
+      // an unrelated mutation on a busy page settles before the rows render.
+      remaining = quiet && seen.size > sizeBefore ? 0 : remaining - Math.max(1, Date.now() - startedAt)
+    }
     while (remaining > 0) {
       await this.awaitControl()
       await this.dom.sleep(pollMs)
@@ -714,6 +776,10 @@ export class DeleteEngine {
    * already-selected tile (the historical "checkbox flap" that toggled
    * selections off). Returns the number of clicks performed.
    */
+  private keyOf(tile: PhotoTile): string | null {
+    return tile.id?.() ?? tile.label()
+  }
+
   private async selectVisibleCheckboxes(maxToSelect: number): Promise<number> {
     if (maxToSelect <= 0) return 0
 
@@ -726,6 +792,12 @@ export class DeleteEngine {
       const remaining = maxToSelect - clicked
       const candidates = this.dom.uncheckedTiles()
         .filter(tile => tileMatchesFilter(tile, this.filter, this.targetIds ?? undefined))
+        .filter(tile => {
+          const k = this.keyOf(tile)
+          if (k === null || !this.trashedKeys.has(k)) return true
+          this.passSkippedTrashed.add(k)
+          return false
+        })
         .slice(0, remaining)
       if (candidates.length === 0) break
       for (const tile of candidates) {
@@ -764,34 +836,42 @@ export class DeleteEngine {
       return false
     }
 
-    const measure = (): { top: number; height: number; checkboxes: number } => ({
-      top: target.scrollTop,
-      height: target.scrollHeight,
-      checkboxes: this.dom.uncheckedTiles().length,
-    })
+    // Progress means new tiles actually appeared, never just a scroll
+    // position that moved while the grid is still rendering.
+    const keyOf = (tile: PhotoTile): string | null => this.keyOf(tile)
+    const snapshot = (): { top: number; height: number; keys: Set<string>; anonymous: boolean; count: number } => {
+      const tiles = this.dom.uncheckedTiles()
+      const keys = new Set<string>()
+      let anonymous = false
+      for (const tile of tiles) {
+        const key = keyOf(tile)
+        if (key === null) anonymous = true
+        else keys.add(key)
+      }
+      return { top: target.scrollTop, height: target.scrollHeight, keys, anonymous, count: tiles.length }
+    }
 
     await this.awaitControl()
 
-    const before = measure()
+    const before = snapshot()
     const step = Math.max(200, target.clientHeight || 800)
     target.scrollBy({ top: step, left: 0, behavior: 'auto' })
 
     let settleRemaining = this.config.scrollSettleMs
     while (settleRemaining > 0) {
       await this.awaitControl()
-      const slice = Math.min(this.config.pollDelay, 200)
-      await this.dom.sleep(slice)
+      settleRemaining -= await this.pollWait(Math.min(this.config.pollDelay, 200), OBSERVED_QUIET_MS)
       await this.awaitControl()
-      settleRemaining -= slice
-      const after = measure()
-      const movedScroll = after.top > before.top
-      const grewHeight = after.height > before.height
-      const moreCheckboxes = after.checkboxes > before.checkboxes
-      if (movedScroll || grewHeight || moreCheckboxes) {
+      const after = snapshot()
+      let newTiles = false
+      for (const key of after.keys) if (!before.keys.has(key)) { newTiles = true; break }
+      // Tiles whose identity cannot be read fall back to the count.
+      if (!newTiles && (before.anonymous || after.anonymous) && after.count > before.count) newTiles = true
+      if (newTiles) {
         console.log(
           `${LOG} scroll progress: top ${before.top}→${after.top}, ` +
           `height ${before.height}→${after.height}, ` +
-          `unchecked ${before.checkboxes}→${after.checkboxes}`,
+          `unchecked ${before.count}→${after.count}`,
         )
         return true
       }
@@ -799,7 +879,7 @@ export class DeleteEngine {
 
     console.log(
       `${LOG} scroll yielded no new content (top=${before.top} of ${before.height}, ` +
-      `unchecked=${before.checkboxes})`,
+      `unchecked=${before.count})`,
     )
     return false
   }
@@ -817,6 +897,9 @@ export class DeleteEngine {
     this.progress.status = 'deleting'
     this.emitProgress()
     console.log(`${LOG} deleting batch of ${count}`)
+
+    // Identity of what this batch trashes, read before any click.
+    const batchKeys = this.dom.checkedTiles().map((t) => this.keyOf(t)).filter((k): k is string => k !== null)
 
     // 1. Click the toolbar "move to trash" / "delete" button.
     const deleteBtn = await this.waitFor(
@@ -867,6 +950,7 @@ export class DeleteEngine {
       )
     }
 
+    for (const k of batchKeys) this.trashedKeys.add(k)
     this.progress.deleted += count
     this.progress.selected = 0
     this.log.record(count)
@@ -875,11 +959,45 @@ export class DeleteEngine {
 
     // Best-effort: scroll the photo container back to the top so the
     // next batch starts from the same anchor. Failure is non-fatal.
+    await this.returnToTop()
+  }
+
+  /**
+   * Scroll the gallery to the top and wait until tiles are on screen again
+   * (ceiling: the scroll settle time). The grid re-renders the top rows after
+   * the reset and a selection pass that starts before they exist skips them.
+   */
+  private async returnToTop(): Promise<void> {
     const scrollTarget = this.dom.findScrollTarget()
-    if (scrollTarget) {
-      scrollTarget.scrollTop = 0
-      console.log(`${LOG} scrolled gallery back to top for next batch`)
+    if (!scrollTarget) return
+    scrollTarget.scrollTop = 0
+    console.log(`${LOG} scrolled gallery back to top`)
+    let remaining = this.config.scrollSettleMs
+    while (remaining > 0) {
+      await this.awaitControl()
+      const ready =
+        this.dom.uncheckedTiles().some((tile) => {
+          const k = this.keyOf(tile)
+          return tileMatchesFilter(tile, this.filter, this.targetIds ?? undefined) && (k === null || !this.trashedKeys.has(k))
+        }) ||
+        this.dom.checkedTiles().length > 0
+      if (ready) return
+      remaining -= await this.pollWait(Math.min(this.config.pollDelay, 200), 0)
     }
+  }
+
+  /**
+   * One poll wait. Observer-driven when the adapter supports it (returns
+   * the time actually spent, `ms` is the ceiling), otherwise a fixed sleep.
+   */
+  private async pollWait(ms: number, quietMs: number): Promise<number> {
+    if (this.dom.waitForDomQuiet) {
+      const startedAt = Date.now()
+      await this.dom.waitForDomQuiet(ms, quietMs)
+      return Math.max(1, Date.now() - startedAt)
+    }
+    await this.dom.sleep(ms)
+    return ms
   }
 
   /**
@@ -900,9 +1018,10 @@ export class DeleteEngine {
       if (remaining <= 0) {
         throw new Error(`Timed out after ${timeoutMs}ms: ${what}`)
       }
-      await this.dom.sleep(this.config.pollDelay)
+      // Wake on the next page change instead of the fixed poll; the poll
+      // interval stays the ceiling per wait and the timeout is wall-clock.
+      remaining -= await this.pollWait(this.config.pollDelay, 0)
       await this.awaitControl()
-      remaining -= this.config.pollDelay
     }
   }
 }

@@ -52,4 +52,12 @@ export interface EngineDom {
   click(target: ClickTarget): void
   /** Sleep for `ms` milliseconds. */
   sleep(ms: number): Promise<void>
+  /**
+   * Optional observer-driven wait. Resolves `true` as soon as the page has
+   * changed at least once and then stayed quiet for `quietMs` (`0` resolves on
+   * the first change), or `false` when `maxMs` elapses first. `maxMs` is the
+   * safety-net ceiling, never exceeded. Adapters without it fall back to
+   * fixed sleeps, which is also what the scripted test fakes do.
+   */
+  waitForDomQuiet?(maxMs: number, quietMs: number): Promise<boolean>
 }

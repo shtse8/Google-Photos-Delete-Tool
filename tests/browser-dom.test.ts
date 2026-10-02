@@ -45,3 +45,20 @@ describe('browserDom checked tiles and tile clicks', () => {
     expect(seen).toEqual(['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'])
   })
 })
+
+describe('browserDom.waitForDomQuiet', () => {
+  it('resolves true after a change then quiet, and false at the ceiling when nothing changes', async () => {
+    document.body.innerHTML = '<div id="a"></div>'
+    const changed = browserDom.waitForDomQuiet!(1000, 20)
+    setTimeout(() => document.getElementById('a')!.setAttribute('x', '1'), 5)
+    expect(await changed).toBe(true)
+    expect(await browserDom.waitForDomQuiet!(40, 20)).toBe(false)
+  })
+
+  it('with quietMs 0 resolves on the first change', async () => {
+    document.body.innerHTML = '<div id="a"></div>'
+    const p = browserDom.waitForDomQuiet!(1000, 0)
+    document.getElementById('a')!.textContent = 'x'
+    expect(await p).toBe(true)
+  })
+})

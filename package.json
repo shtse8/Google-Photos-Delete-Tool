@@ -15,6 +15,7 @@
     "lint:fix": "eslint src/ scripts/ --fix",
     "test": "vitest run",
     "test:watch": "vitest",
+    "bench:engine": "bun run scripts/bench/engine.ts",
     "verify": "bun run scripts/verify.ts",
     "zip": "bun run scripts/zip.ts",
     "package": "bun run build && bun run verify && bun run zip",

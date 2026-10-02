@@ -1,0 +1,190 @@
+{
+  "rows": [
+    {
+      "scenario": "busy",
+      "n": 500,
+      "mode": "delete",
+      "status": "done",
+      "count": 500,
+      "elapsedS": 9.1,
+      "photosPerMinute": 3291,
+      "sleepSharePct": 31.3,
+      "sleeps": 36,
+      "peakHeapMB": 2.7,
+      "heapGrowthMB": 0.9,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      },
+      "violations": []
+    },
+    {
+      "scenario": "busy",
+      "n": 500,
+      "mode": "dry",
+      "status": "done",
+      "count": 500,
+      "elapsedS": 35.6,
+      "photosPerMinute": 842.6,
+      "sleepSharePct": 88.5,
+      "sleeps": 151,
+      "peakHeapMB": 2.7,
+      "heapGrowthMB": 0.9,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      },
+      "violations": []
+    },
+    {
+      "scenario": "busy",
+      "n": 2000,
+      "mode": "delete",
+      "status": "done",
+      "count": 2000,
+      "elapsedS": 42.2,
+      "photosPerMinute": 2840.3,
+      "sleepSharePct": 19.6,
+      "sleeps": 130,
+      "peakHeapMB": 3.3,
+      "heapGrowthMB": 1.4,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      },
+      "violations": []
+    },
+    {
+      "scenario": "busy",
+      "n": 2000,
+      "mode": "dry",
+      "status": "done",
+      "count": 2000,
+      "elapsedS": 136.3,
+      "photosPerMinute": 880.6,
+      "sleepSharePct": 87.3,
+      "sleeps": 588,
+      "peakHeapMB": 2.8,
+      "heapGrowthMB": 0.8,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      },
+      "violations": []
+    },
+    {
+      "scenario": "default",
+      "n": 500,
+      "mode": "delete",
+      "status": "done",
+      "count": 500,
+      "elapsedS": 4.8,
+      "photosPerMinute": 6248.6,
+      "sleepSharePct": 54.2,
+      "sleeps": 32,
+      "peakHeapMB": 2.7,
+      "heapGrowthMB": 0.9,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      },
+      "violations": []
+    },
+    {
+      "scenario": "default",
+      "n": 500,
+      "mode": "dry",
+      "status": "done",
+      "count": 500,
+      "elapsedS": 7.4,
+      "photosPerMinute": 4039.5,
+      "sleepSharePct": 68.7,
+      "sleeps": 19,
+      "peakHeapMB": 2.7,
+      "heapGrowthMB": 0.8,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      },
+      "violations": []
+    },
+    {
+      "scenario": "default",
+      "n": 2000,
+      "mode": "delete",
+      "status": "done",
+      "count": 2000,
+      "elapsedS": 14.9,
+      "photosPerMinute": 8078,
+      "sleepSharePct": 39.8,
+      "sleeps": 98,
+      "peakHeapMB": 3.3,
+      "heapGrowthMB": 1.4,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      },
+      "violations": []
+    },
+    {
+      "scenario": "default",
+      "n": 2000,
+      "mode": "dry",
+      "status": "done",
+      "count": 2000,
+      "elapsedS": 16.6,
+      "photosPerMinute": 7247,
+      "sleepSharePct": 39.3,
+      "sleeps": 26,
+      "peakHeapMB": 3,
+      "heapGrowthMB": 1,
+      "longTasks": {
+        "count": 0,
+        "totalMs": 0,
+        "maxMs": 0
+      },
+      "violations": []
+    }
+  ],
+  "note": "Desk baselines are N=500 and N=2000 only (desk policy: 300 s per locked browser run), both scenarios (default: quiet page; busy: background mutations, slow render and load). N=5000 is measured in the CI job (bench-engine artifact), not on the desk; --check skips sizes without a baseline row. Rows were recorded with the pass-loop engine; the default rows are slower than the first observer-wait recording because a run now ends only after a pass that deletes nothing. --write-baseline refuses slower or heavier rows unless --loosen is passed.",
+  "scenarios": {
+    "default": {
+      "cols": 6,
+      "rowH": 100,
+      "viewH": 800,
+      "buffer": 2,
+      "loadChunk": 200,
+      "renderDelay": 40,
+      "loadDelay": 150,
+      "dialogDelay": 60,
+      "deleteLatency": 800,
+      "staleGap": 0,
+      "backgroundMs": null,
+      "seed": 1
+    },
+    "busy": {
+      "cols": 6,
+      "rowH": 100,
+      "viewH": 800,
+      "buffer": 2,
+      "loadChunk": 200,
+      "renderDelay": 400,
+      "loadDelay": 900,
+      "dialogDelay": 60,
+      "deleteLatency": 800,
+      "staleGap": 150,
+      "backgroundMs": [
+        200,
+        300
+      ],
+      "seed": 1
+    }
+  }
+}

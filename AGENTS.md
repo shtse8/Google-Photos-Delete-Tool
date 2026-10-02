@@ -39,6 +39,6 @@ only in `storefront/listing.json`.
 CI (`.github/workflows/ci.yml`) runs `bun run typecheck`, `bun run lint`,
 `bun run test`, `bun run build`, `node scripts/dupes-demo.mjs --check
 --no-screenshot`, `bun run listing:check`, `bun run verify` and `bun run zip`.
-A release also carries the disposable-account live run in
+`bun run bench:engine` (PR job `bench-engine.yml`, paths `src/`) measures photos per minute and heap on a mock grid and fails only beyond 2x of `bench/engine-baseline.json`; N=5000 is measured in CI only. A release also carries the disposable-account live run in
 [docs/RELEASE_GATE.md](docs/RELEASE_GATE.md); green CI proves the source, only
 that run proves the product against live Google Photos.
