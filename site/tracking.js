@@ -10,6 +10,9 @@
   var script = document.currentScript
   var page = (script && script.getAttribute('data-page')) || 'index'
 
+  // Resolve a data file next to this script, so localised pages in /<lang>/ read the shared root files.
+  function sibling(name) { return script && script.src ? new URL(name, script.src).href : name }
+
   function placeholder(v) { return !v || /X{4}/.test(String(v)) }
   function read() { try { return localStorage.getItem(STORE_KEY) } catch (e) { return null } }
   function write(k, v) { try { localStorage.setItem(k, v) } catch (e) { /* ignore */ } }
@@ -158,5 +161,5 @@
   }
 
   carryUtm()
-  fetch('config.json', { cache: 'no-cache' }).then(function (r) { return r.json() }).then(function (cfg) { try { checkout(cfg) } catch (e) { /* keep the current links */ } return start(cfg) }).catch(function () { /* no config: no tags */ })
+  fetch(sibling('config.json'), { cache: 'no-cache' }).then(function (r) { return r.json() }).then(function (cfg) { try { checkout(cfg) } catch (e) { /* keep the current links */ } return start(cfg) }).catch(function () { /* no config: no tags */ })
 })()
