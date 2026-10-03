@@ -229,3 +229,32 @@ describe('site tracking', () => {
     for (const f of PAGES) expect(read(f).match(/<div id="consent".*?<\/div>/s)![0]).toMatch(/Sylphx Limited, the controller.*privacy\.html/)
   })
 })
+
+describe('site live truth', () => {
+  it('ships self-serve off and links no buy.sylphx.com URL in any page', () => {
+    const cfg = JSON.parse(read('config.json'))
+    expect(cfg.selfServeCheckout).toBe(false)
+    for (const f of [...PAGES, '404.html']) expect(read(f)).not.toContain('buy.sylphx.com')
+  })
+
+  it('with the switch off the recover link stays hidden and unlinked', async () => {
+    expect(read('index.html')).toMatch(/id="recover" hidden/)
+    const r = await run('index', { selfServeCheckout: false, checkoutUrl: 'https://buy.sylphx.com/buy/gpdt', recoverUrl: 'https://buy.sylphx.com/recover?product=gpdt' })
+    expect(r.calls).toHaveLength(0)
+  })
+
+  it('a real GA4 id with a placeholder Ads id loads GA4 only and sends no Ads conversion', async () => {
+    const r = await run('index', { ga4MeasurementId: 'G-ABC123', adsConversionId: 'AW-XXXX', addToChromeSendTo: 'AW-XXXX/LABEL' })
+    expect(r.appended).toHaveLength(1)
+    expect(r.appended[0].src).toContain('id=G-ABC123')
+    expect(r.calls.filter((c) => c[0] === 'config').map((c) => c[1])).toEqual(['G-ABC123'])
+    r.click()
+    expect(r.snapshot().some((c) => c[0] === 'event' && c[1] === 'conversion')).toBe(false)
+  })
+
+  it('docs and README do not claim a Firefox or Edge store listing', () => {
+    const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8')
+    expect(readme).toMatch(/no Firefox Add-ons \(AMO\) listing/)
+    expect(readme).not.toMatch(/addons\.mozilla\.org\/[^\s)]*firefox\/addon/)
+  })
+})

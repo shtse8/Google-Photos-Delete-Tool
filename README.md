@@ -68,7 +68,7 @@ Google Photos Library API has no delete endpoint.
 
 | Surface | Get it | Includes |
 |---|---|---|
-| **Chrome / Firefox extension** | [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb); Firefox zip on each release | Popup UI, badge, 10 languages, empty-trash flow |
+| **Chrome / Firefox extension** | [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb) listing; Firefox: zip on each GitHub release, loaded manually (no AMO listing yet); no Edge listing | Popup UI, badge, 10 languages, empty-trash flow |
 | **Userscript** (Tampermonkey, Violentmonkey, Greasemonkey) | `google-photos-delete.user.js` from the latest release | Same engine, floating panel, same safety model |
 
 ## Built to be trusted
@@ -113,14 +113,15 @@ Google Photos Library API has no delete endpoint.
 
 ### Chrome / Firefox
 
-1. Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb)
-   or load the Firefox zip from the release.
+1. Chrome: install from the [Chrome Web Store](https://chromewebstore.google.com/detail/google-photos-delete-tool/jiahfbbfpacpolomdjlpdpiljllcdenb).
+   Firefox: there is no Firefox Add-ons (AMO) listing yet, so download the
+   Firefox zip from the latest GitHub release and load it manually (below).
 2. Navigate to [photos.google.com](https://photos.google.com/?hl=en).
 3. Click the extension icon, confirm the safety notice on your first real
    run, then press **Start**.
 
 Manual load (development): download the release zip, unzip, open
-`chrome://extensions` (or `about:debugging#/runtime/this-firefox`), enable
+`chrome://extensions` (or `about:debugging#/runtime/this-firefox`, then Load Temporary Add-on), enable
 developer mode, and **Load unpacked**.
 
 ### Userscript
