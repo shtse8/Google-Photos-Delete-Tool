@@ -227,6 +227,10 @@ gh workflow run "Publish Stores (manual)" -f stores=auto
 # run the retry loop once now
 gh workflow run "Store Publish Retry (scheduled)"
 
+# read the live Chrome Web Store state (read-only: items.get projection DRAFT
+# plus v2 fetchStatus; uploadState, item status, version, itemError; no login)
+gh workflow run "Chrome Web Store status (read-only)"
+
 # check recorded submissions (not live-version proof)
 git fetch origin store-state && git show origin/store-state:state.json
 ```

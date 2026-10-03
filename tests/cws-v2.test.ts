@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 // @ts-expect-error plain .mjs script, no type declarations
-import { selectAuthMode, signServiceAccountJwt, mintAccessToken, mintOAuthAccessToken, publishV2, invalidModeMessage, API_BASE, SCOPE } from '../scripts/cws-v2.mjs'
+import { selectAuthMode, signServiceAccountJwt, mintAccessToken, mintOAuthAccessToken, publishV2, readStatus, formatStatus, invalidModeMessage, API_BASE, SCOPE } from '../scripts/cws-v2.mjs'
 
 const wf = (n: string) => readFileSync(fileURLToPath(new URL(`../.github/workflows/${n}`, import.meta.url)), 'utf8')
 const { privateKey, publicKey } = generateKeyPairSync('rsa', {
@@ -361,5 +361,67 @@ describe('staged workflow wiring', () => {
     expect(staged).not.toContain('cancel-pending')
     expect(staged).not.toContain('store-state')
     expect(staged).toContain('permissions:\n      contents: read')
+  })
+})
+
+describe('read-only status', () => {
+  const json = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) })
+  const fake = (routes: Record<string, unknown>) => {
+    const calls: { method: string; url: string }[] = []
+    const fetchImpl = async (url: string, init: { method: string }) => {
+      calls.push({ method: init.method, url })
+      const hit = Object.entries(routes).find(([k]) => url.includes(k))
+      return hit ? (hit[1] as ReturnType<typeof json>) : json({}, 404)
+    }
+    return { fetchImpl, calls }
+  }
+  const draft = { kind: 'chromewebstore#item', id: 'e', publicKey: 'SECRET-LOOKING-KEY', uploadState: 'FAILURE', crxVersion: '3.0.2', itemError: [{ error_code: 'PKG_UNKNOWN_ERROR', error_detail: 'bad zip' }] }
+  const v2 = {
+    name: 'publishers/p/items/e', itemId: 'e', publicKey: 'ANOTHER-KEY', lastAsyncUploadState: 'SUCCEEDED',
+    submittedItemRevisionStatus: { state: 'PENDING_REVIEW', distributionChannels: [{ crxVersion: '3.0.2' }] },
+    publishedItemRevisionStatus: { state: 'PUBLISHED', distributionChannels: [{ crxVersion: '3.0.1', deployPercentage: 100 }] },
+  }
+  it('reads items.get with projection DRAFT and v2 fetchStatus, GET only', async () => {
+    const { fetchImpl, calls } = fake({ 'v1.1/items/e?projection=DRAFT': json(draft), ':fetchStatus': json(v2) })
+    const r = await readStatus({ token: 't', publisherId: 'p', itemId: 'e', fetchImpl })
+    expect(calls.every((c) => c.method === 'GET')).toBe(true)
+    expect(calls.map((c) => c.url)).toEqual([
+      'https://www.googleapis.com/chromewebstore/v1.1/items/e?projection=DRAFT',
+      `${API_BASE}/v2/publishers/p/items/e:fetchStatus`,
+    ])
+    expect(r.draft).toEqual({ uploadState: 'FAILURE', crxVersion: '3.0.2', itemError: [{ code: 'PKG_UNKNOWN_ERROR', detail: 'bad zip' }] })
+    expect(r.v2.submitted).toEqual({ state: 'PENDING_REVIEW', versions: ['3.0.2'] })
+    expect(r.v2.published).toEqual({ state: 'PUBLISHED', versions: ['3.0.1'] })
+    const text = formatStatus(r).join('\n')
+    expect(text).toContain('uploadState: FAILURE')
+    expect(text).toContain('itemError: PKG_UNKNOWN_ERROR (bad zip)')
+    expect(text).toContain('submitted revision: PENDING_REVIEW version 3.0.2')
+    expect(text).not.toContain('KEY')
+  })
+  it('keeps the other read when one fails, and notes the failure', async () => {
+    const { fetchImpl } = fake({ ':fetchStatus': json(v2) })
+    const r = await readStatus({ token: 't', publisherId: 'p', itemId: 'e', fetchImpl })
+    expect(r.draft).toBeNull()
+    expect(r.errors[0]).toContain('items.get (v1.1, projection DRAFT) failed (HTTP 404)')
+    expect(formatStatus(r).join('\n')).toContain('PENDING_REVIEW')
+  })
+  it('skips v2 without a publisher id and fails when nothing could be read', async () => {
+    const ok = fake({ 'v1.1/items/e': json({ uploadState: 'SUCCESS', crxVersion: '3.0.1' }) })
+    const r = await readStatus({ token: 't', publisherId: '', itemId: 'e', fetchImpl: ok.fetchImpl })
+    expect(r.draft?.itemError).toEqual([])
+    expect(formatStatus(r).join('\n')).toContain('itemError: none')
+    expect(ok.calls).toHaveLength(1)
+    await expect(readStatus({ token: 't', publisherId: 'p', itemId: 'e', fetchImpl: fake({}).fetchImpl })).rejects.toThrow(/failed \(HTTP 404\)/)
+  })
+  it('workflow is manual, read-only, self-hosted and passes only the existing credentials', () => {
+    const w = wf('cws-status.yml')
+    expect(w).toMatch(/on:\n  workflow_dispatch:\n/)
+    expect(w).toContain('contents: read')
+    expect(w).toContain('runs-on: sylphx-linux-standard')
+    expect(w).not.toMatch(/ubuntu|macos|windows/)
+    expect(w).toContain('node scripts/cws-v2.mjs status')
+    expect(w).toContain('CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID || vars.CWS_PUBLISHER_ID }}')
+    for (const k of ['CHROME_CLIENT_ID', 'CHROME_CLIENT_SECRET', 'CHROME_REFRESH_TOKEN', 'CHROME_EXTENSION_ID', 'CWS_SERVICE_ACCOUNT_JSON']) expect(w).toContain(`${k}: \${{ secrets.${k} }}`)
+    expect(w).not.toContain("cws-v2.mjs publish")
   })
 })
