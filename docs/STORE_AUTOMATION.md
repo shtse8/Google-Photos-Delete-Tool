@@ -44,7 +44,7 @@ store-retry.yml (every 6h) ──▶ store-publish.yml
 |---|---|---|
 | GitHub release from tag | agent | every tag |
 | CWS package publish | agent | retry loop; blocked while item is in review unless a manual dispatch sets `cancel_pending` |
-| CWS listing text | agent (API) / dashboard fallback | re-dispatch `update-cws-listing.yml` |
+| CWS listing text | agent (browser handoff) / dashboard | no v2 API call exists; edit the draft listing from `storefront/listing.json`, it ships with the next v2 publish |
 | Edge package publish | agent | after one-time bootstrap |
 | AMO version publish | agent | after one-time bootstrap |
 | Greasy Fork | **human, once** | no public API; script updates itself afterwards |
@@ -202,16 +202,13 @@ the entire lifetime cost.
 
 ### CWS listing text
 
-`storefront/listing.json` is the single source. Push it with:
-
-```bash
-gh workflow run "Update CWS Listing (manual)"
-```
-
-It fails while the item is in review (`ITEM_NOT_UPDATABLE` on upload, HTTP 304
-on metadata); re-dispatch after review clears. If the metadata endpoints are
-unavailable, the browser-handoff fallback pastes the same file into the
-dashboard: `node scripts/cws-listing.mjs --item-id <id>`.
+`storefront/listing.json` is the single source. The Chrome Web Store API v2
+has no call that updates listing text, and the v1.1 metadata update shuts
+down on 2026-10-15, so listing changes go through the dashboard: save the new
+copy in the draft listing (browser handoff: `node scripts/cws-listing.mjs
+--item-id <id>` pastes the same file into the dashboard). The draft listing
+ships with the next v2 publish. The dashboard rejects edits while the item is
+in review; make them after review clears.
 Screenshots: `node scripts/cws-screenshots.mjs` captures real 1280×800
 shots from the user's own Google Photos session (dry-run + filters are
 safe; running/empty-trash require `--allow-destructive` and the user

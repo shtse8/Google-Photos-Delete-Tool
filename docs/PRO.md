@@ -74,8 +74,9 @@ rule, and the key is never printed.
 throwaway keypair plus the embedded-key list, and
 `tests/license-scripts.test.ts` checks that the path and content forms of
 `$GPDT_PRO_PRIVATE_KEY` both issue verifiable tokens, without the seller key.
-`tests/license-buyer.test.ts` covers `verify-buyer` (old/new key, email match,
-wrong plan, foreign signature) with throwaway keys.
+`tests/license-buyer.test.ts` covers `verify-buyer` (a token without email,
+email match and mismatch, tampered and foreign tokens, argv refused, the token
+never printed) with throwaway keys.
 
 ## Conversion test
 
@@ -175,14 +176,19 @@ this Sales section.
    that we only offer the legal minimum: if Pro does not work as described and
    cannot be fixed, we put it right or refund. The wording lives in
    `site/terms.html`; keep this section pointing there instead of copying it.
-5. **First-purchase readback:** after the first paid order, check the emailed
-   token without printing it back:
-   `bun run scripts/license.ts verify-buyer <token> --email=<buyer email>`.
-   It prints `valid`, which embedded key verified it (`old` or `new`; new
-   orders must say `new`), `plan`, `email match` and `issuedAt` as an ISO time.
-   Exit code 0 only when the token is valid, the plan is `pro` and the email
-   matches (case-insensitive); anything else exits 1. The token is never
-   echoed.
+5. **First-purchase readback:** after the first paid order, check the token
+   without printing it back. The token goes on stdin (or `--token-file=<path>`),
+   never on the command line, where it would land in shell history and process
+   lists; a token passed as an argument is refused:
+   `read -rs T; printf %s "$T" | bun run scripts/license.ts verify-buyer [--email=<buyer email>]`.
+   It checks the signature against the embedded keys, `plan` and `product`
+   (`gpdt`), and prints only a verdict: `new` (signed by the current key, product
+   `gpdt`: a token from the self-serve checkout), `existing` (valid, but from the
+   original key or with no product) or `invalid`; exit code 1 only for `invalid`.
+   The email is optional because Money puts it in the token only when the buyer
+   is identified by an email address: with `--email` it must match when the token
+   has one, and a token without one prints `email: not in token (check the buyer
+   in Money)`. The token is never echoed.
 
 ## Chrome Web Store compliance
 

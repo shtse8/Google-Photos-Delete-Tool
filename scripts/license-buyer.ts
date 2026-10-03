@@ -1,54 +1,119 @@
 /**
- * First-purchase readback: decide whether an issued token is a valid Pro
- * token for the expected buyer. Pure (keys are injected) so tests can use
- * throwaway keys; the CLI passes the embedded keys. The token itself is never
- * part of the report.
+ * First-purchase readback: decide whether an issued token is a genuine Pro
+ * token for this product. Pure (keys and input are injected) so tests can use
+ * throwaway keys; the CLI passes the embedded keys and real stdin. The token
+ * is read from stdin or a file, never from argv (it would land in shell
+ * history and process lists), and is never part of the output.
+ *
+ * What a token carries decides what is checked: the Ed25519 signature against
+ * the embedded keys, `plan` and `product`. `email` is optional (a Money token
+ * carries it only when the buyer subject is an email address), so it is
+ * compared only when the token has one and an expected email was given.
  */
 import { verifyLicense } from '../src/core/license'
 
+/**
+ * `new`: signed by a later embedded key (the current key signs new orders)
+ * and names product `gpdt`, i.e. a token minted for a fresh purchase.
+ * `existing`: valid, but signed by the original key or carrying no product /
+ * the legacy product slug, i.e. a token from before the self-serve checkout.
+ * `invalid`: anything else, including an email that belongs to someone else.
+ */
+export type BuyerVerdict = 'new' | 'existing' | 'invalid'
+
+/** `not-in-token`: an email was expected but the token carries none (not a failure). */
+export type EmailCheck = 'match' | 'mismatch' | 'not-in-token' | 'not-checked'
+
 export interface BuyerReport {
-  valid: boolean
-  /** 'old' = the first embedded key, 'new' = any later one (the current key signs new tokens). */
-  key: 'old' | 'new' | null
-  plan: string | null
-  emailMatch: boolean
-  issuedAt: string | null
-  /** True only when valid, plan is pro and the email matches. */
-  ok: boolean
+  verdict: BuyerVerdict
+  email: EmailCheck
 }
+
+export interface BuyerOptions {
+  /** Expected buyer email; compared (case-insensitively) only when the token carries one. */
+  email?: string
+}
+
+const PRODUCT = 'gpdt'
 
 export async function verifyBuyer(
   token: string,
-  expectedEmail: string,
   keys: readonly string[],
+  options: BuyerOptions = {},
 ): Promise<BuyerReport> {
+  const expected = options.email?.trim().toLowerCase()
   for (let i = 0; i < keys.length; i++) {
     const result = await verifyLicense(token, keys[i])
     if (!result.ok) continue
-    const { plan, email, issuedAt } = result.payload
-    const emailMatch =
-      typeof email === 'string' && email.trim().toLowerCase() === expectedEmail.trim().toLowerCase()
-    const issued = typeof issuedAt === 'number' && Number.isFinite(issuedAt) ? new Date(issuedAt) : null
-    return {
-      valid: true,
-      key: i === 0 ? 'old' : 'new',
-      plan,
-      emailMatch,
-      issuedAt: issued && !Number.isNaN(issued.getTime()) ? issued.toISOString() : null,
-      ok: plan === 'pro' && emailMatch,
+    const { product, email } = result.payload
+    let emailCheck: EmailCheck = 'not-checked'
+    if (expected) {
+      if (typeof email !== 'string' || email.trim() === '') emailCheck = 'not-in-token'
+      else emailCheck = email.trim().toLowerCase() === expected ? 'match' : 'mismatch'
     }
+    if (emailCheck === 'mismatch') return { verdict: 'invalid', email: emailCheck }
+    const fresh = i > 0 && product === PRODUCT
+    return { verdict: fresh ? 'new' : 'existing', email: emailCheck }
   }
-  return { valid: false, key: null, plan: null, emailMatch: false, issuedAt: null, ok: false }
+  return { verdict: 'invalid', email: 'not-checked' }
 }
 
-const yn = (b: boolean): string => (b ? 'yes' : 'no')
+const EMAIL_LINE: Record<EmailCheck, string> = {
+  match: 'match',
+  mismatch: 'mismatch',
+  'not-in-token': 'not in token (check the buyer in Money)',
+  'not-checked': 'not checked',
+}
 
 export function formatBuyerReport(r: BuyerReport): string {
-  return [
-    `valid: ${yn(r.valid)}`,
-    `key: ${r.key ?? 'none'}`,
-    `plan: ${r.plan ?? 'none'}`,
-    `email match: ${yn(r.emailMatch)}`,
-    `issuedAt: ${r.issuedAt ?? 'none'}`,
-  ].join('\n')
+  return `verdict: ${r.verdict}\nemail: ${EMAIL_LINE[r.email]}`
+}
+
+export const ARGV_REFUSAL =
+  'verify-buyer does not take the token on the command line: it would land in shell history and process lists.\n' +
+  'Pipe it on stdin, e.g. `read -rs T; printf %s "$T" | bun run scripts/license.ts verify-buyer [--email=<buyer email>]`,\n' +
+  'or pass `--token-file=<path>` (a file or a process substitution).'
+
+const NO_INPUT = 'No token on stdin. Pipe it in (see: verify-buyer takes no token argument) or pass --token-file=<path>.'
+
+export type ParsedArgs = { ok: true; email?: string; tokenFile?: string } | { ok: false; message: string }
+
+/** Only `--email=` and `--token-file=` are accepted; anything else (a bare token included) is refused without echoing it. */
+export function parseBuyerArgs(args: readonly string[]): ParsedArgs {
+  let email: string | undefined
+  let tokenFile: string | undefined
+  for (const a of args) {
+    if (a.startsWith('--email=')) email = a.slice('--email='.length)
+    else if (a.startsWith('--token-file=')) tokenFile = a.slice('--token-file='.length)
+    else return { ok: false, message: ARGV_REFUSAL }
+  }
+  return { ok: true, email, tokenFile }
+}
+
+export interface BuyerIo {
+  /** All of stdin, or null when stdin is a terminal (nothing was piped). */
+  readStdin(): string | null
+  readFile(path: string): string
+}
+
+export interface BuyerRun {
+  code: number
+  out: string
+  err: string
+}
+
+/** Exit codes: 0 new or existing, 1 invalid, 2 usage. */
+export async function runVerifyBuyer(args: readonly string[], keys: readonly string[], io: BuyerIo): Promise<BuyerRun> {
+  const parsed = parseBuyerArgs(args)
+  if (!parsed.ok) return { code: 2, out: '', err: parsed.message }
+  let token: string | null
+  try {
+    token = parsed.tokenFile !== undefined ? io.readFile(parsed.tokenFile) : io.readStdin()
+  } catch {
+    // Report the failure class only; never a path or content.
+    return { code: 2, out: '', err: 'Could not read the token file.' }
+  }
+  if (token === null) return { code: 2, out: '', err: NO_INPUT }
+  const report = await verifyBuyer(token, keys, { email: parsed.email })
+  return { code: report.verdict === 'invalid' ? 1 : 0, out: formatBuyerReport(report), err: '' }
 }
