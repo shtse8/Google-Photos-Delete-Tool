@@ -4,6 +4,11 @@ name: Store Publish (reusable)
 #   - publish-stores.yml  (workflow_dispatch — publish now)
 #   - store-retry.yml     (scheduled — publish the latest release tag as
 #                          soon as each store's review queue allows)
+#   - publish-cws.yml     (workflow_dispatch — one tag to CWS, or with
+#                          staged_ref: the cws-staged job builds that commit,
+#                          pins it by content digest and submits it with
+#                          STAGED_PUBLISH; it never publishes, tags or records
+#                          store-state, and every tag job is skipped)
 #
 # Model: a git tag creates GitHub release assets only. Stores are
 # decoupled, stateful, and retryable:
@@ -37,6 +42,21 @@ on:
         required: false
         type: boolean
         default: false
+      staged_ref:
+        description: 'CWS only: build this commit and submit it with STAGED_PUBLISH instead of publishing a tag (manual publish-cws.yml dispatch only)'
+        required: false
+        type: string
+        default: ''
+      content_digest:
+        description: 'With staged_ref: expected content digest of the Chrome zip (scripts/zip-content-digest.sh)'
+        required: false
+        type: string
+        default: ''
+      publisher_id:
+        description: 'With staged_ref: CWS publisher id (not a secret); blank = the CWS_PUBLISHER_ID secret'
+        required: false
+        type: string
+        default: ''
     secrets:
       CWS_SERVICE_ACCOUNT_JSON:
         required: false
@@ -64,6 +84,7 @@ on:
 jobs:
   resolve:
     name: Resolve target tag & pending stores
+    if: inputs.staged_ref == ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -591,3 +612,85 @@ jobs:
           fi
           git push origin HEAD:store-state
           echo "::notice::AMO ${{ needs.resolve.outputs.tag }} submission accepted; state recorded (public version unverified)"
+
+  cws-staged:
+    name: Submit to Chrome Web Store as STAGED
+    if: inputs.staged_ref != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Validate inputs
+        env:
+          REF: ${{ inputs.staged_ref }}
+          DIGEST: ${{ inputs.content_digest }}
+          TAG: ${{ inputs.tag }}
+          STORES: ${{ inputs.stores }}
+          CANCEL: ${{ inputs.cancel_pending }}
+        run: |
+          [ "$STORES" = cws ] || { echo "::error::staged_ref is CWS only"; exit 1; }
+          [[ "$REF" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::staged_ref must be a full 40-hex commit SHA"; exit 1; }
+          [[ "$DIGEST" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::content_digest must be 64 hex characters"; exit 1; }
+          [ -z "$TAG" ] || { echo "::error::tag and staged_ref are exclusive"; exit 1; }
+          [ "$CANCEL" = false ] || { echo "::error::cancel_pending is not offered on the staged path"; exit 1; }
+
+      - name: Check out the publisher (this workflow's commit)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: tool
+          persist-credentials: false
+
+      - name: Check out the commit to submit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.staged_ref }}
+          path: build
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: build/.bun-version
+
+      - name: Build the store zip
+        working-directory: build
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+          bun run verify
+          bun run zip
+
+      - name: Pin the package (content digest, version, untagged)
+        env:
+          DIGEST: ${{ inputs.content_digest }}
+        run: |
+          ZIP=build/google-photos-delete-tool.zip
+          GOT="$(tool/scripts/zip-content-digest.sh "$ZIP")"
+          VER="$(unzip -p "$ZIP" manifest.json | jq -r .version)"
+          echo "zip sha256 $(sha256sum "$ZIP" | cut -d' ' -f1); content digest $GOT; manifest version $VER"
+          if [ "$GOT" != "$DIGEST" ]; then
+            echo "::error::content digest $GOT differs from the expected $DIGEST; nothing uploaded"
+            exit 1
+          fi
+          if git -C build ls-remote --exit-code --tags origin "refs/tags/v$VER" >/dev/null; then
+            echo "::error::v$VER is already tagged; release tags go through the normal publish path"
+            exit 1
+          fi
+          echo "Package pinned: version \`$VER\`, content digest \`$GOT\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload and submit for review with STAGED_PUBLISH
+        id: submit
+        env:
+          CWS_SERVICE_ACCOUNT_JSON: ${{ secrets.CWS_SERVICE_ACCOUNT_JSON }}
+          CWS_PUBLISHER_ID: ${{ inputs.publisher_id || secrets.CWS_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: node tool/scripts/cws-v2.mjs publish --zip build/google-photos-delete-tool.zip --staged
+
+      - name: Fail when a submission is already in review
+        if: steps.submit.outputs.blocked == 'yes'
+        run: |
+          echo "::error::CWS already has a submission in review; nothing was uploaded. Wait for it or cancel it in the dashboard, then re-run."
+          exit 1

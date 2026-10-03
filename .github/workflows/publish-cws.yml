@@ -5,6 +5,17 @@ name: Publish to Chrome Web Store (manual)
 # A blank tag resolves the latest GitHub release, never the dispatch SHA.
 #
 #   gh workflow run "Publish to Chrome Web Store (manual)" -f tag=v3.0.1
+#
+# Staged submission (staged_ref set): builds the store zip from that commit,
+# refuses unless its content digest (scripts/zip-content-digest.sh) equals
+# content_digest, uploads it and submits it for review with publishType
+# STAGED_PUBLISH. After review the version waits as STAGED; it goes live only
+# when someone publishes it (dashboard, or a later v2 publish call). This path
+# never publishes, never tags and never touches store-state, so it can run
+# before the release it belongs to is tagged.
+#
+#   gh workflow run "Publish to Chrome Web Store (manual)" \
+#     -f staged_ref=<40-hex commit> -f content_digest=<64-hex> -f publisher_id=<CWS publisher id>
 
 on:
   workflow_dispatch:
@@ -18,6 +29,18 @@ on:
         required: false
         type: boolean
         default: false
+      staged_ref:
+        description: 'Staged submission: full commit SHA to build and submit with STAGED_PUBLISH (blank = normal tag publish)'
+        required: false
+        default: ''
+      content_digest:
+        description: 'Staged submission: expected content digest of the Chrome zip (scripts/zip-content-digest.sh)'
+        required: false
+        default: ''
+      publisher_id:
+        description: 'Staged submission: CWS publisher id (dashboard Account page; not a secret). Blank = CWS_PUBLISHER_ID secret'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -33,4 +56,7 @@ jobs:
       stores: cws
       tag: ${{ inputs.tag }}
       cancel_pending: ${{ inputs.cancel_pending }}
+      staged_ref: ${{ inputs.staged_ref }}
+      content_digest: ${{ inputs.content_digest }}
+      publisher_id: ${{ inputs.publisher_id }}
     secrets: inherit

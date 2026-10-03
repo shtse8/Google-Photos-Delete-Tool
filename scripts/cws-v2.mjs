@@ -19,7 +19,10 @@
  *                       (submittedItemRevisionStatus, publishedItemRevisionStatus,
  *                       lastAsyncUploadState)
  *   publish             POST /v2/publishers/{publisherId}/items/{itemId}:publish
- *                       (no body = DEFAULT_PUBLISH)
+ *                       (no body = DEFAULT_PUBLISH: live as soon as review passes;
+ *                       body {"publishType":"STAGED_PUBLISH"}: after review the
+ *                       revision is STAGED and goes live only on a later publish
+ *                       call or a dashboard click)
  *   cancelSubmission    POST /v2/publishers/{publisherId}/items/{itemId}:cancelSubmission
  *                       ("Cancel the current active submission of an item if present")
  *   ItemState           PENDING_REVIEW | STAGED | PUBLISHED | PUBLISHED_TO_TESTERS |
@@ -31,11 +34,16 @@
  *
  * Commands (all read the environment; nothing secret is ever printed):
  *   node scripts/cws-v2.mjs mode                  # prints sa | oauth | none, exit 1 if SA config is partial
- *   node scripts/cws-v2.mjs publish --zip <file> [--cancel-pending]
+ *   node scripts/cws-v2.mjs publish --zip <file> [--cancel-pending] [--staged]
+ *
+ * --staged submits with publishType STAGED_PUBLISH and accepts only a
+ * PENDING_REVIEW or STAGED readback, so the run can never make a version live.
  *
  * Environment: CWS_SERVICE_ACCOUNT_JSON, CWS_PUBLISHER_ID, CHROME_EXTENSION_ID
- * (service-account path) and CHROME_CLIENT_ID / CHROME_CLIENT_SECRET /
- * CHROME_REFRESH_TOKEN (OAuth fallback, handled by the workflow, not here).
+ * (service-account path), or CHROME_CLIENT_ID / CHROME_CLIENT_SECRET /
+ * CHROME_REFRESH_TOKEN plus CWS_PUBLISHER_ID and CHROME_EXTENSION_ID (the same
+ * v2 calls with an OAuth access token minted from the refresh token). Without
+ * CWS_PUBLISHER_ID the OAuth secrets stay with the workflow's v1 CLI path.
  *
  * Exit codes: 0 = published or blocked by a pending review (outputs say which),
  * 1 = any failure (auth, validation, readback). State must only advance on
@@ -49,6 +57,9 @@ export const API_BASE = 'https://chromewebstore.googleapis.com'
 export const SCOPE = 'https://www.googleapis.com/auth/chromewebstore'
 const DEFAULT_TOKEN_URI = 'https://oauth2.googleapis.com/token'
 const ACCEPTED_STATES = ['PENDING_REVIEW', 'STAGED', 'PUBLISHED', 'PUBLISHED_TO_TESTERS']
+/** A staged submission must read back as waiting, never as live. */
+const STAGED_ACCEPTED_STATES = ['PENDING_REVIEW', 'STAGED']
+export const PUBLISH_TYPES = ['DEFAULT_PUBLISH', 'STAGED_PUBLISH']
 
 /** Choose the auth path. Service account wins when its secret is set. */
 export function selectAuthMode(env) {
@@ -111,16 +122,34 @@ export async function mintAccessToken(keyJson, fetchImpl = fetch) {
   return data.access_token
 }
 
+/** Exchange the OAuth refresh token for an access token. Throws without echoing secrets. */
+export async function mintOAuthAccessToken({ clientId, clientSecret, refreshToken }, fetchImpl = fetch) {
+  if (!clientId || !clientSecret || !refreshToken) throw new Error('OAuth client id, secret or refresh token missing')
+  const res = await fetchImpl(DEFAULT_TOKEN_URI, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'refresh_token', client_id: clientId, client_secret: clientSecret, refresh_token: refreshToken }).toString(),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    const code = (() => { try { return JSON.parse(body).error } catch { return '' } })()
+    throw new Error(`OAuth token refresh failed (HTTP ${res.status}${code ? ` ${code}` : ''})`)
+  }
+  const data = await res.json()
+  if (!data.access_token) throw new Error('OAuth token refresh returned no access_token')
+  return data.access_token
+}
+
 export const PUBLISH_RETRY_MS = 600000
 /** CWS reachability checks on the support URL / privacy policy are transient. */
 export const isTransientPublishError = (text) => /not reachable|Timeout while connecting/i.test(text ?? '')
 
 const itemName = (publisherId, itemId) => `publishers/${publisherId}/items/${itemId}`
 
-async function call(fetchImpl, token, method, url, body) {
+async function call(fetchImpl, token, method, url, body, contentType = 'application/zip') {
   const res = await fetchImpl(url, {
     method,
-    headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/zip' } : {}) },
+    headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': contentType } : {}) },
     ...(body ? { body } : {}),
   })
   const text = await res.text()
@@ -134,7 +163,9 @@ async function call(fetchImpl, token, method, url, body) {
  * Returns { outcome: 'published' | 'blocked', ... }; throws on any failure.
  */
 export async function publishV2(opts) {
-  const { token, publisherId, itemId, zip, cancelPending = false, fetchImpl = fetch, log = () => {}, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = opts
+  const { token, publisherId, itemId, zip, cancelPending = false, publishType, fetchImpl = fetch, log = () => {}, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) } = opts
+  if (publishType !== undefined && !PUBLISH_TYPES.includes(publishType)) throw new Error(`unknown publishType ${publishType}`)
+  const staged = publishType === 'STAGED_PUBLISH'
   const name = itemName(publisherId, itemId)
   const status = () => call(fetchImpl, token, 'GET', `${API_BASE}/v2/${name}:fetchStatus`)
 
@@ -175,7 +206,9 @@ export async function publishV2(opts) {
   }
   if (uploadState !== 'SUCCEEDED') throw new Error(`upload did not succeed (uploadState=${uploadState ?? 'unset'})`)
 
-  const doPublish = () => call(fetchImpl, token, 'POST', `${API_BASE}/v2/${name}:publish`)
+  // No body keeps the historical DEFAULT_PUBLISH request byte for byte.
+  const publishBody = publishType ? JSON.stringify({ publishType }) : undefined
+  const doPublish = () => call(fetchImpl, token, 'POST', `${API_BASE}/v2/${name}:publish`, publishBody, 'application/json')
   let pub = await doPublish()
   if (!pub.ok && isTransientPublishError(pub.text)) {
     log(`::notice::CWS publish hit a transient reachability error (HTTP ${pub.status}); retrying once after 10 min`)
@@ -192,9 +225,14 @@ export async function publishV2(opts) {
   const published = after.json?.publishedItemRevisionStatus
   const publishedVersions = (published?.distributionChannels ?? []).map((c) => c.crxVersion)
   const itemState = submitted?.state ?? published?.state ?? 'UNKNOWN'
+  if (staged) {
+    if (crxVersion && publishedVersions.includes(crxVersion)) throw new Error(`staged submission ${crxVersion} reads back as published`)
+    if (!STAGED_ACCEPTED_STATES.includes(submitted?.state ?? '')) throw new Error(`readback does not show the staged submission (state=${itemState})`)
+    return { outcome: 'published', itemState, crxVersion: crxVersion ?? '', cancelled, staged, readback: after.json }
+  }
   const accepted = ACCEPTED_STATES.includes(submitted?.state ?? '') || (crxVersion && publishedVersions.includes(crxVersion))
   if (!accepted) throw new Error(`readback does not show the submission (state=${itemState})`)
-  return { outcome: 'published', itemState, crxVersion: crxVersion ?? '', cancelled, readback: after.json }
+  return { outcome: 'published', itemState, crxVersion: crxVersion ?? '', cancelled, staged, readback: after.json }
 }
 
 function writeOutputs(pairs) {
@@ -214,23 +252,31 @@ async function main(argv, env) {
     return 0
   }
   if (cmd !== 'publish') {
-    console.error('usage: cws-v2.mjs mode | publish --zip <file> [--cancel-pending]')
+    console.error('usage: cws-v2.mjs mode | publish --zip <file> [--cancel-pending] [--staged]')
     return 2
   }
   const zipIdx = rest.indexOf('--zip')
   const zipPath = zipIdx >= 0 ? rest[zipIdx + 1] : ''
   if (!zipPath) { console.error('::error::--zip <file> required'); return 2 }
   const sel = selectAuthMode(env)
-  if (sel.mode !== 'sa') { console.error('::error::service-account configuration incomplete'); return 1 }
+  const publisherId = (env.CWS_PUBLISHER_ID ?? '').trim()
+  if (sel.mode !== 'sa' && !(sel.mode === 'oauth' && publisherId)) {
+    console.error('::error::v2 needs the service account, or the OAuth secrets plus CWS_PUBLISHER_ID')
+    return 1
+  }
+  const staged = rest.includes('--staged')
   try {
-    const token = await mintAccessToken(env.CWS_SERVICE_ACCOUNT_JSON)
+    const token = sel.mode === 'sa'
+      ? await mintAccessToken(env.CWS_SERVICE_ACCOUNT_JSON)
+      : await mintOAuthAccessToken({ clientId: env.CHROME_CLIENT_ID.trim(), clientSecret: env.CHROME_CLIENT_SECRET.trim(), refreshToken: env.CHROME_REFRESH_TOKEN.trim() })
     console.log(`::add-mask::${token}`)
     const result = await publishV2({
       token,
-      publisherId: env.CWS_PUBLISHER_ID.trim(),
+      publisherId,
       itemId: env.CHROME_EXTENSION_ID.trim(),
       zip: readFileSync(zipPath),
       cancelPending: rest.includes('--cancel-pending'),
+      ...(staged ? { publishType: 'STAGED_PUBLISH' } : {}),
       log: (m) => console.log(m),
     })
     if (result.outcome === 'blocked') {
@@ -238,9 +284,9 @@ async function main(argv, env) {
       writeOutputs({ blocked: 'yes' })
       return 0
     }
-    console.log(`::notice::CWS v2 submission accepted: state=${result.itemState} version=${result.crxVersion} cancelled_pending=${result.cancelled}`)
+    console.log(`::notice::CWS v2 submission accepted: state=${result.itemState} version=${result.crxVersion} staged=${result.staged} cancelled_pending=${result.cancelled}`)
     console.log(JSON.stringify(result.readback))
-    writeOutputs({ uploaded: 'yes', published: 'yes', item_state: result.itemState, crx_version: result.crxVersion })
+    writeOutputs({ uploaded: 'yes', published: 'yes', item_state: result.itemState, crx_version: result.crxVersion, staged: result.staged ? 'yes' : 'no' })
     if (process.env.GITHUB_STEP_SUMMARY) {
       appendFileSync(process.env.GITHUB_STEP_SUMMARY, `CWS v2 readback: state \`${result.itemState}\`, version \`${result.crxVersion}\`, pending submission cancelled: ${result.cancelled}\n`)
     }
