@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { verifyBuyer, formatBuyerReport } from '../scripts/license-buyer'
+import { spawnSync } from 'node:child_process'
+import { join } from 'node:path'
+import { verifyBuyer, formatBuyerReport, parseBuyerArgs, runVerifyBuyer, type BuyerIo } from '../scripts/license-buyer'
 import { encodeBase64Url } from '../src/core/license'
 
 const newKey = async () => {
@@ -14,49 +16,137 @@ const issue = async (priv: CryptoKey, payload: Record<string, unknown>): Promise
   return `${encodeBase64Url(bytes)}.${encodeBase64Url(sig)}`
 }
 
-describe('verify-buyer readback', () => {
-  it('accepts a valid pro token for the expected email and names the new key', async () => {
+/** A Money-shaped token: product and grant, no email. */
+const moneyPayload = { plan: 'pro', product: 'gpdt', issuedAt: 1786300000000, grant: 'grant_1', seats: 1 }
+
+const ioFor = (stdin: string | null, files: Record<string, string> = {}): BuyerIo => ({
+  readStdin: () => stdin,
+  readFile: (p) => {
+    if (!(p in files)) throw new Error('ENOENT')
+    return files[p]!
+  },
+})
+
+describe('verifyBuyer verdicts', () => {
+  it('verifies a Money token without an email as new (current key, product gpdt)', async () => {
     const oldK = await newKey()
     const curK = await newKey()
-    const t = 1786300000000
-    const token = await issue(curK.priv, { plan: 'pro', email: 'Buyer@Example.com', issuedAt: t })
-    const r = await verifyBuyer(token, ' buyer@example.com ', [oldK.pub, curK.pub])
-    expect(r).toEqual({ valid: true, key: 'new', plan: 'pro', emailMatch: true, issuedAt: new Date(t).toISOString(), ok: true })
-    expect(formatBuyerReport(r)).not.toContain(token)
+    const token = await issue(curK.priv, moneyPayload)
+    expect(await verifyBuyer(token, [oldK.pub, curK.pub])).toEqual({ verdict: 'new', email: 'not-checked' })
+    // an expected email the token cannot confirm is reported, not failed
+    expect(await verifyBuyer(token, [oldK.pub, curK.pub], { email: 'a@example.com' })).toEqual({
+      verdict: 'new',
+      email: 'not-in-token',
+    })
   })
 
-  it('names the old key when the first embedded key signed it', async () => {
+  it('matches the email case-insensitively when the token carries one, and fails a mismatch', async () => {
     const oldK = await newKey()
     const curK = await newKey()
-    const token = await issue(oldK.priv, { plan: 'pro', email: 'a@example.com', issuedAt: 1 })
-    expect((await verifyBuyer(token, 'a@example.com', [oldK.pub, curK.pub])).key).toBe('old')
+    const token = await issue(curK.priv, { ...moneyPayload, email: 'Buyer@Example.com' })
+    expect(await verifyBuyer(token, [oldK.pub, curK.pub], { email: ' buyer@example.com ' })).toEqual({
+      verdict: 'new',
+      email: 'match',
+    })
+    expect(await verifyBuyer(token, [oldK.pub, curK.pub], { email: 'other@example.com' })).toEqual({
+      verdict: 'invalid',
+      email: 'mismatch',
+    })
   })
 
-  it('fails on an email mismatch or a missing email', async () => {
-    const k = await newKey()
-    const wrong = await issue(k.priv, { plan: 'pro', email: 'a@example.com', issuedAt: 1 })
-    const r = await verifyBuyer(wrong, 'b@example.com', [k.pub])
-    expect(r.valid).toBe(true)
-    expect(r.emailMatch).toBe(false)
-    expect(r.ok).toBe(false)
-    const none = await issue(k.priv, { plan: 'pro', issuedAt: 1 })
-    expect((await verifyBuyer(none, 'a@example.com', [k.pub])).ok).toBe(false)
+  it('calls a token from the original key, or without a product, existing', async () => {
+    const oldK = await newKey()
+    const curK = await newKey()
+    const fromOld = await issue(oldK.priv, { plan: 'pro', email: 'a@example.com', issuedAt: 1 })
+    expect((await verifyBuyer(fromOld, [oldK.pub, curK.pub])).verdict).toBe('existing')
+    const seller = await issue(curK.priv, { plan: 'pro', email: 'a@example.com', issuedAt: 1 })
+    expect((await verifyBuyer(seller, [oldK.pub, curK.pub])).verdict).toBe('existing')
   })
 
-  it('fails on a foreign signature, a wrong plan and garbage', async () => {
+  it('calls a tampered token, a foreign signature, another product, a wrong plan and garbage invalid', async () => {
     const k = await newKey()
     const other = await newKey()
-    const foreign = await issue(other.priv, { plan: 'pro', email: 'a@example.com', issuedAt: 1 })
-    const r = await verifyBuyer(foreign, 'a@example.com', [k.pub])
-    expect(r).toMatchObject({ valid: false, key: null, ok: false })
-    const free = await issue(k.priv, { plan: 'free', email: 'a@example.com', issuedAt: 1 })
-    expect((await verifyBuyer(free, 'a@example.com', [k.pub])).ok).toBe(false)
-    expect((await verifyBuyer('not-a-token', 'a@example.com', [k.pub])).valid).toBe(false)
+    const good = await issue(k.priv, moneyPayload)
+    const [payload, sig] = good.split('.') as [string, string]
+    const forged = encodeBase64Url(new TextEncoder().encode(JSON.stringify({ ...moneyPayload, email: 'evil@example.com' })))
+    const tampered = `${forged}.${sig}`
+    expect(payload).not.toBe(forged)
+    expect((await verifyBuyer(tampered, [k.pub, k.pub])).verdict).toBe('invalid')
+    expect((await verifyBuyer(await issue(other.priv, moneyPayload), [k.pub])).verdict).toBe('invalid')
+    expect((await verifyBuyer(await issue(k.priv, { ...moneyPayload, product: 'other-tool' }), [k.pub])).verdict).toBe('invalid')
+    expect((await verifyBuyer(await issue(k.priv, { ...moneyPayload, plan: 'free' }), [k.pub])).verdict).toBe('invalid')
+    expect((await verifyBuyer('not-a-token', [k.pub])).verdict).toBe('invalid')
+    expect((await verifyBuyer('', [k.pub])).verdict).toBe('invalid')
   })
 
-  it('formats yes/no lines without the token', () => {
-    expect(
-      formatBuyerReport({ valid: false, key: null, plan: null, emailMatch: false, issuedAt: null, ok: false }),
-    ).toBe('valid: no\nkey: none\nplan: none\nemail match: no\nissuedAt: none')
+  it('formats verdict and email lines', () => {
+    expect(formatBuyerReport({ verdict: 'new', email: 'not-in-token' })).toBe(
+      'verdict: new\nemail: not in token (check the buyer in Money)',
+    )
+    expect(formatBuyerReport({ verdict: 'invalid', email: 'not-checked' })).toBe('verdict: invalid\nemail: not checked')
+  })
+})
+
+describe('verify-buyer input', () => {
+  it('refuses a token (or anything else) on argv without echoing it', async () => {
+    const k = await newKey()
+    const token = await issue(k.priv, moneyPayload)
+    for (const args of [[token], [token, '--email=a@example.com'], [`--token=${token}`], ['--other']]) {
+      expect(parseBuyerArgs(args).ok).toBe(false)
+      const run = await runVerifyBuyer(args, [k.pub], ioFor(token))
+      expect(run.code).toBe(2)
+      expect(run.out).toBe('')
+      expect(run.err).toContain('does not take the token on the command line')
+      expect(run.err).not.toContain(token)
+    }
+  })
+
+  it('reads the token from stdin or a file and never prints it', async () => {
+    const oldK = await newKey()
+    const curK = await newKey()
+    const token = await issue(curK.priv, moneyPayload)
+    const keys = [oldK.pub, curK.pub]
+    const viaStdin = await runVerifyBuyer([], keys, ioFor(`${token}\n`))
+    expect(viaStdin).toEqual({ code: 0, out: 'verdict: new\nemail: not checked', err: '' })
+    const viaFile = await runVerifyBuyer(['--token-file=/t'], keys, ioFor(null, { '/t': token }))
+    expect(viaFile.out).toBe(viaStdin.out)
+    for (const run of [viaStdin, viaFile]) {
+      expect(run.out + run.err).not.toContain(token)
+      expect(run.out + run.err).not.toContain(token.split('.')[0]!)
+    }
+  })
+
+  it('exits 1 on an invalid token without printing it, and 2 when nothing was piped', async () => {
+    const k = await newKey()
+    const other = await newKey()
+    const token = await issue(other.priv, moneyPayload)
+    const bad = await runVerifyBuyer([], [k.pub], ioFor(token))
+    expect(bad.code).toBe(1)
+    expect(bad.out).toBe('verdict: invalid\nemail: not checked')
+    expect(bad.out + bad.err).not.toContain(token)
+    expect((await runVerifyBuyer([], [k.pub], ioFor(null))).code).toBe(2)
+    const missing = await runVerifyBuyer(['--token-file=/nope'], [k.pub], ioFor(null))
+    expect(missing).toMatchObject({ code: 2, out: '' })
+    expect(missing.err).not.toContain('/nope')
+  })
+})
+
+describe('verify-buyer CLI', () => {
+  const cli = join(__dirname, '..', 'scripts', 'license.ts')
+  const run = (args: string[], input?: string) =>
+    spawnSync('bun', ['run', cli, 'verify-buyer', ...args], { input, encoding: 'utf8' })
+
+  it('refuses argv and reports invalid for a token that is not signed by the embedded keys', async () => {
+    const k = await newKey()
+    const token = await issue(k.priv, moneyPayload)
+    const argv = run([token])
+    expect(argv.status).toBe(2)
+    expect(argv.stdout + argv.stderr).not.toContain(token)
+    expect(argv.stderr).toContain('does not take the token on the command line')
+
+    const stdin = run([], token)
+    expect(stdin.status).toBe(1)
+    expect(stdin.stdout.trim()).toBe('verdict: invalid\nemail: not checked')
+    expect(stdin.stdout + stdin.stderr).not.toContain(token)
   })
 })
