@@ -33,7 +33,7 @@
  * with the v1 wording kept only as a fallback on a failed upload.
  *
  * Commands (all read the environment; nothing secret is ever printed):
- *   node scripts/cws-v2.mjs mode                  # prints sa | oauth | none, exit 1 if SA config is partial
+ *   node scripts/cws-v2.mjs mode                  # prints sa | oauth | none, exit 1 if the config is partial
  *   node scripts/cws-v2.mjs publish --zip <file> [--cancel-pending] [--staged]
  *
  * --staged submits with publishType STAGED_PUBLISH and accepts only a
@@ -42,8 +42,9 @@
  * Environment: CWS_SERVICE_ACCOUNT_JSON, CWS_PUBLISHER_ID, CHROME_EXTENSION_ID
  * (service-account path), or CHROME_CLIENT_ID / CHROME_CLIENT_SECRET /
  * CHROME_REFRESH_TOKEN plus CWS_PUBLISHER_ID and CHROME_EXTENSION_ID (the same
- * v2 calls with an OAuth access token minted from the refresh token). Without
- * CWS_PUBLISHER_ID the OAuth secrets stay with the workflow's v1 CLI path.
+ * v2 calls with an OAuth access token minted from the refresh token). The v1.1
+ * API shuts down on 2026-10-15 and v2 addresses items by publisher id, so the
+ * OAuth secrets without CWS_PUBLISHER_ID are refused, never sent to v1.
  *
  * Exit codes: 0 = published or blocked by a pending review (outputs say which),
  * 1 = any failure (auth, validation, readback). State must only advance on
@@ -61,18 +62,27 @@ const ACCEPTED_STATES = ['PENDING_REVIEW', 'STAGED', 'PUBLISHED', 'PUBLISHED_TO_
 const STAGED_ACCEPTED_STATES = ['PENDING_REVIEW', 'STAGED']
 export const PUBLISH_TYPES = ['DEFAULT_PUBLISH', 'STAGED_PUBLISH']
 
-/** Choose the auth path. Service account wins when its secret is set. */
+/**
+ * Choose the auth path. Service account wins when its secret is set. Both paths
+ * need the publisher id: the v2 API has no publisher-less form.
+ */
 export function selectAuthMode(env) {
   const has = (k) => typeof env[k] === 'string' && env[k].trim() !== ''
   if (has('CWS_SERVICE_ACCOUNT_JSON')) {
     const missing = ['CWS_PUBLISHER_ID', 'CHROME_EXTENSION_ID'].filter((k) => !has(k))
-    return missing.length ? { mode: 'invalid', missing } : { mode: 'sa' }
+    return missing.length ? { mode: 'invalid', via: 'CWS_SERVICE_ACCOUNT_JSON', missing } : { mode: 'sa' }
   }
   if (['CHROME_EXTENSION_ID', 'CHROME_CLIENT_ID', 'CHROME_CLIENT_SECRET', 'CHROME_REFRESH_TOKEN'].every(has)) {
-    return { mode: 'oauth' }
+    return has('CWS_PUBLISHER_ID') ? { mode: 'oauth' } : { mode: 'invalid', via: 'the CHROME_* OAuth secrets', missing: ['CWS_PUBLISHER_ID'] }
   }
   return { mode: 'none' }
 }
+
+/** The error line for a refused configuration (names what to set, never a value). */
+export const invalidModeMessage = (sel) =>
+  sel.missing.includes('CWS_PUBLISHER_ID') && sel.via !== 'CWS_SERVICE_ACCOUNT_JSON'
+    ? `${sel.via} are set but CWS_PUBLISHER_ID is missing; the Chrome Web Store API v1.1 shuts down on 2026-10-15 and v2 needs the publisher id. Set the CWS_PUBLISHER_ID repo variable (developer dashboard, Account page; not a secret).`
+    : `${sel.via} is set but ${sel.missing.join(', ')} is missing; refusing to fall back silently`
 
 const b64url = (v) => Buffer.from(v).toString('base64url')
 
@@ -245,7 +255,7 @@ async function main(argv, env) {
   if (cmd === 'mode') {
     const sel = selectAuthMode(env)
     if (sel.mode === 'invalid') {
-      console.error(`::error::CWS_SERVICE_ACCOUNT_JSON is set but ${sel.missing.join(', ')} is missing; refusing to fall back silently`)
+      console.error(`::error::${invalidModeMessage(sel)}`)
       return 1
     }
     console.log(sel.mode)
@@ -260,7 +270,11 @@ async function main(argv, env) {
   if (!zipPath) { console.error('::error::--zip <file> required'); return 2 }
   const sel = selectAuthMode(env)
   const publisherId = (env.CWS_PUBLISHER_ID ?? '').trim()
-  if (sel.mode !== 'sa' && !(sel.mode === 'oauth' && publisherId)) {
+  if (sel.mode === 'invalid') {
+    console.error(`::error::${invalidModeMessage(sel)}`)
+    return 1
+  }
+  if (sel.mode !== 'sa' && sel.mode !== 'oauth') {
     console.error('::error::v2 needs the service account, or the OAuth secrets plus CWS_PUBLISHER_ID')
     return 1
   }
