@@ -3,7 +3,7 @@ import { generateKeyPairSync, createVerify } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 // @ts-expect-error plain .mjs script, no type declarations
-import { selectAuthMode, signServiceAccountJwt, mintAccessToken, publishV2, API_BASE, SCOPE } from '../scripts/cws-v2.mjs'
+import { selectAuthMode, signServiceAccountJwt, mintAccessToken, mintOAuthAccessToken, publishV2, API_BASE, SCOPE } from '../scripts/cws-v2.mjs'
 
 const wf = (n: string) => readFileSync(fileURLToPath(new URL(`../.github/workflows/${n}`, import.meta.url)), 'utf8')
 const { privateKey, publicKey } = generateKeyPairSync('rsa', {
@@ -176,5 +176,98 @@ describe('workflow wiring', () => {
     expect(wf('publish-cws.yml')).toContain('cancel_pending: ${{ inputs.cancel_pending }}')
     expect(wf('store-retry.yml')).not.toContain('cancel_pending')
     expect(wf('publish-stores.yml')).not.toContain('cancel_pending')
+  })
+})
+
+describe('staged publish (publishType STAGED_PUBLISH)', () => {
+  type Seen = { label: string; body?: string; contentType?: string }
+  function recordingApi(steps: Step[]) {
+    const seen: Seen[] = []
+    const fetchImpl = async (url: string, init: { method: string; body?: unknown; headers?: Record<string, string> }) => {
+      const label = `${init.method} ${url.replace(API_BASE, '')}`
+      seen.push({ label, body: typeof init.body === 'string' ? init.body : undefined, contentType: init.headers?.['Content-Type'] })
+      const i = steps.findIndex((st) => label.endsWith(st.match))
+      if (i < 0) throw new Error(`unexpected call ${label}`)
+      const [st] = steps.splice(i, 1)
+      return new Response(JSON.stringify(st.body ?? {}), { status: st.status ?? 200 })
+    }
+    return { seen, fetchImpl }
+  }
+  const flow = (readback: unknown) => [
+    { match: `${N}:fetchStatus`, body: {} },
+    { match: `/upload/v2/${N}:upload`, body: { uploadState: 'SUCCEEDED', crxVersion: '3.6.1' } },
+    { match: `/v2/${N}:publish`, body: {} },
+    { match: `${N}:fetchStatus`, body: readback },
+  ]
+
+  it('sends publishType STAGED_PUBLISH as JSON and accepts a PENDING_REVIEW readback', async () => {
+    const api = recordingApi(flow({ submittedItemRevisionStatus: { state: 'PENDING_REVIEW' } }))
+    const r = await publishV2({ ...base, publishType: 'STAGED_PUBLISH', fetchImpl: api.fetchImpl })
+    expect(r).toMatchObject({ outcome: 'published', itemState: 'PENDING_REVIEW', crxVersion: '3.6.1', staged: true })
+    const pub = api.seen.find((x) => x.label.endsWith(':publish'))!
+    expect(JSON.parse(pub.body!)).toEqual({ publishType: 'STAGED_PUBLISH' })
+    expect(pub.contentType).toBe('application/json')
+  })
+  it('accepts a STAGED readback', async () => {
+    const api = recordingApi(flow({ submittedItemRevisionStatus: { state: 'STAGED' } }))
+    expect((await publishV2({ ...base, publishType: 'STAGED_PUBLISH', fetchImpl: api.fetchImpl })).itemState).toBe('STAGED')
+  })
+  it('fails when the staged version reads back as live or in any other state', async () => {
+    const live = recordingApi(flow({ publishedItemRevisionStatus: { state: 'PUBLISHED', distributionChannels: [{ crxVersion: '3.6.1' }] } }))
+    await expect(publishV2({ ...base, publishType: 'STAGED_PUBLISH', fetchImpl: live.fetchImpl })).rejects.toThrow('reads back as published')
+    const other = recordingApi(flow({ submittedItemRevisionStatus: { state: 'PUBLISHED' } }))
+    await expect(publishV2({ ...base, publishType: 'STAGED_PUBLISH', fetchImpl: other.fetchImpl })).rejects.toThrow('staged submission')
+  })
+  it('keeps the default publish request without a body', async () => {
+    const api = recordingApi(flow({ submittedItemRevisionStatus: { state: 'PENDING_REVIEW' } }))
+    const r = await publishV2({ ...base, fetchImpl: api.fetchImpl })
+    expect(r.staged).toBe(false)
+    const pub = api.seen.find((x) => x.label.endsWith(':publish'))!
+    expect(pub.body).toBeUndefined()
+    expect(pub.contentType).toBeUndefined()
+  })
+  it('refuses an unknown publishType before any call', async () => {
+    const api = recordingApi([])
+    await expect(publishV2({ ...base, publishType: 'IMMEDIATE', fetchImpl: api.fetchImpl })).rejects.toThrow('unknown publishType')
+    expect(api.seen).toHaveLength(0)
+  })
+})
+
+describe('OAuth access token for the v2 calls', () => {
+  it('exchanges the refresh token', async () => {
+    let sent = ''
+    const f = vi.fn(async (_u: string, init: { body: string }) => { sent = init.body; return new Response(JSON.stringify({ access_token: 'at' })) })
+    expect(await mintOAuthAccessToken({ clientId: 'c', clientSecret: 's', refreshToken: 'r' }, f)).toBe('at')
+    expect(Object.fromEntries(new URLSearchParams(sent))).toEqual({ grant_type: 'refresh_token', client_id: 'c', client_secret: 's', refresh_token: 'r' })
+  })
+  it('fails without echoing the secrets', async () => {
+    const f = async () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 })
+    const err = await mintOAuthAccessToken({ clientId: 'cid-x', clientSecret: 'sec-x', refreshToken: 'ref-x' }, f).catch((e: Error) => e.message)
+    expect(err).toBe('OAuth token refresh failed (HTTP 400 invalid_grant)')
+    await expect(mintOAuthAccessToken({ clientId: 'c', clientSecret: '', refreshToken: 'r' }, f)).rejects.toThrow('missing')
+  })
+})
+
+describe('staged workflow wiring', () => {
+  const engine = wf('store-publish.yml')
+  const staged = engine.slice(engine.indexOf('\n  cws-staged:'))
+  it('forwards the staged inputs from the manual CWS dispatch to the shared engine', () => {
+    const caller = wf('publish-cws.yml')
+    for (const k of ['staged_ref', 'content_digest', 'publisher_id']) expect(caller).toContain(`${k}: \${{ inputs.${k} }}`)
+    expect(wf('store-retry.yml')).not.toContain('staged_ref')
+    expect(wf('publish-stores.yml')).not.toContain('staged_ref')
+  })
+  it('skips every tag job when staged_ref is set and runs the staged job only then', () => {
+    expect(engine).toContain("name: Resolve target tag & pending stores\n    if: inputs.staged_ref == ''")
+    expect(staged).toContain("if: inputs.staged_ref != ''")
+  })
+  it('pins the package by content digest before any upload and submits only with --staged', () => {
+    expect(staged).toContain('tool/scripts/zip-content-digest.sh')
+    expect(staged.indexOf('content digest $GOT differs')).toBeGreaterThan(0)
+    expect(staged.indexOf('content digest $GOT differs')).toBeLessThan(staged.indexOf('cws-v2.mjs publish'))
+    expect(staged).toContain('cws-v2.mjs publish --zip build/google-photos-delete-tool.zip --staged')
+    expect(staged).not.toContain('cancel-pending')
+    expect(staged).not.toContain('store-state')
+    expect(staged).toContain('permissions:\n      contents: read')
   })
 })
