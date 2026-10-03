@@ -20,6 +20,7 @@ store-retry.yml (every 6h) ──▶ store-publish.yml
                                   └─ amo  : wdzeng/firefox-addon → state ✓
 ```
 
+- **Live listings (checked 2026-10-02):** Chrome Web Store only. There is no AMO listing (the AMO API returns 404 for the slug) and no Edge listing, so the amo and edge jobs have nothing to publish to until the one-time bootstrap runs; public copy says Firefox is a zip on each GitHub release.
 - **`store-state` branch** (`state.json`) records the release tag accepted by
   each store submission API, not proof of the live public version. Review may
   still be pending. State advances only after the existing publish API/action
