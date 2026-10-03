@@ -2,11 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-### Fixed
-- A run that ends with nothing selected or moved to Trash no longer says a plain "Done". It says nothing was selected, that the page may have changed, and points to Report issue (all 9 languages).
-
 ## [3.6.0] - 2026-10-02
 
 ### Fixed
@@ -22,8 +17,23 @@ All notable changes to this project will be documented in this file.
 - On a slow gallery, photos already moved to Trash can linger on screen for a
   moment. The tool now waits for them to disappear, instead of stopping with a
   false "photos are still in the gallery; run again" message.
+- A run that ended with nothing selected or moved to Trash no longer says a
+  plain "Done". It says nothing was selected, that the page may have changed,
+  and points to Report issue (all 9 languages).
+- A Pro licence key that is malformed in an unusual way (for example valid
+  JSON that is not a licence) is now rejected as invalid instead of causing an
+  error.
 
 ### Changed
+- Your Pro licence now follows your browser sign-in: it is also kept in Chrome
+  sync, so it appears on your other browsers and survives a reinstall. If sync
+  is off, Pro keeps working from the copy on this device.
+- A short welcome page opens once after a fresh install, and a short feedback
+  page opens when the extension is uninstalled. Neither page address carries
+  anything about you beyond the extension version on uninstall.
+- Pro licence wording is more precise: the key is verified on your device and
+  never sent to us. The Pro licence box also accepts keys issued by the new
+  checkout (self-serve purchase is not switched on in this release).
 - Dry runs and deletes are faster: the tool reacts to the page going quiet
   instead of always waiting a fixed 1.5 seconds between scrolls.
 - The store name and description appear in your language (de, es, fr, it, nl,
