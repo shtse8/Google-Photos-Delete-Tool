@@ -194,8 +194,9 @@ nothing. **Pro** adds the analysis layer on top:
 
 **US$9.99, one time, lifetime.** No subscription, no account.
 
-<!-- PRO_CHECKOUT_URL: single placeholder. When the Stripe Payment Link exists,
-replace this comment with: **[Buy Pro for US$9.99](https://buy.stripe.com/...)** -->
+**[Buy Pro for US$9.99](https://buy.sylphx.com/buy/gpdt)** - your token is shown
+on the success page right after payment and emailed to you. Lost it? Recover it
+at <https://buy.sylphx.com/recover?product=gpdt>.
 
 **Activation:** open the extension (or the userscript panel), find the **Pro
 license** box, paste your Pro token and press **Activate**. The token is
